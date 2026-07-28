@@ -1,0 +1,480 @@
+<!DOCTYPE html>
+<html lang="nl">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=360, initial-scale=1.0">
+<title>Claude Stats</title>
+<style>
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+
+  :root {
+    --bg: #F0F0F0;
+    --card-bg: #ffffff;
+    --text: #1A1A1A;
+    --muted: #8A8A8A;
+    --track: #EAEAEA;
+    --accent-blue: #4B7BEC;
+    --icon-color: #8A8A8A;
+    --icon-hover-bg: rgba(0,0,0,0.07);
+    --icon-hover-color: #1A1A1A;
+    --status-ok: #34C759;
+    --status-stale: #FF9500;
+    --status-error: #FF3B30;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root {
+      --bg: #1C1C1E;
+      --card-bg: #2C2C2E;
+      --text: #F2F2F2;
+      --muted: #9A9A9E;
+      --track: #3A3A3C;
+      --accent-blue: #6B93F5;
+      --icon-color: #9A9A9E;
+      --icon-hover-bg: rgba(255,255,255,0.08);
+      --icon-hover-color: #F2F2F2;
+    }
+  }
+
+  body {
+    font-family: -apple-system, BlinkMacSystemFont, 'SF Pro Text', sans-serif;
+    background: var(--bg);
+    width: 360px;
+    color: var(--text);
+    font-size: 13px;
+    overflow-x: hidden;
+    -webkit-font-smoothing: antialiased;
+  }
+
+  .container {
+    padding: 14px 14px 12px;
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+  }
+
+  /* ---- Header ---- */
+  .header {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+  }
+  .header-icon {
+    width: 28px;
+    height: 28px;
+    background: #C85C2D;
+    border-radius: 6px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    flex-shrink: 0;
+  }
+  .header-icon svg { display: block; }
+  .header-title {
+    font-weight: 700;
+    font-size: 15px;
+    flex: 1;
+    color: var(--text);
+  }
+  .header-account {
+    font-size: 11px;
+    color: var(--muted);
+    flex: 1;
+    text-align: right;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    max-width: 160px;
+  }
+  .icon-btn {
+    width: 28px;
+    height: 28px;
+    border: none;
+    background: transparent;
+    cursor: pointer;
+    border-radius: 6px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: var(--icon-color);
+    transition: background 0.15s;
+    flex-shrink: 0;
+  }
+  .icon-btn:hover { background: var(--icon-hover-bg); color: var(--icon-hover-color); }
+  .icon-btn.spinning svg { animation: spin 1s linear infinite; }
+  @keyframes spin { to { transform: rotate(360deg); } }
+
+  /* ---- Cards ---- */
+  .card {
+    background: var(--card-bg);
+    border-radius: 12px;
+    padding: 14px;
+  }
+  .card-session {
+    background: color-mix(in srgb, var(--stress-color, #34C759) 14%, var(--card-bg));
+    transition: background 0.4s ease;
+  }
+
+  /* ---- Session donut ---- */
+  .session-inner {
+    display: flex;
+    align-items: center;
+    gap: 14px;
+  }
+  .donut-wrap {
+    position: relative;
+    width: 90px;
+    height: 90px;
+    flex-shrink: 0;
+  }
+  .donut-wrap svg {
+    transform: rotate(-90deg);
+  }
+  .donut-center {
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    text-align: center;
+    line-height: 1;
+  }
+  .donut-face {
+    font-size: 34px;
+    line-height: 1;
+    display: block;
+  }
+  @keyframes skull-shake {
+    0%, 92%, 100% { transform: translateX(0) rotate(0); }
+    93% { transform: translateX(-2px) rotate(-4deg); }
+    94% { transform: translateX(2px) rotate(4deg); }
+    95% { transform: translateX(-2px) rotate(-3deg); }
+    96% { transform: translateX(2px) rotate(3deg); }
+    97% { transform: translateX(0) rotate(0); }
+  }
+  .donut-face.stressed {
+    animation: skull-shake 3s ease-in-out infinite;
+  }
+  #donutTrack {
+    stroke: color-mix(in srgb, var(--stress-color, #34C759) 30%, var(--card-bg));
+    transition: stroke 0.4s ease;
+  }
+  .session-info {
+    flex: 1;
+  }
+  .label-sm {
+    font-size: 10px;
+    font-weight: 600;
+    letter-spacing: 0.06em;
+    color: var(--muted);
+    text-transform: uppercase;
+    margin-bottom: 4px;
+  }
+  .session-reset {
+    font-size: 12px;
+    color: var(--muted);
+    margin-top: 4px;
+  }
+
+  /* ---- Weekly card ---- */
+  .weekly-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 8px;
+  }
+  .weekly-pct-label {
+    font-size: 13px;
+    font-weight: 700;
+    color: var(--text);
+  }
+  .weekly-pct-label span {
+    color: var(--accent-blue);
+  }
+  .progress-bar-track {
+    height: 6px;
+    background: var(--track);
+    border-radius: 3px;
+    overflow: hidden;
+    margin-bottom: 5px;
+  }
+  .progress-bar-fill {
+    height: 100%;
+    background: var(--accent-blue);
+    border-radius: 3px;
+    transition: width 0.6s cubic-bezier(0.16, 1, 0.3, 1);
+    min-width: 2px;
+  }
+  #donutFill {
+    transition: stroke-dasharray 0.6s cubic-bezier(0.16, 1, 0.3, 1), stroke 0.4s ease;
+  }
+  .no-transition, .no-transition * {
+    transition: none !important;
+  }
+  .weekly-reset {
+    font-size: 11px;
+    color: var(--muted);
+  }
+
+  /* ---- Footer ---- */
+  .footer {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    font-size: 11px;
+    color: var(--muted);
+    padding: 0 2px;
+  }
+  .footer-left {
+    display: flex;
+    align-items: center;
+    gap: 5px;
+    min-width: 0;
+    flex-shrink: 1;
+  }
+  #statusText {
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+  #lastUpdated {
+    flex-shrink: 0;
+    margin-left: 8px;
+  }
+  .status-dot {
+    width: 7px;
+    height: 7px;
+    border-radius: 50%;
+    background: var(--status-ok);
+    display: inline-block;
+    flex-shrink: 0;
+  }
+  .status-dot.stale { background: var(--status-stale); }
+  .status-dot.disconnected { background: var(--status-error); }
+
+  /* Fetching overlay pulse */
+  .fetching-pulse {
+    animation: pulse 1.5s ease-in-out infinite;
+  }
+  @keyframes pulse {
+    0%, 100% { opacity: 1; }
+    50% { opacity: 0.5; }
+  }
+</style>
+</head>
+<body>
+<div class="container">
+
+  <!-- Header -->
+  <div class="header">
+    <div class="header-icon">
+      <svg width="16" height="16" viewBox="0 0 16 16" fill="none">
+        <rect x="1" y="1" width="6" height="6" rx="1.5" fill="white" opacity="0.9"/>
+        <rect x="9" y="1" width="6" height="6" rx="1.5" fill="white" opacity="0.7"/>
+        <rect x="1" y="9" width="6" height="6" rx="1.5" fill="white" opacity="0.7"/>
+        <rect x="9" y="9" width="6" height="6" rx="1.5" fill="white" opacity="0.5"/>
+      </svg>
+    </div>
+    <span class="header-title">Claude Stats</span>
+    <span class="header-account" id="accountLabel"></span>
+    <button class="icon-btn" id="refreshBtn" title="Vernieuwen" onclick="onRefresh()">
+      <svg width="15" height="15" viewBox="0 0 15 15" fill="none">
+        <path d="M13.5 7.5a6 6 0 1 1-1.5-3.95" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/>
+        <path d="M13.5 2.5v3h-3" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>
+      </svg>
+    </button>
+    <button class="icon-btn" title="Afsluiten" onclick="onQuit()">
+      <svg width="15" height="15" viewBox="0 0 15 15" fill="none">
+        <path d="M3 3l9 9M12 3l-9 9" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"/>
+      </svg>
+    </button>
+  </div>
+
+  <!-- Session card -->
+  <div class="card card-session">
+    <div class="session-inner">
+      <div class="donut-wrap">
+        <svg width="90" height="90" viewBox="0 0 90 90">
+          <circle id="donutTrack" cx="45" cy="45" r="36" fill="none" stroke-width="9"/>
+          <circle id="donutFill" cx="45" cy="45" r="36" fill="none"
+                  stroke-width="9"
+                  stroke-linecap="round"
+                  stroke-dasharray="0 226.2"/>
+        </svg>
+        <div class="donut-center">
+          <span class="donut-face" id="sessionFace">🚀</span>
+        </div>
+      </div>
+      <div class="session-info">
+        <div class="label-sm">Current Session</div>
+        <div style="font-size:13px; font-weight:600;" id="sessionPctText">—%</div>
+        <div class="session-reset" id="sessionReset">Resets in —</div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Weekly card -->
+  <div class="card">
+    <div class="weekly-header">
+      <div class="label-sm">Weekly Limit</div>
+      <div class="weekly-pct-label"><span id="weeklyPctLabel">—</span>% gebruikt</div>
+    </div>
+    <div class="progress-bar-track">
+      <div class="progress-bar-fill" id="weeklyBar" style="width:0%"></div>
+    </div>
+    <div class="weekly-reset" id="weeklyReset">Reset —</div>
+  </div>
+
+  <!-- Footer -->
+  <div class="footer">
+    <div class="footer-left">
+      <span class="status-dot" id="statusDot"></span>
+      <span id="statusText">Verbinden…</span>
+    </div>
+    <span id="lastUpdated"></span>
+  </div>
+
+
+</div>
+
+<script>
+'use strict';
+
+const CIRC = 2 * Math.PI * 36; // 226.2
+
+let _currentData = null;
+
+// ---- Public API ----
+
+window.updateData = function(data) {
+  _currentData = data;
+  render(data);
+};
+
+// Called on popover open: reset donut + bar to 0 without transition, then
+// fill them in with a smooth transition so the open feels alive every time.
+window.openWithAnimation = function(data) {
+  const donut = document.getElementById('donutFill');
+  const bar = document.getElementById('weeklyBar');
+  donut.classList.add('no-transition');
+  bar.classList.add('no-transition');
+  donut.setAttribute('stroke-dasharray', '0 226.2');
+  bar.style.width = '0%';
+  void donut.getBoundingClientRect(); // force reflow so the 0% state actually paints
+  setTimeout(() => {
+    donut.classList.remove('no-transition');
+    bar.classList.remove('no-transition');
+    _currentData = data;
+    render(data);
+  }, 100);
+};
+
+window.setStatus = function(status) {
+  const btn = document.getElementById('refreshBtn');
+  if (status === 'fetching') {
+    btn.classList.add('spinning');
+  } else {
+    btn.classList.remove('spinning');
+  }
+};
+
+// ---- Render ----
+
+function faceForPct(pct) {
+  if (pct >= 100) return '💀';
+  if (pct >= 90) return '😱';
+  if (pct >= 75) return '😰';
+  if (pct >= 60) return '😨';
+  if (pct >= 40) return '😅';
+  if (pct >= 20) return '🙂';
+  return '🚀';
+}
+
+// Green -> orange -> red as the session fills up (two-stage lerp).
+function colorForPct(pct) {
+  const stops = pct <= 50
+    ? [[0, 47, 168, 74], [50, 255, 149, 0]]
+    : [[50, 255, 149, 0], [100, 255, 59, 48]];
+  const [p0, r0, g0, b0] = stops[0];
+  const [p1, r1, g1, b1] = stops[1];
+  const t = p1 === p0 ? 0 : (pct - p0) / (p1 - p0);
+  const r = Math.round(r0 + (r1 - r0) * t);
+  const g = Math.round(g0 + (g1 - g0) * t);
+  const b = Math.round(b0 + (b1 - b0) * t);
+  return `rgb(${r}, ${g}, ${b})`;
+}
+
+function render(d) {
+  // Account
+  document.getElementById('accountLabel').textContent = d.account || '';
+
+  // Session donut
+  const pct = Math.max(0, Math.min(100, d.session_pct || 0));
+  const filled = (pct / 100) * CIRC;
+  const gap = CIRC - filled;
+  const color = colorForPct(pct);
+  const donutFill = document.getElementById('donutFill');
+  donutFill.setAttribute('stroke-dasharray', `${filled.toFixed(1)} ${gap.toFixed(1)}`);
+  donutFill.style.stroke = color;
+  document.querySelector('.card-session').style.setProperty('--stress-color', color);
+  const face = document.getElementById('sessionFace');
+  face.textContent = faceForPct(pct);
+  face.classList.toggle('stressed', pct >= 100);
+  document.getElementById('sessionPctText').textContent = pct + '%';
+  document.getElementById('sessionPctText').style.color = color;
+  document.getElementById('sessionReset').textContent = 'Reset ' + (d.session_reset || '—');
+
+  // Weekly
+  const wpct = Math.max(0, Math.min(100, d.weekly_pct || 0));
+  document.getElementById('weeklyPctLabel').textContent = wpct;
+  document.getElementById('weeklyBar').style.width = wpct + '%';
+  document.getElementById('weeklyReset').textContent = 'Reset ' + (d.weekly_reset || '—');
+
+  // Footer: status is one of 'ok' | 'stale' | 'not_logged_in'
+  const dot = document.getElementById('statusDot');
+  const statusTxt = document.getElementById('statusText');
+  dot.classList.remove('stale', 'disconnected');
+  if (d.status === 'stale') {
+    dot.classList.add('stale');
+    statusTxt.textContent = d.status_reason || 'Kon niet vernieuwen';
+  } else if (d.status === 'not_logged_in') {
+    dot.classList.add('disconnected');
+    statusTxt.textContent = d.status_reason || 'Niet ingelogd';
+  } else {
+    statusTxt.textContent = 'Verbonden met Anthropic API';
+  }
+  document.getElementById('lastUpdated').textContent = d.last_updated ? 'Bijgewerkt: ' + d.last_updated : '';
+
+  // Fetching spinner
+  window.setStatus(d.fetching ? 'fetching' : 'ready');
+}
+
+// ---- Actions ----
+
+function onRefresh() {
+  if (window.webkit && window.webkit.messageHandlers && window.webkit.messageHandlers.refresh) {
+    window.webkit.messageHandlers.refresh.postMessage(null);
+  }
+  document.getElementById('refreshBtn').classList.add('spinning');
+}
+
+function onOpenSettings() {
+  if (window.webkit && window.webkit.messageHandlers && window.webkit.messageHandlers.openSettings) {
+    window.webkit.messageHandlers.openSettings.postMessage(null);
+  }
+}
+
+function onQuit() {
+  if (window.webkit && window.webkit.messageHandlers && window.webkit.messageHandlers.quit) {
+    window.webkit.messageHandlers.quit.postMessage(null);
+  }
+}
+
+// ---- Init placeholder ----
+(function init() {
+  // Show placeholder state until Python calls updateData
+  const dot = document.getElementById('statusDot');
+  dot.classList.add('disconnected');
+  document.getElementById('statusText').textContent = 'Laden…';
+})();
+</script>
+</body>
+</html>

@@ -8,6 +8,7 @@ rm -rf build dist
 python3 setup.py py2app --quiet 2>&1 | grep -v "^$" | tail -5
 
 STAGE=$(mktemp -d)
+chmod 755 "$STAGE"
 cp -R dist/ClaudeUsage.app "$STAGE/"
 cp install.sh "$STAGE/"
 ln -s /Applications "$STAGE/Applications"

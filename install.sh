@@ -4,12 +4,21 @@
 set -e
 
 APP=/Applications/ClaudeUsage.app
-PLIST="$HOME/Library/LaunchAgents/com.claudeusage.menubar.plist"
+LABEL=com.jos.claude-usage
+PLIST="$HOME/Library/LaunchAgents/$LABEL.plist"
 
 if [ ! -d "$APP" ]; then
     echo "✗ $APP niet gevonden. Sleep ClaudeUsage.app eerst naar Applications."
     exit 1
 fi
+
+if [ ! -d "/Applications/Claude.app" ]; then
+    echo "⚠ Claude desktop-app niet gevonden in /Applications."
+    echo "  ClaudeUsage leest de sessie uit die app — installeer en log eerst in via https://claude.ai/download"
+fi
+
+# De app is niet Apple-notarized. Zonder deze stap blokkeert Gatekeeper de eerste start.
+xattr -dr com.apple.quarantine "$APP" 2>/dev/null || true
 
 mkdir -p "$HOME/Library/LaunchAgents"
 cat > "$PLIST" <<EOF
@@ -18,7 +27,7 @@ cat > "$PLIST" <<EOF
 <plist version="1.0">
 <dict>
     <key>Label</key>
-    <string>com.claudeusage.menubar</string>
+    <string>$LABEL</string>
     <key>ProgramArguments</key>
     <array>
         <string>$APP/Contents/MacOS/ClaudeUsage</string>
@@ -39,4 +48,5 @@ launchctl unload "$PLIST" 2>/dev/null || true
 launchctl load "$PLIST"
 
 echo "✓ ClaudeUsage geïnstalleerd en gestart. Klik ◆ in de menubalk."
-echo "  Herstart je Mac? App start vanzelf mee."
+echo "  Eerste keer: macOS vraagt toegang tot de sleutel 'Claude Safe Storage' — kies 'Always Allow'."
+echo "  Eerste cijfers verschijnen na ~10–20 s. Logboek: ~/Library/Logs/ClaudeUsage.log"

@@ -1,7 +1,7 @@
 from setuptools import setup
 
 APP = ['app.py']
-DATA_FILES = [('', ['fetch_limits.py', 'dashboard.html'])]
+DATA_FILES = [('', ['core.py', 'fetch_limits.py', 'dashboard.html'])]
 
 OPTIONS = {
     'argv_emulation': False,
@@ -18,6 +18,7 @@ OPTIONS = {
     'includes': [
         'Foundation', 'AppKit', 'WebKit',
         'objc', 'hashlib', 'sqlite3',
+        'core',
     ],
     'excludes': ['tkinter', 'rumps'],
 }

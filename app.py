@@ -1,18 +1,15 @@
 #!/usr/bin/env python3
-"""Claude Usage Tracker - macOS Menu Bar App (NSPopover + WKWebView)"""
+"""Claude Usage Tracker - macOS Menu Bar App (NSPopover + WKWebView)
+
+Only PyObjC glue lives here; pure logic is in core.py (testable without AppKit).
+"""
 
 import objc
 import json
 import os
-import glob
-import sqlite3
-import shutil
-import tempfile
 import hashlib
-from datetime import datetime, timezone, timedelta, date
-from collections import defaultdict
+from datetime import datetime
 
-from Crypto.Cipher import AES
 from Foundation import (
     NSObject, NSTimer, NSRunLoop, NSRunLoopCommonModes, NSURL, NSMakeRect, NSMakeSize,
     NSURLRequest, NSHTTPCookie, NSProcessInfo,
@@ -35,350 +32,17 @@ from WebKit import (
     WKWebsiteDataStore,
 )
 
+from core import (
+    LIMITS_FILE, log, find_cookie_db, decrypt_claude_cookies, session_key_from,
+    build_fetch_js, limits_output, format_reset_time, format_reset_compact,
+    status_title, title_from_limits, load_limits, limits_are_fresh,
+)
 
-STATS_CACHE = os.path.expanduser("~/.claude/stats-cache.json")
-PROJECTS_DIR = os.path.expanduser("~/.claude/projects")
-LIMITS_FILE = os.path.expanduser("~/.claude/usage-limits.json")
-LOG_FILE = os.path.expanduser("~/Library/Logs/ClaudeUsage.log")
+
 SCRIPT_DIR = os.path.dirname(os.path.abspath(__file__))
 FETCH_TIMEOUT_SEC = 45.0
-DAYS_NL = ["ma", "di", "wo", "do", "vr", "za", "zo"]
-DAYS_NL_FULL = ["maandag", "dinsdag", "woensdag", "donderdag", "vrijdag", "zaterdag", "zondag"]
 
-# JS that fetches usage from all orgs and posts the best result via message handler
-FETCH_JS = """
-(function() {
-fetch('/api/bootstrap', {credentials:'include', headers:{Accept:'application/json'}})
-.then(r => r.json())
-.then(async d => {
-    const acct = d.account || {};
-    const email = acct.email_address || acct.email || '';
-    const memberships = acct.memberships || [];
-    let best = null;
-    for (const m of memberships) {
-        const orgId = m.organization ? m.organization.uuid : null;
-        if (!orgId) continue;
-        try {
-            const r = await fetch('/api/organizations/' + orgId + '/usage', {
-                credentials: 'include',
-                headers: {Accept: 'application/json'}
-            });
-            if (!r.ok) continue;
-            const data = await r.json();
-            if (data.five_hour === undefined) continue;
-            const util = (data.five_hour && data.five_hour.utilization) || 0;
-            if (!best || util > best.util) {
-                best = {util, org_id: orgId, account_email: email, data};
-            }
-        } catch(e) { continue; }
-    }
-    if (best) {
-        window.webkit.messageHandlers.fetchResult.postMessage(
-            JSON.stringify({ok: true, org_id: best.org_id,
-                            account_email: best.account_email, data: best.data}));
-    } else {
-        window.webkit.messageHandlers.fetchResult.postMessage(
-            JSON.stringify({ok: false, error: 'no org with usage data'}));
-    }
-})
-.catch(e => {
-    window.webkit.messageHandlers.fetchResult.postMessage(
-        JSON.stringify({ok: false, error: e.message}));
-});
-})();
-"""
-
-
-# ---------------------------------------------------------------------------
-# Helper functions
-# ---------------------------------------------------------------------------
-
-def log(msg: str):
-    try:
-        with open(LOG_FILE, "a") as f:
-            f.write(f"{datetime.now().strftime('%Y-%m-%d %H:%M:%S')} {msg}\n")
-    except Exception:
-        pass
-
-
-def find_cookie_db() -> str:
-    """Return path to the Claude desktop app's cookie database, or ''.
-    Newer Electron/Chromium versions moved Cookies into a Network subdir."""
-    base = os.path.expanduser("~/Library/Application Support/Claude")
-    for candidate in (os.path.join(base, "Cookies"),
-                      os.path.join(base, "Network", "Cookies")):
-        if os.path.exists(candidate):
-            return candidate
-    return ""
-
-
-def decrypt_claude_cookies() -> dict:
-    """Decrypt cookies from the Claude desktop app's Chromium cookie store."""
-    import subprocess as _sp
-    key_str = _sp.run(
-        ["security", "find-generic-password", "-s", "Claude Safe Storage", "-w"],
-        capture_output=True, text=True,
-    ).stdout.strip()
-    if not key_str:
-        log("cookie decrypt: geen 'Claude Safe Storage' sleutel in keychain")
-        return {}
-
-    key = hashlib.pbkdf2_hmac("sha1", key_str.encode(), b"saltysalt", 1003, dklen=16)
-    src = find_cookie_db()
-    if not src:
-        log("cookie decrypt: cookie-database niet gevonden")
-        return {}
-
-    dst = tempfile.mktemp(suffix=".db")
-    shutil.copy2(src, dst)
-    try:
-        conn = sqlite3.connect(dst)
-        cur = conn.cursor()
-        cur.execute("SELECT name, encrypted_value, host_key, path FROM cookies")
-        rows = cur.fetchall()
-        conn.close()
-    finally:
-        os.unlink(dst)
-
-    def decrypt(enc_bytes, host):
-        if enc_bytes[:3] != b"v10":
-            return None
-        dec = AES.new(key, AES.MODE_CBC, IV=b" " * 16).decrypt(enc_bytes[3:])
-        pad = dec[-1]
-        if not (1 <= pad <= 16 and dec.endswith(bytes([pad]) * pad)):
-            return None
-        dec = dec[:-pad]
-        # Chromium >= v24 prefixes the value with sha256(host_key)
-        if len(dec) >= 32 and dec[:32] == hashlib.sha256(host.encode()).digest():
-            dec = dec[32:]
-        try:
-            return dec.decode("ascii")
-        except UnicodeDecodeError:
-            return None
-
-    return {
-        name: {"value": val, "domain": host, "path": path}
-        for name, enc, host, path in rows
-        if (val := decrypt(bytes(enc), host))
-    }
-
-
-def format_tokens(n: int) -> str:
-    if n >= 1_000_000:
-        return f"{n / 1_000_000:.1f}M"
-    if n >= 1_000:
-        return f"{n / 1_000:.1f}k"
-    return str(n)
-
-
-def format_reset_time(iso_str: str) -> str:
-    if not iso_str:
-        return "—"
-    try:
-        dt = datetime.fromisoformat(iso_str).astimezone()
-        now = datetime.now(dt.tzinfo)
-        diff = dt - now
-        total_sec = int(diff.total_seconds())
-        if 0 < total_sec < 86400:
-            h = total_sec // 3600
-            m = (total_sec % 3600) // 60
-            if h > 0:
-                return f"over {h}u {m}m"
-            return f"over {m}m"
-        day = DAYS_NL[dt.weekday()]
-        return f"{day} {dt.strftime('%H:%M')}"
-    except Exception:
-        return "—"
-
-
-def format_reset_compact(iso_str: str) -> str:
-    """Compact countdown for the menu bar title, e.g. '2u15m' or '45m'."""
-    if not iso_str:
-        return "—"
-    try:
-        dt = datetime.fromisoformat(iso_str).astimezone()
-        now = datetime.now(dt.tzinfo)
-        total_sec = int((dt - now).total_seconds())
-        if total_sec <= 0:
-            return "—"
-        h = total_sec // 3600
-        m = (total_sec % 3600) // 60
-        if h > 0:
-            return f"{h}u{m:02d}m"
-        return f"{m}m"
-    except Exception:
-        return "—"
-
-
-def face_icon(session_pct: int) -> str:
-    """Tamagotchi-style face for the menu bar, stressing out as the session fills up."""
-    if session_pct >= 100:
-        return "💀"
-    if session_pct >= 90:
-        return "😱"
-    if session_pct >= 75:
-        return "😰"
-    if session_pct >= 60:
-        return "😨"
-    if session_pct >= 40:
-        return "😅"
-    if session_pct >= 20:
-        return "🙂"
-    return "🚀"
-
-
-def status_title(session_pct: int, weekly_pct: int, session_reset_compact: str) -> str:
-    return f"{face_icon(session_pct)} {session_pct}% / {weekly_pct}% · {session_reset_compact}"
-
-
-def load_limits() -> dict:
-    try:
-        with open(LIMITS_FILE) as f:
-            return json.load(f)
-    except Exception:
-        return {}
-
-
-def limits_are_fresh(limits: dict, max_age_minutes: int = 5) -> bool:
-    fetched = limits.get("fetched_at")
-    if not fetched:
-        return False
-    try:
-        dt = datetime.fromisoformat(fetched)
-        age = datetime.now(timezone.utc) - dt
-        return age.total_seconds() < max_age_minutes * 60
-    except Exception:
-        return False
-
-
-def parse_dt(s: str) -> datetime:
-    if s.endswith("Z"):
-        s = s[:-1] + "+00:00"
-    return datetime.fromisoformat(s)
-
-
-def load_stats_cache() -> dict:
-    try:
-        with open(STATS_CACHE) as f:
-            return json.load(f)
-    except Exception:
-        return {}
-
-
-def scan_jsonl_files() -> dict:
-    daily: dict = defaultdict(lambda: {
-        "msgs": 0, "input_tokens": 0, "output_tokens": 0, "cache_read": 0,
-        "models": defaultdict(int),
-    })
-    for jsonl_path in glob.glob(os.path.join(PROJECTS_DIR, "*", "*.jsonl")):
-        try:
-            with open(jsonl_path) as f:
-                for line in f:
-                    line = line.strip()
-                    if not line:
-                        continue
-                    try:
-                        obj = json.loads(line)
-                    except Exception:
-                        continue
-                    ts = obj.get("timestamp")
-                    if not ts:
-                        continue
-                    try:
-                        # Group by local calendar day, not UTC
-                        date_key = parse_dt(ts).astimezone().date().isoformat()
-                    except Exception:
-                        continue
-                    if obj.get("type") == "user" and obj.get("message", {}).get("role") == "user":
-                        daily[date_key]["msgs"] += 1
-                    elif obj.get("type") == "assistant":
-                        usage = obj.get("message", {}).get("usage", {})
-                        model = obj.get("message", {}).get("model", "unknown")
-                        tok_in = usage.get("input_tokens", 0)
-                        tok_out = usage.get("output_tokens", 0)
-                        tok_cache = usage.get("cache_read_input_tokens", 0)
-                        daily[date_key]["input_tokens"] += tok_in
-                        daily[date_key]["output_tokens"] += tok_out
-                        daily[date_key]["cache_read"] += tok_cache
-                        daily[date_key]["models"][model] += tok_in + tok_out + tok_cache
-        except Exception:
-            pass
-    return daily
-
-
-_scan_cache = {"ts": 0.0, "data": None}
-
-
-def scan_jsonl_files_cached(max_age_sec: float = 60.0) -> dict:
-    """Cached wrapper: scanning every popover-open/refresh is wasteful."""
-    import time as _time
-    now = _time.monotonic()
-    if _scan_cache["data"] is None or now - _scan_cache["ts"] > max_age_sec:
-        _scan_cache["data"] = scan_jsonl_files()
-        _scan_cache["ts"] = now
-    return _scan_cache["data"]
-
-
-def build_stats() -> dict:
-    cache = load_stats_cache()
-    jsonl_daily = scan_jsonl_files_cached()
-
-    now = datetime.now()
-    today = now.date()
-    week_ago = today - timedelta(days=7)
-    month_ago = today - timedelta(days=30)
-
-    today_msgs = today_tokens = week_msgs = week_tokens = 0
-    month_msgs = month_tokens = 0
-    model_tokens: dict = defaultdict(int)
-
-    for date_str, day in jsonl_daily.items():
-        try:
-            d = date.fromisoformat(date_str)
-        except Exception:
-            continue
-        msgs = day["msgs"]
-        tokens = day["input_tokens"] + day["output_tokens"]
-        for model, tok in day["models"].items():
-            model_tokens[model] += tok
-        if d == today:
-            today_msgs += msgs
-            today_tokens += tokens
-        if d >= week_ago:
-            week_msgs += msgs
-            week_tokens += tokens
-        if d >= month_ago:
-            month_msgs += msgs
-            month_tokens += tokens
-
-    return {
-        "total_sessions": cache.get("totalSessions", 0),
-        "total_messages": cache.get("totalMessages", 0),
-        "today_msgs": today_msgs,
-        "today_tokens": today_tokens,
-        "week_msgs": week_msgs,
-        "week_tokens": week_tokens,
-        "month_msgs": month_msgs,
-        "month_tokens": month_tokens,
-        "model_totals": dict(model_tokens),
-        "last_updated": now.strftime("%H:%M"),
-        "jsonl_daily": {k: {"input_tokens": v["input_tokens"],
-                             "output_tokens": v["output_tokens"],
-                             "cache_read": v["cache_read"]}
-                        for k, v in jsonl_daily.items()},
-    }
-
-
-def compute_weekly_tokens(jsonl_daily: dict, base_date: date) -> list:
-    """Return list of 7 token counts (input+output only) for 7 days ending on base_date."""
-    result = []
-    for i in range(6, -1, -1):
-        d = base_date - timedelta(days=i)
-        day = jsonl_daily.get(d.isoformat(), {})
-        tokens = day.get("input_tokens", 0) + day.get("output_tokens", 0)
-        result.append(tokens)
-    return result
-
+FETCH_JS = build_fetch_js("window.webkit.messageHandlers.fetchResult.postMessage(s);")
 
 # ---------------------------------------------------------------------------
 # PyObjC classes
@@ -529,7 +193,7 @@ class AppDelegate(NSObject):
             log(f"cookie decrypt mislukt: {e}")
             return
 
-        session_key = cookies.get("sessionKey", {}).get("value", "")
+        session_key = session_key_from(cookies)
         if not session_key:
             log("geen sessionKey gevonden — is de Claude desktop-app ingelogd?")
             self._logged_in = False
@@ -581,7 +245,7 @@ class AppDelegate(NSObject):
         except Exception as e:
             log(f"cookie refresh mislukt: {e}")
             return
-        session_key = cookies.get("sessionKey", {}).get("value", "")
+        session_key = session_key_from(cookies)
         if not session_key:
             self._logged_in = False
             return
@@ -620,7 +284,7 @@ class AppDelegate(NSObject):
             log(f"account-check: cookie decrypt mislukt: {e}")
             return
 
-        session_key = cookies.get("sessionKey", {}).get("value", "")
+        session_key = session_key_from(cookies)
         if not session_key:
             self._logged_in = False
             return
@@ -680,13 +344,7 @@ class AppDelegate(NSObject):
 
     def _show_cached_pct(self):
         try:
-            limits = load_limits()
-            five_h = limits.get("five_hour") or {}
-            seven_d = limits.get("seven_day") or {}
-            session_pct = int(five_h.get("utilization", 0) or 0)
-            weekly_pct = int(seven_d.get("utilization", 0) or 0)
-            reset_compact = format_reset_compact(five_h.get("resets_at", ""))
-            self._set_status_title(status_title(session_pct, weekly_pct, reset_compact))
+            self._set_status_title(title_from_limits(load_limits()))
         except Exception:
             self._set_status_title("🚀")
 
@@ -714,12 +372,7 @@ class AppDelegate(NSObject):
         try:
             parsed = json.loads(raw)
             if parsed.get("ok"):
-                output = {
-                    "fetched_at": datetime.now(timezone.utc).isoformat(),
-                    "org_id": parsed["org_id"],
-                    "account_email": parsed.get("account_email", ""),
-                    **parsed["data"],
-                }
+                output = limits_output(parsed)
                 with open(LIMITS_FILE, "w") as f:
                     json.dump(output, f, indent=2)
                 self._last_fetch_error = None
@@ -834,12 +487,7 @@ class AppDelegate(NSObject):
             self._push_data()
         else:
             try:
-                five_h = limits.get("five_hour") or {}
-                seven_d = limits.get("seven_day") or {}
-                session_pct = int(five_h.get("utilization", 0) or 0)
-                weekly_pct = int(seven_d.get("utilization", 0) or 0)
-                reset_compact = format_reset_compact(five_h.get("resets_at", ""))
-                self._set_status_title(status_title(session_pct, weekly_pct, reset_compact))
+                self._set_status_title(title_from_limits(limits))
             except Exception:
                 pass
 

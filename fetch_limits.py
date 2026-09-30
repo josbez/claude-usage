@@ -112,7 +112,7 @@ def main():
 
     output = limits_output(parsed)
 
-    with open(LIMITS_FILE, "w") as f:
+    with open(LIMITS_FILE, "w", encoding="utf-8") as f:
         json.dump(output, f, indent=2)
 
     print(json.dumps(output, indent=2))

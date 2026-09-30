@@ -5,6 +5,7 @@ DATA_FILES = [('', ['core.py', 'fetch_limits.py', 'dashboard.html'])]
 
 OPTIONS = {
     'argv_emulation': False,
+    'iconfile': 'icon/ClaudeUsage.icns',
     'plist': {
         'CFBundleName': 'ClaudeUsage',
         'CFBundleDisplayName': 'Claude Usage',

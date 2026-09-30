@@ -27,7 +27,7 @@ fi
 rm -f "$BUILD_LOG"
 [ -x "$APP/Contents/MacOS/ClaudeUsage" ] || fail "$APP ontbreekt na build"
 
-for f in core.py dashboard.html fetch_limits.py; do
+for f in core.py dashboard.html fetch_limits.py ClaudeUsage.icns; do
     [ -f "$APP/Contents/Resources/$f" ] || fail "$f ontbreekt in bundle-Resources (setup.py DATA_FILES?)"
 done
 

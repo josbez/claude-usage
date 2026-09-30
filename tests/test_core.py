@@ -275,17 +275,18 @@ def test_notify_state_roundtrip(tmp_path):
 
 def test_settings_default_and_roundtrip(tmp_path):
     path = str(tmp_path / "s.json")
-    assert core.load_settings(path) == {"notifications": True}
-    core.save_settings({"notifications": False}, path)
-    assert core.load_settings(path) == {"notifications": False}
+    assert core.load_settings(path) == {"notifications": True, "update_check": True}
+    core.save_settings({"notifications": False, "update_check": True}, path)
+    assert core.load_settings(path) == {"notifications": False, "update_check": True}
 
 
 def test_settings_ignore_unknown_and_corrupt(tmp_path):
     path = tmp_path / "s.json"
     path.write_text('{"notifications": false, "evil": 1}')
-    assert core.load_settings(str(path)) == {"notifications": False}
+    assert core.load_settings(str(path))["notifications"] is False
+    assert "evil" not in core.load_settings(str(path))
     path.write_text("{nope")
-    assert core.load_settings(str(path)) == {"notifications": True}
+    assert core.load_settings(str(path)) == core.DEFAULT_SETTINGS
 
 
 @pytest.mark.parametrize("pct,rgb", [
@@ -300,3 +301,116 @@ def test_color_for_pct_matches_dashboard(pct, rgb):
 def test_notification_carries_pct():
     notes, _ = core.due_notifications(_limits(five=86), {})
     assert notes[0]["pct"] == 86
+
+
+# ---------------------------------------------------------------------------
+# Updates
+# ---------------------------------------------------------------------------
+
+@pytest.mark.parametrize("s,parsed", [
+    ("1.2", (1, 2)), ("v1.2.0", (1, 2)), ("1.10.3", (1, 10, 3)), ("V2", (2,)),
+    ("1.2.0-rc1", None), ("dev", None), ("", None), (None, None), ("1..2", None),
+])
+def test_parse_version(s, parsed):
+    assert core.parse_version(s) == parsed
+
+
+@pytest.mark.parametrize("cand,cur,newer", [
+    ("1.10.0", "1.9.2", True), ("1.2", "1.1.1", True), ("1.2.0", "1.2", False),
+    ("1.1.1", "1.2", False), ("1.3", "dev", False), ("1.3-beta", "1.2", False),
+])
+def test_is_newer(cand, cur, newer):
+    assert core.is_newer(cand, cur) is newer
+
+
+def _release(**over):
+    rel = {"tag_name": "v1.2", "html_url": "https://github.com/x/y/releases/tag/v1.2",
+           "draft": False, "prerelease": False, "assets": [
+               {"name": "ClaudeUsage.dmg", "browser_download_url": "https://dl/dmg"},
+               {"name": "ClaudeUsage.dmg.sig", "browser_download_url": "https://dl/sig"},
+           ]}
+    rel.update(over)
+    return rel
+
+
+def test_parse_release():
+    assert core.parse_release(_release()) == {
+        "version": "1.2", "html_url": "https://github.com/x/y/releases/tag/v1.2",
+        "dmg_url": "https://dl/dmg", "sig_url": "https://dl/sig"}
+
+
+def test_parse_release_without_signature_has_empty_sig_url():
+    rel = core.parse_release(_release(assets=[{"name": "ClaudeUsage.dmg", "browser_download_url": "u"}]))
+    assert rel["dmg_url"] == "u" and rel["sig_url"] == ""
+
+
+@pytest.mark.parametrize("over", [{"draft": True}, {"prerelease": True}, {"tag_name": "nightly"}])
+def test_parse_release_rejects_non_final(over):
+    assert core.parse_release(_release(**over)) is None
+    assert core.parse_release("not a dict") is None
+
+
+def test_update_check_due():
+    now = datetime(2026, 9, 30, 12, 0, tzinfo=timezone.utc)
+    assert core.update_check_due({}, now)
+    assert not core.update_check_due({"last_check": (now - timedelta(hours=23)).isoformat()}, now)
+    assert core.update_check_due({"last_check": (now - timedelta(hours=25)).isoformat()}, now)
+    assert core.update_check_due({"last_check": "garbage"}, now)
+
+
+@pytest.fixture
+def signing_key():
+    from Crypto.PublicKey import ECC
+    key = ECC.generate(curve="ed25519")
+    return key, key.public_key().export_key(format="raw").hex()
+
+
+def test_release_signature_roundtrip(signing_key):
+    key, pub = signing_key
+    data = b"dmg bytes" * 1000
+    sig = core.sign_release(data, key)
+    assert core.verify_release_signature(data, sig, pub)
+    assert core.verify_release_signature(data, sig + "\n", pub)   # trailing newline in .sig file
+
+
+def test_release_signature_rejects_tampering(signing_key):
+    key, pub = signing_key
+    sig = core.sign_release(b"original", key)
+    assert not core.verify_release_signature(b"tampered", sig, pub)
+    assert not core.verify_release_signature(b"original", "not base64!!", pub)
+    assert not core.verify_release_signature(b"original", "", pub)
+    from Crypto.PublicKey import ECC
+    other = ECC.generate(curve="ed25519").public_key().export_key(format="raw").hex()
+    assert not core.verify_release_signature(b"original", sig, other)
+
+
+def test_embedded_public_key_is_valid():
+    from Crypto.Signature import eddsa
+    eddsa.import_public_key(bytes.fromhex(core.UPDATE_PUBLIC_KEY_HEX))
+
+
+def test_json_helpers(tmp_path):
+    path = str(tmp_path / "x.json")
+    assert core.load_json(path) == {}
+    core.save_json({"a": 1}, path)
+    assert core.load_json(path) == {"a": 1}
+    (tmp_path / "list.json").write_text("[1, 2]")
+    assert core.load_json(str(tmp_path / "list.json")) == {}
+
+
+def test_log_writes_utf8_regardless_of_locale(tmp_path, monkeypatch):
+    # Inside the app bundle the locale is ASCII; "—" must still be logged.
+    import builtins
+    real_open = builtins.open
+
+    def ascii_default_open(file, mode="r", *args, encoding=None, **kw):
+        if "b" not in mode and encoding is None:
+            encoding = "ascii"
+        return real_open(file, mode, *args, encoding=encoding, **kw)
+
+    monkeypatch.setattr(builtins, "open", ascii_default_open)
+    log_file = tmp_path / "log.txt"
+    monkeypatch.setattr(core, "LOG_FILE", str(log_file))
+    core.log("account gewisseld — geïnstalleerd")
+    monkeypatch.undo()
+    assert "— geïnstalleerd" in log_file.read_text(encoding="utf-8")

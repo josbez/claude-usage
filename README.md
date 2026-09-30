@@ -18,6 +18,12 @@ Dat installeert een LaunchAgent (start automatisch bij inloggen) en zet de Gatek
 
 Bij de eerste start vraagt macOS toegang tot de Keychain-sleutel *Claude Safe Storage* — kies **Always Allow**. Daarna vraagt macOS of ClaudeUsage meldingen mag sturen: sta dat toe voor een waarschuwing bij 80% en 95% van de 5-uurslimiet en 90% van de weeklimiet. Met het bel-icoon in de popover zet je meldingen aan of uit. Eerste cijfers verschijnen na ~10–20 seconden.
 
+### Bijwerken
+
+Vanaf versie 1.2 checkt de app dagelijks of er een nieuwe versie is. Is die er, dan verschijnt een oranje pijl in de popover (en een melding). Klik erop en kies **Bijwerken**: de app downloadt de update, controleert de digitale handtekening, vervangt zichzelf en start opnieuw. Updates zonder geldige handtekening worden geweigerd. Heb je een oudere versie, werk dan één keer handmatig bij via de DMG hierboven.
+
+Het versienummer staat naast de titel in de popover.
+
 ### Waarom die Terminal-stap
 
 De app is niet Apple-signed of notarized (vereist een betaald Developer-account). Zonder `install.sh` blokkeert Gatekeeper de eerste start; sinds macOS 15 Sequoia werkt de oude rechtsklik → *Open*-truc daar niet meer voor. Handmatig alternatief: dubbelklik de app, ga dan naar **Systeeminstellingen → Privacy en beveiliging** en klik onderaan bij *Beveiliging* op **Toch openen**.
@@ -43,13 +49,21 @@ Scripts:
 ```bash
 ./build.sh             # tests + import-check + py2app + buildnummer + ad-hoc codesign
 ./deploy.sh            # build.sh, uitrollen naar /Applications, LaunchAgent-herstart, verifieert verse fetch
-./make-dmg.sh          # build.sh + ClaudeUsage.dmg
+./make-dmg.sh          # build.sh + ClaudeUsage.dmg (+ .sig als de signing key aanwezig is)
 /usr/bin/python3 -m pytest   # alleen de tests
 ```
 
 `deploy.sh` eindigt met `✓ fetch geverifieerd` of faalt met de laatste logregels. `CFBundleVersion` is de buildtijd (`YYYYMMDD.HHMMSS`), zo zie je welke build draait.
 
 Structuur: `core.py` bevat alle logica zonder PyObjC (getest in `tests/`); `app.py` is alleen de menubalk/WebKit-glue; `fetch_limits.py` is een los debugscript voor de fetch-pipeline.
+
+## Release maken
+
+1. Versie ophogen in `setup.py` (`CFBundleShortVersionString` en `CFBundleVersion`), committen en pushen.
+2. `./make-dmg.sh` — maakt `ClaudeUsage.dmg` én `ClaudeUsage.dmg.sig`.
+3. GitHub-release met tag `vX.Y` en **beide** bestanden als bijlage. Zonder `.sig` weigert de in-app updater de release.
+
+De signing key staat in `~/.config/claude-usage/release-signing-key.pem` en komt nooit in git. Maak er een back-up van: zonder die sleutel kun je geen updates meer uitbrengen die bestaande installaties accepteren. Eenmalig aanmaken op een nieuwe machine gaat met `sign-release.py --init`, maar een nieuwe sleutel vraagt ook een nieuwe `UPDATE_PUBLIC_KEY_HEX` in `core.py` en dus één handmatige update bij alle gebruikers.
 
 ## Logs en valkuilen
 

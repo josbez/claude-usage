@@ -61,13 +61,22 @@
   .header-title {
     font-weight: 700;
     font-size: 15px;
-    flex: 1;
     color: var(--text);
+    white-space: nowrap;
+  }
+  .header-version {
+    font-size: 10px;
+    color: var(--muted);
+    white-space: nowrap;
+    margin-left: -3px;
+    align-self: flex-end;
+    padding-bottom: 3px;
   }
   .header-account {
     font-size: 11px;
     color: var(--muted);
     flex: 1;
+    min-width: 0;
     text-align: right;
     white-space: nowrap;
     overflow: hidden;
@@ -95,6 +104,16 @@
   #notifyBtn[aria-pressed="false"] .bell-on { display: none; }
   #notifyBtn[aria-pressed="false"] .bell-off { display: block; }
   #notifyBtn[aria-pressed="true"] { color: var(--accent-blue); }
+  #updateBtn { position: relative; color: var(--status-stale); }
+  #updateBtn[hidden] { display: none; }
+  #updateBtn::after {
+    content: ''; position: absolute; top: 4px; right: 4px;
+    width: 6px; height: 6px; border-radius: 50%;
+    background: var(--status-stale);
+  }
+  #updateBtn.error, #updateBtn.error::after { color: var(--status-error); background-color: transparent; }
+  #updateBtn.error::after { background: var(--status-error); }
+  #updateBtn.working::after { display: none; }
   @keyframes spin { to { transform: rotate(360deg); } }
 
   /* ---- Cards ---- */
@@ -260,11 +279,18 @@
   <!-- Header -->
   <div class="header">
     <span class="header-title">Claude Stats</span>
+    <span class="header-version" id="versionLabel"></span>
     <span class="header-account" id="accountLabel"></span>
     <button class="icon-btn" id="refreshBtn" title="Vernieuwen" onclick="onRefresh()">
       <svg width="15" height="15" viewBox="0 0 15 15" fill="none">
         <path d="M13.5 7.5a6 6 0 1 1-1.5-3.95" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/>
         <path d="M13.5 2.5v3h-3" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>
+      </svg>
+    </button>
+    <button class="icon-btn" id="updateBtn" hidden onclick="onStartUpdate()">
+      <svg width="15" height="15" viewBox="0 0 15 15" fill="none">
+        <path d="M7.5 2v8M4 6.8l3.5 3.5L11 6.8" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>
+        <path d="M2.5 12.5h10" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/>
       </svg>
     </button>
     <button class="icon-btn" id="notifyBtn" aria-pressed="true" hidden onclick="onToggleNotifications()">
@@ -440,6 +466,12 @@ function render(d) {
   }
   document.getElementById('lastUpdated').textContent = d.last_updated ? 'Bijgewerkt: ' + d.last_updated : '';
 
+  // Version + update button
+  const ver = document.getElementById('versionLabel');
+  ver.textContent = d.version && d.version !== 'dev' ? 'v' + d.version : (d.version || '');
+  ver.title = d.build ? 'Build ' + d.build : '';
+  renderUpdateBtn(d.update);
+
   // Notifications toggle (hidden when running outside the app bundle)
   renderNotifyBtn(!!d.notifications_enabled, !!d.notifications_available);
 
@@ -459,6 +491,24 @@ function onRefresh() {
 function onOpenSettings() {
   if (window.webkit && window.webkit.messageHandlers && window.webkit.messageHandlers.openSettings) {
     window.webkit.messageHandlers.openSettings.postMessage(null);
+  }
+}
+
+function renderUpdateBtn(u) {
+  const btn = document.getElementById('updateBtn');
+  btn.hidden = !u;
+  if (!u) return;
+  btn.classList.toggle('working', u.state === 'working');
+  btn.classList.toggle('spinning', u.state === 'working');
+  btn.classList.toggle('error', u.state === 'error');
+  btn.title = u.state === 'working' ? 'Bijwerken naar v' + u.version + '…'
+    : u.state === 'error' ? 'Bijwerken mislukt: ' + u.message + ' — klik om opnieuw te proberen'
+    : 'Versie ' + u.version + ' beschikbaar — klik om bij te werken';
+}
+
+function onStartUpdate() {
+  if (window.webkit && window.webkit.messageHandlers && window.webkit.messageHandlers.startUpdate) {
+    window.webkit.messageHandlers.startUpdate.postMessage(null);
   }
 }
 

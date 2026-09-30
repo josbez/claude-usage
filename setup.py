@@ -10,8 +10,8 @@ OPTIONS = {
         'CFBundleName': 'ClaudeUsage',
         'CFBundleDisplayName': 'Claude Usage',
         'CFBundleIdentifier': 'com.jos.claude-usage',
-        'CFBundleVersion': '1.1.1',
-        'CFBundleShortVersionString': '1.1.1',
+        'CFBundleVersion': '1.2',
+        'CFBundleShortVersionString': '1.2',
         'LSUIElement': True,          # Geen dock-icon
         'NSHighResolutionCapable': True,
     },
@@ -19,7 +19,7 @@ OPTIONS = {
     'includes': [
         'Foundation', 'AppKit', 'WebKit',
         'objc', 'hashlib', 'sqlite3',
-        'core', 'UserNotifications',
+        'core', 'updater', 'UserNotifications', 'PyObjCTools',
     ],
     'excludes': ['tkinter', 'rumps'],
 }

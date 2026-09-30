@@ -9,12 +9,13 @@ import json
 import os
 import sys
 import tempfile
+import threading
 import hashlib
-from datetime import datetime
+from datetime import datetime, timezone
 
 from Foundation import (
     NSObject, NSTimer, NSRunLoop, NSRunLoopCommonModes, NSURL, NSMakeRect, NSMakeSize,
-    NSURLRequest, NSHTTPCookie, NSProcessInfo,
+    NSURLRequest, NSHTTPCookie, NSProcessInfo, NSBundle,
     NSHTTPCookieDomain, NSHTTPCookieName, NSHTTPCookiePath,
     NSHTTPCookieValue, NSHTTPCookieSecure,
 )
@@ -28,9 +29,10 @@ from AppKit import (
     NSAttributedString, NSFontAttributeName, NSDeviceRGBColorSpace,
     NSApplication, NSApplicationActivationPolicyAccessory,
     NSStatusBar, NSVariableStatusItemLength, NSMinYEdge,
-    NSViewController, NSWorkspace, NSPopover,
+    NSViewController, NSWorkspace, NSPopover, NSAlert,
     NSApp,
 )
+from PyObjCTools import AppHelper
 from WebKit import (
     WKWebView, WKWebViewConfiguration, WKUserContentController,
     WKWebsiteDataStore,
@@ -50,7 +52,9 @@ from core import (
     status_title, title_from_limits, load_limits, limits_are_fresh,
     due_notifications, load_notify_state, save_notify_state, color_for_pct, face_icon,
     load_settings, save_settings,
+    UPDATE_STATE_FILE, load_json, save_json, is_newer, update_check_due,
 )
+import updater
 
 
 SCRIPT_DIR = os.path.dirname(os.path.abspath(__file__))
@@ -77,6 +81,9 @@ class MessageHandler(NSObject):
         elif name == "setNotifications":
             if self.delegate:
                 self.delegate.set_notifications_enabled(bool(message.body()))
+        elif name == "startUpdate":
+            if self.delegate:
+                self.delegate.start_update()
         elif name == "quit":
             NSApp.terminate_(None)
         elif name == "fetchResult":
@@ -161,6 +168,15 @@ def render_status_image(pct: int, path: str, size: int = 256):
     png.writeToFile_atomically_(path, True)
 
 
+def app_version():
+    """(short version, build) from the bundle's Info.plist; ('dev', '') outside it."""
+    if not getattr(sys, "frozen", False):
+        return "dev", ""
+    info = NSBundle.mainBundle().infoDictionary()
+    return (str(info.get("CFBundleShortVersionString", "dev")),
+            str(info.get("CFBundleVersion", "")))
+
+
 def _log_notify_error(note_id: str):
     def on_added(error):
         if error:
@@ -192,7 +208,12 @@ class AppDelegate(NSObject):
         self._last_fetch_error = None
         self._last_cookie_mtime = None
         self._last_session_hash = None
-        log("app gestart")
+        self._update = None            # latest release dict when newer than us
+        self._update_checking = False  # release check running on a thread
+        self._update_installing = False
+        self._update_error = None
+        self._version, self._build = app_version()
+        log(f"app gestart (versie {self._version})")
         # Keep the process out of App Nap so the periodic timer below actually
         # keeps firing while backgrounded — without this, macOS throttles it
         # to a near-standstill after a few minutes since there's no visible window.
@@ -205,6 +226,7 @@ class AppDelegate(NSObject):
         self._setup_popover()
         self._setup_fetch_webview()
         self._start_fetch()
+        self._maybe_check_updates()
         # Periodic timer every minute
         self._timer = self._schedule_timer(
             60.0, objc.selector(self.tickFired_, signature=b"v@:@"), True
@@ -263,6 +285,17 @@ class AppDelegate(NSObject):
             log(f"notificatie-afbeelding mislukt: {e}")
             return None
 
+    def _post_notification(self, ident: str, title: str, body: str):
+        if self._notify_center is None or not load_settings()["notifications"]:
+            return
+        content = UNMutableNotificationContent.new()
+        content.setTitle_(title)
+        content.setBody_(body)
+        content.setSound_(UNNotificationSound.defaultSound())
+        request = UNNotificationRequest.requestWithIdentifier_content_trigger_(ident, content, None)
+        self._notify_center.addNotificationRequest_withCompletionHandler_(
+            request, _log_notify_error(ident))
+
     def _notify_limits(self, limits: dict):
         if self._notify_center is None:
             return
@@ -293,6 +326,127 @@ class AppDelegate(NSObject):
             save_notify_state(state)
         except Exception as e:
             log(f"notificatie-check mislukt: {e}")
+
+    # ------------------------------------------------------------------
+    # Updates (network/disk work on a thread, UI back on the main thread)
+    # ------------------------------------------------------------------
+
+    def _maybe_check_updates(self, force: bool = False):
+        if not getattr(sys, "frozen", False) or self._update_checking or self._update_installing:
+            return
+        if not load_settings()["update_check"]:
+            return
+        state = load_json(UPDATE_STATE_FILE)
+        latest = state.get("latest")
+        if self._update is None and latest and is_newer(latest.get("version", ""), self._version):
+            self._update = latest   # remembered from an earlier check, no network needed
+        if not force and not update_check_due(state, datetime.now(timezone.utc)):
+            return
+        self._update_checking = True
+
+        def work():
+            try:
+                AppHelper.callAfter(self._on_update_checked, updater.fetch_latest_release(), None)
+            except Exception as e:
+                AppHelper.callAfter(self._on_update_checked, None, str(e))
+
+        threading.Thread(target=work, daemon=True).start()
+
+    def _on_update_checked(self, release, error):
+        self._update_checking = False
+        state = load_json(UPDATE_STATE_FILE)
+        state["last_check"] = datetime.now(timezone.utc).isoformat()
+        if error:
+            log(f"update-check mislukt: {error}")
+        else:
+            state["latest"] = release
+            if release and is_newer(release["version"], self._version):
+                self._update = release
+                if state.get("notified_version") != release["version"]:
+                    state["notified_version"] = release["version"]
+                    log(f"update beschikbaar: {release['version']}")
+                    self._post_notification(
+                        f"update-{release['version']}",
+                        f"ClaudeUsage {release['version']} is beschikbaar",
+                        "Klik op het pijltje in de popover om bij te werken.",
+                    )
+            else:
+                self._update = None
+        try:
+            save_json(state, UPDATE_STATE_FILE)
+        except Exception as e:
+            log(f"update-status opslaan mislukt: {e}")
+        self._push_data()
+
+    def _update_view(self):
+        if self._update is None:
+            return None
+        if self._update_installing:
+            state = "working"
+        elif self._update_error:
+            state = "error"
+        else:
+            state = "available"
+        return {"version": self._update["version"], "state": state,
+                "message": self._update_error or ""}
+
+    def start_update(self):
+        release = self._update
+        if release is None or self._update_installing:
+            return
+        NSApp.activateIgnoringOtherApps_(True)
+        alert = NSAlert.new()
+        alert.setMessageText_(f"ClaudeUsage {release['version']} installeren?")
+        alert.setInformativeText_(
+            f"Je hebt nu versie {self._version}. De update wordt gedownload en "
+            "gecontroleerd; daarna sluit de app even af en start opnieuw."
+        )
+        alert.addButtonWithTitle_("Bijwerken")
+        alert.addButtonWithTitle_("Later")
+        if release.get("html_url"):
+            alert.addButtonWithTitle_("Wat is er nieuw?")
+        choice = alert.runModal()
+        if choice == 1002:   # NSAlertThirdButtonReturn
+            NSWorkspace.sharedWorkspace().openURL_(NSURL.URLWithString_(release["html_url"]))
+            return
+        if choice != 1000:   # NSAlertFirstButtonReturn
+            return
+
+        log(f"update naar {release['version']} gestart")
+        self._update_installing = True
+        self._update_error = None
+        self._push_data()
+        current = self._version
+
+        def work():
+            try:
+                AppHelper.callAfter(self._on_update_staged,
+                                    updater.download_and_stage(release, current), None)
+            except Exception as e:
+                AppHelper.callAfter(self._on_update_staged, None, str(e))
+
+        threading.Thread(target=work, daemon=True).start()
+
+    def _on_update_staged(self, staged, error):
+        if error:
+            self._update_installing = False
+            self._update_error = error
+            log(f"update mislukt: {error}")
+            self._push_data()
+            NSApp.activateIgnoringOtherApps_(True)
+            alert = NSAlert.new()
+            alert.setMessageText_("Bijwerken is niet gelukt")
+            alert.setInformativeText_(f"{error}. De huidige versie blijft gewoon werken.")
+            alert.runModal()
+            return
+        target = str(NSBundle.mainBundle().bundlePath())
+        log(f"update klaargezet, vervangen van {target} en herstarten")
+        try:
+            updater.launch_swap(staged, target, os.getpid())
+        except Exception as e:
+            self._on_update_staged(None, f"installeren mislukt: {e}")
+            return
+        NSApp.terminate_(None)
 
     # ------------------------------------------------------------------
     # Status item
@@ -339,6 +493,7 @@ class AppDelegate(NSObject):
         ucc.addScriptMessageHandler_name_(handler, "openSettings")
         ucc.addScriptMessageHandler_name_(handler, "quit")
         ucc.addScriptMessageHandler_name_(handler, "setNotifications")
+        ucc.addScriptMessageHandler_name_(handler, "startUpdate")
 
         self.webView = WKWebView.alloc().initWithFrame_configuration_(
             NSMakeRect(0, 0, 360, 296), config
@@ -363,6 +518,7 @@ class AppDelegate(NSObject):
                 btn.bounds(), btn, NSMinYEdge
             )
             self._check_account_switch()
+            self._maybe_check_updates()
             self._push_data(animated=True)
 
     # ------------------------------------------------------------------
@@ -557,7 +713,7 @@ class AppDelegate(NSObject):
             parsed = json.loads(raw)
             if parsed.get("ok"):
                 output = limits_output(parsed)
-                with open(LIMITS_FILE, "w") as f:
+                with open(LIMITS_FILE, "w", encoding="utf-8") as f:
                     json.dump(output, f, indent=2)
                 self._last_fetch_error = None
                 self._notify_limits(output)
@@ -659,6 +815,9 @@ class AppDelegate(NSObject):
             "status_reason": status_reason,
             "notifications_enabled": load_settings()["notifications"],
             "notifications_available": self._notify_center is not None,
+            "version": self._version,
+            "build": self._build,
+            "update": self._update_view(),
         }
 
     def _push_status(self, status: str):
@@ -667,6 +826,7 @@ class AppDelegate(NSObject):
 
     def tickFired_(self, timer):
         self._check_account_switch()
+        self._maybe_check_updates()
         limits = load_limits()
         if not limits_are_fresh(limits):
             self._start_fetch()

@@ -4,6 +4,7 @@ Shared by app.py (the menu bar app) and fetch_limits.py (standalone debug script
 Keep it that way: anything that needs Foundation/AppKit/WebKit belongs in app.py.
 """
 
+import base64
 import json
 import math
 import os
@@ -75,7 +76,7 @@ def build_fetch_js(deliver_stmt: str) -> str:
 
 def log(msg: str):
     try:
-        with open(LOG_FILE, "a") as f:
+        with open(LOG_FILE, "a", encoding="utf-8") as f:
             f.write(f"{datetime.now().strftime('%Y-%m-%d %H:%M:%S')} {msg}\n")
     except Exception:
         pass
@@ -146,7 +147,7 @@ def read_safe_storage_password() -> str:
     # `security` is a system binary, not a Python interpreter — fine from the bundle.
     return subprocess.run(
         ["security", "find-generic-password", "-s", "Claude Safe Storage", "-w"],
-        capture_output=True, text=True,
+        capture_output=True, encoding="utf-8", errors="replace",
     ).stdout.strip()
 
 
@@ -265,7 +266,7 @@ def parse_dt(s: str) -> datetime:
 
 def load_limits(path: str = LIMITS_FILE) -> dict:
     try:
-        with open(path) as f:
+        with open(path, encoding="utf-8") as f:
             return json.load(f)
     except Exception:
         return {}
@@ -353,19 +354,29 @@ def due_notifications(limits: dict, state: dict,
     return notes, new_state
 
 
-def load_notify_state(path: str = NOTIFY_STATE_FILE) -> dict:
+def load_json(path: str) -> dict:
     try:
-        with open(path) as f:
-            return json.load(f)
+        with open(path, encoding="utf-8") as f:
+            data = json.load(f)
+        return data if isinstance(data, dict) else {}
     except Exception:
         return {}
 
 
-def save_notify_state(state: dict, path: str = NOTIFY_STATE_FILE):
+def save_json(data: dict, path: str):
+    """Atomic write: a crash mid-write never leaves a half file behind."""
     tmp = path + ".tmp"
-    with open(tmp, "w") as f:
-        json.dump(state, f, indent=2)
+    with open(tmp, "w", encoding="utf-8") as f:
+        json.dump(data, f, indent=2)
     os.replace(tmp, path)
+
+
+def load_notify_state(path: str = NOTIFY_STATE_FILE) -> dict:
+    return load_json(path)
+
+
+def save_notify_state(state: dict, path: str = NOTIFY_STATE_FILE):
+    save_json(state, path)
 
 
 # ---------------------------------------------------------------------------
@@ -373,22 +384,100 @@ def save_notify_state(state: dict, path: str = NOTIFY_STATE_FILE):
 # ---------------------------------------------------------------------------
 
 SETTINGS_FILE = os.path.expanduser("~/.claude/usage-tracker-settings.json")
-DEFAULT_SETTINGS = {"notifications": True}
+DEFAULT_SETTINGS = {"notifications": True, "update_check": True}
 
 
 def load_settings(path: str = SETTINGS_FILE) -> dict:
     settings = dict(DEFAULT_SETTINGS)
-    try:
-        with open(path) as f:
-            stored = json.load(f)
-        settings.update({k: v for k, v in stored.items() if k in DEFAULT_SETTINGS})
-    except Exception:
-        pass
+    stored = load_json(path)
+    settings.update({k: v for k, v in stored.items() if k in DEFAULT_SETTINGS})
     return settings
 
 
 def save_settings(settings: dict, path: str = SETTINGS_FILE):
-    tmp = path + ".tmp"
-    with open(tmp, "w") as f:
-        json.dump(settings, f, indent=2)
-    os.replace(tmp, path)
+    save_json(settings, path)
+
+
+# ---------------------------------------------------------------------------
+# Updates: GitHub release check and signature verification
+# (downloading and installing is glue in app.py)
+# ---------------------------------------------------------------------------
+
+UPDATE_REPO = "josbez/claude-usage"
+UPDATE_API_URL = f"https://api.github.com/repos/{UPDATE_REPO}/releases/latest"
+UPDATE_CHECK_INTERVAL_SEC = 24 * 3600
+UPDATE_STATE_FILE = os.path.expanduser("~/.claude/usage-tracker-update.json")
+BUNDLE_ID = "com.jos.claude-usage"
+DMG_ASSET = "ClaudeUsage.dmg"
+SIG_ASSET = DMG_ASSET + ".sig"
+
+# Ed25519 public key for release signatures. The private key lives only on the
+# release machine (~/.config/claude-usage/release-signing-key.pem), never in git.
+UPDATE_PUBLIC_KEY_HEX = "cd50f6dc348c4c0b3170df3c4204cb6b7adabb92c11a798116127c02d207cc66"
+
+
+def parse_version(s: str):
+    """'v1.10.2' -> (1, 10, 2); anything else (pre-releases, 'dev') -> None."""
+    if not isinstance(s, str):
+        return None
+    s = s.strip()
+    if s[:1] in ("v", "V"):
+        s = s[1:]
+    parts = s.split(".")
+    if not parts or not all(p.isdigit() for p in parts):
+        return None
+    nums = [int(p) for p in parts]
+    while len(nums) > 1 and nums[-1] == 0:   # 1.2 == 1.2.0
+        nums.pop()
+    return tuple(nums)
+
+
+def is_newer(candidate: str, current: str) -> bool:
+    c, cur = parse_version(candidate), parse_version(current)
+    return c is not None and cur is not None and c > cur
+
+
+def parse_release(obj: dict):
+    """Pick what we need from a GitHub releases/latest response, or None."""
+    if not isinstance(obj, dict) or obj.get("draft") or obj.get("prerelease"):
+        return None
+    tag = obj.get("tag_name", "")
+    if parse_version(tag) is None:
+        return None
+    assets = {a.get("name"): a.get("browser_download_url")
+              for a in obj.get("assets") or [] if isinstance(a, dict)}
+    return {
+        "version": tag.lstrip("vV"),
+        "html_url": obj.get("html_url", ""),
+        "dmg_url": assets.get(DMG_ASSET, ""),
+        "sig_url": assets.get(SIG_ASSET, ""),
+    }
+
+
+def update_check_due(state: dict, now: datetime,
+                     interval_sec: int = UPDATE_CHECK_INTERVAL_SEC) -> bool:
+    last = state.get("last_check")
+    if not last:
+        return True
+    try:
+        return (now - parse_dt(last)).total_seconds() >= interval_sec
+    except Exception:
+        return True
+
+
+def sign_release(data: bytes, private_key) -> str:
+    """Base64 Ed25519 signature over the whole file (used by sign-release.py)."""
+    from Crypto.Signature import eddsa
+    return base64.b64encode(eddsa.new(private_key, "rfc8032").sign(data)).decode()
+
+
+def verify_release_signature(data: bytes, sig_text: str,
+                             public_key_hex: str = UPDATE_PUBLIC_KEY_HEX) -> bool:
+    from Crypto.Signature import eddsa
+    try:
+        key = eddsa.import_public_key(bytes.fromhex(public_key_hex))
+        sig = base64.b64decode(sig_text.strip(), validate=True)
+        eddsa.new(key, "rfc8032").verify(data, sig)
+        return True
+    except Exception:
+        return False

@@ -151,7 +151,7 @@ def render_status_image(pct: int, path: str, size: int = 256):
             arc.stroke()
 
         face = NSAttributedString.alloc().initWithString_attributes_(
-            face_icon(pct), {NSFontAttributeName: NSFont.systemFontOfSize_(size * 0.3)})
+            face_icon(pct), {NSFontAttributeName: NSFont.systemFontOfSize_(size * 0.42)})
         w, h = face.size()
         face.drawAtPoint_((center[0] - w / 2, center[1] - h / 2))
     finally:

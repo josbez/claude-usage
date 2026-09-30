@@ -7,6 +7,7 @@ Only PyObjC glue lives here; pure logic is in core.py (testable without AppKit).
 import objc
 import json
 import os
+import sys
 import hashlib
 from datetime import datetime
 
@@ -32,10 +33,18 @@ from WebKit import (
     WKWebsiteDataStore,
 )
 
+from UserNotifications import (
+    UNUserNotificationCenter, UNMutableNotificationContent, UNNotificationRequest,
+    UNNotificationSound, UNAuthorizationOptionAlert, UNAuthorizationOptionSound,
+    UNNotificationPresentationOptionBanner, UNNotificationPresentationOptionList,
+    UNNotificationPresentationOptionSound,
+)
+
 from core import (
     LIMITS_FILE, log, find_cookie_db, decrypt_claude_cookies, session_key_from,
     build_fetch_js, limits_output, format_reset_time, format_reset_compact,
     status_title, title_from_limits, load_limits, limits_are_fresh,
+    due_notifications, load_notify_state, save_notify_state,
 )
 
 
@@ -83,6 +92,26 @@ class FetchNavDelegate(NSObject):
             self.delegate._on_fetch_failed()
 
 
+def _log_notify_error(note_id: str):
+    def on_added(error):
+        if error:
+            log(f"notificatie mislukt ({note_id}): {error}")
+    return on_added
+
+
+class NotificationDelegate(NSObject, protocols=[objc.protocolNamed("UNUserNotificationCenterDelegate")]):
+    """Show banners even while the popover makes us the active app."""
+
+    def userNotificationCenter_willPresentNotification_withCompletionHandler_(
+        self, center, notification, handler
+    ):
+        handler(
+            UNNotificationPresentationOptionBanner
+            | UNNotificationPresentationOptionList
+            | UNNotificationPresentationOptionSound
+        )
+
+
 class AppDelegate(NSObject):
 
     def applicationDidFinishLaunching_(self, notification):
@@ -102,6 +131,7 @@ class AppDelegate(NSObject):
             NS_ACTIVITY_USER_INITIATED_ALLOWING_IDLE_SYSTEM_SLEEP,
             "periodieke Claude-usage-refresh",
         )
+        self._setup_notifications()
         self._setup_status_item()
         self._setup_popover()
         self._setup_fetch_webview()
@@ -110,6 +140,55 @@ class AppDelegate(NSObject):
         self._timer = self._schedule_timer(
             60.0, objc.selector(self.tickFired_, signature=b"v@:@"), True
         )
+
+    # ------------------------------------------------------------------
+    # Limit notifications
+    # ------------------------------------------------------------------
+
+    def _setup_notifications(self):
+        """UNUserNotificationCenter needs a real bundle id; from a bare
+        interpreter it raises, so notifications only work in the deployed app."""
+        self._notify_center = None
+        if not getattr(sys, "frozen", False):
+            log("notificaties uit: niet als app-bundle gestart")
+            return
+        try:
+            center = UNUserNotificationCenter.currentNotificationCenter()
+            self._notify_delegate = NotificationDelegate.new()  # keep strong reference
+            center.setDelegate_(self._notify_delegate)
+
+            def on_auth(granted, error):
+                log(f"notificatie-toestemming: {'ja' if granted else 'nee'}"
+                    + (f" ({error})" if error else ""))
+
+            center.requestAuthorizationWithOptions_completionHandler_(
+                UNAuthorizationOptionAlert | UNAuthorizationOptionSound, on_auth
+            )
+            self._notify_center = center
+        except Exception as e:
+            log(f"notificaties setup mislukt: {e}")
+
+    def _notify_limits(self, limits: dict):
+        if self._notify_center is None:
+            return
+        try:
+            notes, state = due_notifications(limits, load_notify_state())
+            for note in notes:
+                content = UNMutableNotificationContent.new()
+                content.setTitle_(note["title"])
+                content.setBody_(note["body"])
+                content.setSound_(UNNotificationSound.defaultSound())
+                request = UNNotificationRequest.requestWithIdentifier_content_trigger_(
+                    note["id"], content, None
+                )
+
+                self._notify_center.addNotificationRequest_withCompletionHandler_(
+                    request, _log_notify_error(note["id"])
+                )
+                log(f"notificatie: {note['title']}")
+            save_notify_state(state)
+        except Exception as e:
+            log(f"notificatie-check mislukt: {e}")
 
     # ------------------------------------------------------------------
     # Status item
@@ -376,6 +455,7 @@ class AppDelegate(NSObject):
                 with open(LIMITS_FILE, "w") as f:
                     json.dump(output, f, indent=2)
                 self._last_fetch_error = None
+                self._notify_limits(output)
             else:
                 error = parsed.get("error", "onbekende fout")
                 log(f"fetch mislukt: {error}")

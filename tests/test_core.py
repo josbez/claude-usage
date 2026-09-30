@@ -302,3 +302,75 @@ def test_core_does_not_import_pyobjc():
             "print(','.join(bad))") % os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
     out = subprocess.run([sys.executable, "-c", code], capture_output=True, text=True, check=True)
     assert out.stdout.strip() == ""
+
+
+# ---------------------------------------------------------------------------
+# Limit notifications
+# ---------------------------------------------------------------------------
+
+def _limits(five=0, week=0, five_reset="2026-09-30T15:50:00.385576+00:00",
+            week_reset="2026-10-02T17:00:00.385603+00:00", account="a@b"):
+    return {"account_email": account,
+            "five_hour": {"utilization": five, "resets_at": five_reset},
+            "seven_day": {"utilization": week, "resets_at": week_reset}}
+
+
+def test_window_key_ignores_microsecond_jitter():
+    a = core.window_key("2026-09-30T15:50:00.037633+00:00")
+    b = core.window_key("2026-09-30T15:50:00.385576+00:00")
+    c = core.window_key("2026-09-30T15:49:59.990000+00:00")
+    assert a == b == c == "2026-09-30T15:50:00+00:00"
+    assert core.window_key("") == core.window_key("garbage") == ""
+
+
+def test_below_thresholds_nothing_due():
+    notes, state = core.due_notifications(_limits(five=79, week=89), {})
+    assert notes == []
+    assert state["a@b|five_hour"]["sent"] == []
+
+
+def test_crossing_threshold_notifies_once_per_window():
+    notes, state = core.due_notifications(_limits(five=81), {})
+    assert [n["threshold"] for n in notes] == [80]
+    assert notes[0]["title"] == "Claude: 5-uurslimiet op 81%"
+    # Same window, jittered resets_at, higher but below next threshold: silent
+    notes, state = core.due_notifications(
+        _limits(five=90, five_reset="2026-09-30T15:50:00.999+00:00"), state)
+    assert notes == []
+    notes, state = core.due_notifications(_limits(five=96), state)
+    assert [n["threshold"] for n in notes] == [95]
+    notes, state = core.due_notifications(_limits(five=99), state)
+    assert notes == []
+
+
+def test_jump_over_several_thresholds_sends_only_highest():
+    notes, state = core.due_notifications(_limits(five=97), {})
+    assert [n["threshold"] for n in notes] == [95]
+    assert state["a@b|five_hour"]["sent"] == [80, 95]
+
+
+def test_new_window_notifies_again():
+    _, state = core.due_notifications(_limits(five=85), {})
+    notes, _ = core.due_notifications(
+        _limits(five=85, five_reset="2026-09-30T20:50:00+00:00"), state)
+    assert [n["threshold"] for n in notes] == [80]
+
+
+def test_weekly_threshold_and_accounts_are_independent():
+    notes, state = core.due_notifications(_limits(five=10, week=91), {})
+    assert [(n["limit"], n["threshold"]) for n in notes] == [("seven_day", 90)]
+    assert notes[0]["title"] == "Claude: Weeklimiet op 91%"
+    notes, _ = core.due_notifications(_limits(week=91, account="other@x"), state)
+    assert [(n["limit"], n["threshold"]) for n in notes] == [("seven_day", 90)]
+
+
+def test_missing_or_null_blocks_are_skipped():
+    notes, state = core.due_notifications({"five_hour": None, "seven_day": {"utilization": 99}}, {})
+    assert notes == [] and state == {}
+
+
+def test_notify_state_roundtrip(tmp_path):
+    path = str(tmp_path / "n.json")
+    assert core.load_notify_state(path) == {}
+    core.save_notify_state({"k": {"window": "w", "sent": [80]}}, path)
+    assert core.load_notify_state(path) == {"k": {"window": "w", "sent": [80]}}

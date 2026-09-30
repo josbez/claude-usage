@@ -18,7 +18,7 @@ OPTIONS = {
     'includes': [
         'Foundation', 'AppKit', 'WebKit',
         'objc', 'hashlib', 'sqlite3',
-        'core',
+        'core', 'UserNotifications',
     ],
     'excludes': ['tkinter', 'rumps'],
 }

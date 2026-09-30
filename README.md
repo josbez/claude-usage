@@ -16,7 +16,7 @@ bash /Volumes/ClaudeUsage/install.sh
 
 Dat installeert een LaunchAgent (start automatisch bij inloggen) en zet de Gatekeeper-quarantaine van de app af. Klik daarna ◆ in de menubalk.
 
-Bij de eerste start vraagt macOS toegang tot de Keychain-sleutel *Claude Safe Storage* — kies **Always Allow**. Eerste cijfers verschijnen na ~10–20 seconden.
+Bij de eerste start vraagt macOS toegang tot de Keychain-sleutel *Claude Safe Storage* — kies **Always Allow**. Daarna vraagt macOS of ClaudeUsage meldingen mag sturen: sta dat toe voor een waarschuwing bij 80% en 95% van de 5-uurslimiet en 90% van de weeklimiet. Eerste cijfers verschijnen na ~10–20 seconden.
 
 ### Waarom die Terminal-stap
 
@@ -35,7 +35,7 @@ rm -rf /Applications/ClaudeUsage.app
 Vereisten: macOS, Xcode command line tools (`xcode-select --install`), en in de **systeem-Python** (`/usr/bin/python3`, niet Homebrew):
 
 ```bash
-/usr/bin/python3 -m pip install --user py2app pycryptodome pyobjc pytest
+/usr/bin/python3 -m pip install --user py2app pycryptodome pyobjc pyobjc-framework-UserNotifications pytest
 ```
 
 Scripts:

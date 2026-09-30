@@ -418,3 +418,77 @@ def compute_weekly_tokens(jsonl_daily: dict, base_date: date) -> list:
         tokens = day.get("input_tokens", 0) + day.get("output_tokens", 0)
         result.append(tokens)
     return result
+
+
+# ---------------------------------------------------------------------------
+# Limit notifications (which thresholds to announce; posting lives in app.py)
+# ---------------------------------------------------------------------------
+
+FIVE_HOUR_THRESHOLDS = (80, 95)
+WEEKLY_THRESHOLDS = (90,)
+NOTIFY_STATE_FILE = os.path.expanduser("~/.claude/usage-tracker-notified.json")
+
+_LIMIT_LABELS = {"five_hour": "5-uurslimiet", "seven_day": "Weeklimiet"}
+
+
+def window_key(resets_at: str) -> str:
+    """Stable id for one limit window. The API's resets_at jitters by a few
+    microseconds between fetches, so round to the minute."""
+    if not resets_at:
+        return ""
+    try:
+        dt = parse_dt(resets_at).astimezone(timezone.utc)
+    except Exception:
+        return ""
+    dt = (dt + timedelta(seconds=30)).replace(second=0, microsecond=0)
+    return dt.isoformat()
+
+
+def due_notifications(limits: dict, state: dict,
+                      five_hour_thresholds=FIVE_HOUR_THRESHOLDS,
+                      weekly_thresholds=WEEKLY_THRESHOLDS):
+    """Return (notifications, new_state).
+
+    One notification per limit per fetch at most: if several thresholds were
+    crossed at once only the highest is announced, but all are marked sent.
+    State is keyed per account and per limit, and resets when the window changes."""
+    account = limits.get("account_email", "")
+    new_state = dict(state)
+    notes = []
+    for limit, thresholds in (("five_hour", five_hour_thresholds),
+                              ("seven_day", weekly_thresholds)):
+        block = limits.get(limit) or {}
+        wk = window_key(block.get("resets_at", ""))
+        if not wk:
+            continue
+        pct = int(block.get("utilization", 0) or 0)
+        key = f"{account}|{limit}"
+        entry = state.get(key) or {}
+        sent = list(entry.get("sent", [])) if entry.get("window") == wk else []
+        crossed = [t for t in thresholds if pct >= t and t not in sent]
+        if crossed:
+            notes.append({
+                "id": f"{key}|{wk}|{max(crossed)}",
+                "title": f"Claude: {_LIMIT_LABELS[limit]} op {pct}%",
+                "body": f"Reset {format_reset_time(block.get('resets_at', ''))}.",
+                "limit": limit,
+                "threshold": max(crossed),
+            })
+            sent = sorted(set(sent) | set(crossed))
+        new_state[key] = {"window": wk, "sent": sent}
+    return notes, new_state
+
+
+def load_notify_state(path: str = NOTIFY_STATE_FILE) -> dict:
+    try:
+        with open(path) as f:
+            return json.load(f)
+    except Exception:
+        return {}
+
+
+def save_notify_state(state: dict, path: str = NOTIFY_STATE_FILE):
+    tmp = path + ".tmp"
+    with open(tmp, "w") as f:
+        json.dump(state, f, indent=2)
+    os.replace(tmp, path)

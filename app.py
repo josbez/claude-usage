@@ -74,10 +74,6 @@ class MessageHandler(NSObject):
         if name == "refresh":
             if self.delegate:
                 self.delegate.trigger_refresh()
-        elif name == "openSettings":
-            NSWorkspace.sharedWorkspace().openURL_(
-                NSURL.URLWithString_("https://claude.ai/settings")
-            )
         elif name == "setNotifications":
             if self.delegate:
                 self.delegate.set_notifications_enabled(bool(message.body()))
@@ -490,7 +486,6 @@ class AppDelegate(NSObject):
         handler = MessageHandler.new()
         handler.delegate = self
         ucc.addScriptMessageHandler_name_(handler, "refresh")
-        ucc.addScriptMessageHandler_name_(handler, "openSettings")
         ucc.addScriptMessageHandler_name_(handler, "quit")
         ucc.addScriptMessageHandler_name_(handler, "setNotifications")
         ucc.addScriptMessageHandler_name_(handler, "startUpdate")

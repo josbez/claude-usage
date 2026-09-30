@@ -61,27 +61,8 @@
   .header-title {
     font-weight: 700;
     font-size: 15px;
-    color: var(--text);
-    white-space: nowrap;
-  }
-  .header-version {
-    font-size: 10px;
-    color: var(--muted);
-    white-space: nowrap;
-    margin-left: -3px;
-    align-self: flex-end;
-    padding-bottom: 3px;
-  }
-  .header-account {
-    font-size: 11px;
-    color: var(--muted);
     flex: 1;
-    min-width: 0;
-    text-align: right;
-    white-space: nowrap;
-    overflow: hidden;
-    text-overflow: ellipsis;
-    max-width: 160px;
+    color: var(--text);
   }
   .icon-btn {
     width: 28px;
@@ -99,21 +80,60 @@
   }
   .icon-btn:hover { background: var(--icon-hover-bg); color: var(--icon-hover-color); }
   .icon-btn.spinning svg { animation: spin 1s linear infinite; }
-  #notifyBtn[hidden] { display: none; }
-  #notifyBtn .bell-off { display: none; }
-  #notifyBtn[aria-pressed="false"] .bell-on { display: none; }
-  #notifyBtn[aria-pressed="false"] .bell-off { display: block; }
-  #notifyBtn[aria-pressed="true"] { color: var(--accent-blue); }
-  #updateBtn { position: relative; color: var(--status-stale); }
-  #updateBtn[hidden] { display: none; }
-  #updateBtn::after {
-    content: ''; position: absolute; top: 4px; right: 4px;
+  #settingsBtn { position: relative; }
+  #settingsBtn.active { color: var(--accent-blue); }
+  #settingsBtn .badge {
+    position: absolute; top: 4px; right: 4px;
     width: 6px; height: 6px; border-radius: 50%;
-    background: var(--status-stale);
+    display: none;
   }
-  #updateBtn.error, #updateBtn.error::after { color: var(--status-error); background-color: transparent; }
-  #updateBtn.error::after { background: var(--status-error); }
-  #updateBtn.working::after { display: none; }
+  #settingsBtn .badge.update { display: block; background: var(--status-stale); }
+  #settingsBtn .badge.stale { display: block; background: var(--status-stale); }
+  #settingsBtn .badge.disconnected { display: block; background: var(--status-error); }
+
+  /* ---- Views: main (cards) and settings share the same space ---- */
+  .view { display: flex; flex-direction: column; gap: 10px; }
+  .view[hidden] { display: none; }
+
+  /* ---- Settings ---- */
+  .settings-card { padding: 4px 14px; }
+  .setting-row {
+    display: flex; align-items: center; gap: 10px;
+    padding: 11px 0; min-height: 52px;
+  }
+  .setting-row + .setting-row { border-top: 1px solid var(--track); }
+  .setting-text { flex: 1; min-width: 0; }
+  .setting-title { font-size: 13px; font-weight: 600; color: var(--text); }
+  .setting-sub {
+    font-size: 11px; color: var(--muted); margin-top: 2px;
+    white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+  }
+  .setting-sub.error { color: var(--status-error); white-space: normal; }
+  .setting-value { font-size: 12px; color: var(--muted); white-space: nowrap; }
+
+  .switch {
+    position: relative; width: 36px; height: 21px; flex-shrink: 0;
+    border: none; border-radius: 11px; cursor: pointer; padding: 0;
+    background: var(--track); transition: background 0.2s;
+  }
+  .switch::after {
+    content: ''; position: absolute; top: 2px; left: 2px;
+    width: 17px; height: 17px; border-radius: 50%;
+    background: #fff; box-shadow: 0 1px 2px rgba(0,0,0,0.25);
+    transition: transform 0.2s;
+  }
+  .switch[aria-checked="true"] { background: var(--status-ok); }
+  .switch[aria-checked="true"]::after { transform: translateX(15px); }
+  .switch:disabled { opacity: 0.4; cursor: default; }
+
+  .update-btn {
+    border: none; border-radius: 6px; cursor: pointer;
+    padding: 5px 10px; font: inherit; font-size: 12px; font-weight: 600;
+    background: var(--accent-blue); color: #fff; white-space: nowrap;
+  }
+  .update-btn:disabled { opacity: 0.6; cursor: default; }
+  .update-btn[hidden] { display: none; }
+
   @keyframes spin { to { transform: rotate(360deg); } }
 
   /* ---- Cards ---- */
@@ -243,7 +263,7 @@
     min-width: 0;
     flex-shrink: 1;
   }
-  #statusText {
+  #accountText {
     overflow: hidden;
     text-overflow: ellipsis;
     white-space: nowrap;
@@ -260,6 +280,8 @@
     display: inline-block;
     flex-shrink: 0;
   }
+  .footer .status-dot { display: none; }
+  .footer .status-dot.stale, .footer .status-dot.disconnected { display: inline-block; }
   .status-dot.stale { background: var(--status-stale); }
   .status-dot.disconnected { background: var(--status-error); }
 
@@ -278,31 +300,19 @@
 
   <!-- Header -->
   <div class="header">
-    <span class="header-title">Claude Stats</span>
-    <span class="header-version" id="versionLabel"></span>
-    <span class="header-account" id="accountLabel"></span>
+    <span class="header-title" id="headerTitle">Claude Stats</span>
     <button class="icon-btn" id="refreshBtn" title="Vernieuwen" onclick="onRefresh()">
       <svg width="15" height="15" viewBox="0 0 15 15" fill="none">
         <path d="M13.5 7.5a6 6 0 1 1-1.5-3.95" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/>
         <path d="M13.5 2.5v3h-3" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>
       </svg>
     </button>
-    <button class="icon-btn" id="updateBtn" hidden onclick="onStartUpdate()">
-      <svg width="15" height="15" viewBox="0 0 15 15" fill="none">
-        <path d="M7.5 2v8M4 6.8l3.5 3.5L11 6.8" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>
-        <path d="M2.5 12.5h10" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/>
+    <button class="icon-btn" id="settingsBtn" title="Instellingen" onclick="toggleSettings()">
+      <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+        <circle cx="12" cy="12" r="3"/>
+        <path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 1 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 1 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 1 1-2.83-2.83l.06-.06A1.65 1.65 0 0 0 4.68 15a1.65 1.65 0 0 0-1.51-1H3a2 2 0 1 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 1 1 2.83-2.83l.06.06A1.65 1.65 0 0 0 9 4.68a1.65 1.65 0 0 0 1-1.51V3a2 2 0 1 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 1 1 2.83 2.83l-.06.06A1.65 1.65 0 0 0 19.4 9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 1 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1Z"/>
       </svg>
-    </button>
-    <button class="icon-btn" id="notifyBtn" aria-pressed="true" hidden onclick="onToggleNotifications()">
-      <svg class="bell-on" width="15" height="15" viewBox="0 0 15 15" fill="none">
-        <path d="M3.5 10.5V7a4 4 0 0 1 8 0v3.5l1 1.2h-10l1-1.2Z" stroke="currentColor" stroke-width="1.4" stroke-linejoin="round"/>
-        <path d="M6 13.2a1.6 1.6 0 0 0 3 0" stroke="currentColor" stroke-width="1.4" stroke-linecap="round"/>
-      </svg>
-      <svg class="bell-off" width="15" height="15" viewBox="0 0 15 15" fill="none">
-        <path d="M3.5 10.5V7a4 4 0 0 1 8 0v3.5l1 1.2h-10l1-1.2Z" stroke="currentColor" stroke-width="1.4" stroke-linejoin="round"/>
-        <path d="M6 13.2a1.6 1.6 0 0 0 3 0" stroke="currentColor" stroke-width="1.4" stroke-linecap="round"/>
-        <path d="M2 2l11 11" stroke="currentColor" stroke-width="1.4" stroke-linecap="round"/>
-      </svg>
+      <span class="badge" id="settingsBadge"></span>
     </button>
     <button class="icon-btn" title="Afsluiten" onclick="onQuit()">
       <svg width="15" height="15" viewBox="0 0 15 15" fill="none">
@@ -311,7 +321,8 @@
     </button>
   </div>
 
-  <!-- Session card -->
+  <div class="view" id="mainView">
+  <!-- Session card -->  <!-- Session card -->
   <div class="card card-session">
     <div class="session-inner">
       <div class="donut-wrap">
@@ -350,11 +361,38 @@
   <div class="footer">
     <div class="footer-left">
       <span class="status-dot" id="statusDot"></span>
-      <span id="statusText">Verbinden…</span>
+      <span id="accountText"></span>
     </div>
     <span id="lastUpdated"></span>
   </div>
+  </div>
 
+  <!-- Settings -->
+  <div class="view" id="settingsView" hidden>
+    <div class="card settings-card">
+      <div class="setting-row">
+        <div class="setting-text">
+          <div class="setting-title">Meldingen</div>
+          <div class="setting-sub">Bij 80% en 95% sessie, 90% week</div>
+        </div>
+        <button class="switch" id="notifySwitch" role="switch" aria-checked="false" onclick="onToggleNotifications()"></button>
+      </div>
+      <div class="setting-row">
+        <div class="setting-text">
+          <div class="setting-title">Versie <span class="setting-value" id="versionText"></span></div>
+          <div class="setting-sub" id="updateText">Up-to-date</div>
+        </div>
+        <button class="update-btn" id="updateBtn" hidden onclick="onStartUpdate()"></button>
+      </div>
+      <div class="setting-row">
+        <div class="setting-text">
+          <div class="setting-title">Verbinding</div>
+          <div class="setting-sub" id="connText">Verbinden…</div>
+        </div>
+        <span class="status-dot" id="connDot"></span>
+      </div>
+    </div>
+  </div>
 
 </div>
 
@@ -375,6 +413,7 @@ window.updateData = function(data) {
 // Called on popover open: reset donut + bar to 0 without transition, then
 // fill them in with a smooth transition so the open feels alive every time.
 window.openWithAnimation = function(data) {
+  toggleSettings(false);  // always open on the main view
   const donut = document.getElementById('donutFill');
   const bar = document.getElementById('weeklyBar');
   donut.classList.add('no-transition');
@@ -426,9 +465,6 @@ function colorForPct(pct) {
 }
 
 function render(d) {
-  // Account
-  document.getElementById('accountLabel').textContent = d.account || '';
-
   // Session donut
   const pct = Math.max(0, Math.min(100, d.session_pct || 0));
   const filled = (pct / 100) * CIRC;
@@ -451,29 +487,34 @@ function render(d) {
   document.getElementById('weeklyBar').style.width = wpct + '%';
   document.getElementById('weeklyReset').textContent = 'Reset ' + (d.weekly_reset || '—');
 
-  // Footer: status is one of 'ok' | 'stale' | 'not_logged_in'
+  // Status: 'ok' | 'stale' | 'not_logged_in'. Only problems surface on the
+  // main view (dot before the account); details live in settings.
+  const problem = d.status === 'stale' ? 'stale' : d.status === 'not_logged_in' ? 'disconnected' : '';
+  const statusText = d.status === 'stale' ? (d.status_reason || 'Kon niet vernieuwen')
+    : d.status === 'not_logged_in' ? (d.status_reason || 'Niet ingelogd')
+    : 'Verbonden met Anthropic API';
   const dot = document.getElementById('statusDot');
-  const statusTxt = document.getElementById('statusText');
-  dot.classList.remove('stale', 'disconnected');
-  if (d.status === 'stale') {
-    dot.classList.add('stale');
-    statusTxt.textContent = d.status_reason || 'Kon niet vernieuwen';
-  } else if (d.status === 'not_logged_in') {
-    dot.classList.add('disconnected');
-    statusTxt.textContent = d.status_reason || 'Niet ingelogd';
-  } else {
-    statusTxt.textContent = 'Verbonden met Anthropic API';
-  }
+  dot.className = 'status-dot' + (problem ? ' ' + problem : '');
+  dot.title = problem ? statusText : '';
+  document.getElementById('accountText').textContent = d.account || '';
   document.getElementById('lastUpdated').textContent = d.last_updated ? 'Bijgewerkt: ' + d.last_updated : '';
 
-  // Version + update button
-  const ver = document.getElementById('versionLabel');
-  ver.textContent = d.version && d.version !== 'dev' ? 'v' + d.version : (d.version || '');
-  ver.title = d.build ? 'Build ' + d.build : '';
-  renderUpdateBtn(d.update);
+  // Settings view
+  const connDot = document.getElementById('connDot');
+  connDot.className = 'status-dot' + (problem ? ' ' + problem : '');
+  document.getElementById('connText').textContent =
+    statusText + (d.last_updated ? ' · ' + d.last_updated : '');
+  const sw = document.getElementById('notifySwitch');
+  sw.setAttribute('aria-checked', d.notifications_enabled ? 'true' : 'false');
+  sw.disabled = !d.notifications_available;
+  document.getElementById('versionText').textContent =
+    d.version && d.version !== 'dev' ? 'v' + d.version : (d.version || '');
+  document.getElementById('versionText').title = d.build ? 'Build ' + d.build : '';
+  renderUpdate(d.update);
 
-  // Notifications toggle (hidden when running outside the app bundle)
-  renderNotifyBtn(!!d.notifications_enabled, !!d.notifications_available);
+  // Badge on the gear: update available, or a connection problem
+  document.getElementById('settingsBadge').className =
+    'badge' + (problem ? ' ' + problem : d.update && d.update.state !== 'working' ? ' update' : '');
 
   // Fetching spinner
   window.setStatus(d.fetching ? 'fetching' : 'ready');
@@ -488,22 +529,33 @@ function onRefresh() {
   document.getElementById('refreshBtn').classList.add('spinning');
 }
 
-function onOpenSettings() {
-  if (window.webkit && window.webkit.messageHandlers && window.webkit.messageHandlers.openSettings) {
-    window.webkit.messageHandlers.openSettings.postMessage(null);
-  }
+function toggleSettings(show) {
+  const open = show === undefined ? document.getElementById('settingsView').hidden : show;
+  document.getElementById('settingsView').hidden = !open;
+  document.getElementById('mainView').hidden = open;
+  document.getElementById('settingsBtn').classList.toggle('active', open);
+  document.getElementById('headerTitle').textContent = open ? 'Instellingen' : 'Claude Stats';
 }
 
-function renderUpdateBtn(u) {
+function renderUpdate(u) {
   const btn = document.getElementById('updateBtn');
-  btn.hidden = !u;
-  if (!u) return;
-  btn.classList.toggle('working', u.state === 'working');
-  btn.classList.toggle('spinning', u.state === 'working');
-  btn.classList.toggle('error', u.state === 'error');
-  btn.title = u.state === 'working' ? 'Bijwerken naar v' + u.version + '…'
-    : u.state === 'error' ? 'Bijwerken mislukt: ' + u.message + ' — klik om opnieuw te proberen'
-    : 'Versie ' + u.version + ' beschikbaar — klik om bij te werken';
+  const txt = document.getElementById('updateText');
+  txt.classList.remove('error');
+  if (!u) {
+    btn.hidden = true;
+    txt.textContent = 'Up-to-date';
+    return;
+  }
+  btn.hidden = false;
+  btn.disabled = u.state === 'working';
+  btn.textContent = u.state === 'working' ? 'Bijwerken…'
+    : u.state === 'error' ? 'Opnieuw' : 'Bijwerken';
+  if (u.state === 'error') {
+    txt.classList.add('error');
+    txt.textContent = 'Mislukt: ' + u.message;
+  } else {
+    txt.textContent = 'v' + u.version + ' is beschikbaar';
+  }
 }
 
 function onStartUpdate() {
@@ -512,19 +564,11 @@ function onStartUpdate() {
   }
 }
 
-function renderNotifyBtn(enabled, available) {
-  const btn = document.getElementById('notifyBtn');
-  btn.hidden = !available;
-  btn.setAttribute('aria-pressed', enabled ? 'true' : 'false');
-  btn.title = enabled
-    ? 'Meldingen aan (80/95% sessie, 90% week) — klik om uit te zetten'
-    : 'Meldingen uit — klik om aan te zetten';
-}
-
 function onToggleNotifications() {
-  const btn = document.getElementById('notifyBtn');
-  const enabled = btn.getAttribute('aria-pressed') !== 'true';
-  renderNotifyBtn(enabled, true);  // optimistic; Python pushes the saved state back
+  const sw = document.getElementById('notifySwitch');
+  if (sw.disabled) return;
+  const enabled = sw.getAttribute('aria-checked') !== 'true';
+  sw.setAttribute('aria-checked', enabled ? 'true' : 'false');  // optimistic; Python pushes saved state back
   if (window.webkit && window.webkit.messageHandlers && window.webkit.messageHandlers.setNotifications) {
     window.webkit.messageHandlers.setNotifications.postMessage(enabled);
   }
@@ -538,10 +582,8 @@ function onQuit() {
 
 // ---- Init placeholder ----
 (function init() {
-  // Show placeholder state until Python calls updateData
-  const dot = document.getElementById('statusDot');
-  dot.classList.add('disconnected');
-  document.getElementById('statusText').textContent = 'Laden…';
+  // Placeholder until Python calls updateData
+  document.getElementById('accountText').textContent = 'Laden…';
 })();
 </script>
 </body>

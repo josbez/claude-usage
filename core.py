@@ -492,3 +492,29 @@ def save_notify_state(state: dict, path: str = NOTIFY_STATE_FILE):
     with open(tmp, "w") as f:
         json.dump(state, f, indent=2)
     os.replace(tmp, path)
+
+
+# ---------------------------------------------------------------------------
+# User settings (toggled from the popover)
+# ---------------------------------------------------------------------------
+
+SETTINGS_FILE = os.path.expanduser("~/.claude/usage-tracker-settings.json")
+DEFAULT_SETTINGS = {"notifications": True}
+
+
+def load_settings(path: str = SETTINGS_FILE) -> dict:
+    settings = dict(DEFAULT_SETTINGS)
+    try:
+        with open(path) as f:
+            stored = json.load(f)
+        settings.update({k: v for k, v in stored.items() if k in DEFAULT_SETTINGS})
+    except Exception:
+        pass
+    return settings
+
+
+def save_settings(settings: dict, path: str = SETTINGS_FILE):
+    tmp = path + ".tmp"
+    with open(tmp, "w") as f:
+        json.dump(settings, f, indent=2)
+    os.replace(tmp, path)

@@ -374,3 +374,18 @@ def test_notify_state_roundtrip(tmp_path):
     assert core.load_notify_state(path) == {}
     core.save_notify_state({"k": {"window": "w", "sent": [80]}}, path)
     assert core.load_notify_state(path) == {"k": {"window": "w", "sent": [80]}}
+
+
+def test_settings_default_and_roundtrip(tmp_path):
+    path = str(tmp_path / "s.json")
+    assert core.load_settings(path) == {"notifications": True}
+    core.save_settings({"notifications": False}, path)
+    assert core.load_settings(path) == {"notifications": False}
+
+
+def test_settings_ignore_unknown_and_corrupt(tmp_path):
+    path = tmp_path / "s.json"
+    path.write_text('{"notifications": false, "evil": 1}')
+    assert core.load_settings(str(path)) == {"notifications": False}
+    path.write_text("{nope")
+    assert core.load_settings(str(path)) == {"notifications": True}

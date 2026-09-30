@@ -16,7 +16,7 @@ bash /Volumes/ClaudeUsage/install.sh
 
 Dat installeert een LaunchAgent (start automatisch bij inloggen) en zet de Gatekeeper-quarantaine van de app af. Klik daarna ◆ in de menubalk.
 
-Bij de eerste start vraagt macOS toegang tot de Keychain-sleutel *Claude Safe Storage* — kies **Always Allow**. Daarna vraagt macOS of ClaudeUsage meldingen mag sturen: sta dat toe voor een waarschuwing bij 80% en 95% van de 5-uurslimiet en 90% van de weeklimiet. Eerste cijfers verschijnen na ~10–20 seconden.
+Bij de eerste start vraagt macOS toegang tot de Keychain-sleutel *Claude Safe Storage* — kies **Always Allow**. Daarna vraagt macOS of ClaudeUsage meldingen mag sturen: sta dat toe voor een waarschuwing bij 80% en 95% van de 5-uurslimiet en 90% van de weeklimiet. Met het bel-icoon in de popover zet je meldingen aan of uit. Eerste cijfers verschijnen na ~10–20 seconden.
 
 ### Waarom die Terminal-stap
 

@@ -45,6 +45,7 @@ from core import (
     build_fetch_js, limits_output, format_reset_time, format_reset_compact,
     status_title, title_from_limits, load_limits, limits_are_fresh,
     due_notifications, load_notify_state, save_notify_state,
+    load_settings, save_settings,
 )
 
 
@@ -69,6 +70,9 @@ class MessageHandler(NSObject):
             NSWorkspace.sharedWorkspace().openURL_(
                 NSURL.URLWithString_("https://claude.ai/settings")
             )
+        elif name == "setNotifications":
+            if self.delegate:
+                self.delegate.set_notifications_enabled(bool(message.body()))
         elif name == "quit":
             NSApp.terminate_(None)
         elif name == "fetchResult":
@@ -168,11 +172,25 @@ class AppDelegate(NSObject):
         except Exception as e:
             log(f"notificaties setup mislukt: {e}")
 
+    def set_notifications_enabled(self, enabled: bool):
+        settings = load_settings()
+        settings["notifications"] = enabled
+        try:
+            save_settings(settings)
+            log(f"meldingen {'aan' if enabled else 'uit'}")
+        except Exception as e:
+            log(f"instelling opslaan mislukt: {e}")
+        self._push_data()
+
     def _notify_limits(self, limits: dict):
         if self._notify_center is None:
             return
         try:
             notes, state = due_notifications(limits, load_notify_state())
+            if not load_settings()["notifications"]:
+                # Still record crossed thresholds, so switching back on
+                # doesn't replay warnings for this window.
+                notes = []
             for note in notes:
                 content = UNMutableNotificationContent.new()
                 content.setTitle_(note["title"])
@@ -234,6 +252,7 @@ class AppDelegate(NSObject):
         ucc.addScriptMessageHandler_name_(handler, "refresh")
         ucc.addScriptMessageHandler_name_(handler, "openSettings")
         ucc.addScriptMessageHandler_name_(handler, "quit")
+        ucc.addScriptMessageHandler_name_(handler, "setNotifications")
 
         self.webView = WKWebView.alloc().initWithFrame_configuration_(
             NSMakeRect(0, 0, 360, 296), config
@@ -552,6 +571,8 @@ class AppDelegate(NSObject):
             "last_updated": last_updated,
             "status": status,
             "status_reason": status_reason,
+            "notifications_enabled": load_settings()["notifications"],
+            "notifications_available": self._notify_center is not None,
         }
 
     def _push_status(self, status: str):

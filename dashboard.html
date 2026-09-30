@@ -90,6 +90,11 @@
   }
   .icon-btn:hover { background: var(--icon-hover-bg); color: var(--icon-hover-color); }
   .icon-btn.spinning svg { animation: spin 1s linear infinite; }
+  #notifyBtn[hidden] { display: none; }
+  #notifyBtn .bell-off { display: none; }
+  #notifyBtn[aria-pressed="false"] .bell-on { display: none; }
+  #notifyBtn[aria-pressed="false"] .bell-off { display: block; }
+  #notifyBtn[aria-pressed="true"] { color: var(--accent-blue); }
   @keyframes spin { to { transform: rotate(360deg); } }
 
   /* ---- Cards ---- */
@@ -262,6 +267,17 @@
         <path d="M13.5 2.5v3h-3" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>
       </svg>
     </button>
+    <button class="icon-btn" id="notifyBtn" aria-pressed="true" hidden onclick="onToggleNotifications()">
+      <svg class="bell-on" width="15" height="15" viewBox="0 0 15 15" fill="none">
+        <path d="M3.5 10.5V7a4 4 0 0 1 8 0v3.5l1 1.2h-10l1-1.2Z" stroke="currentColor" stroke-width="1.4" stroke-linejoin="round"/>
+        <path d="M6 13.2a1.6 1.6 0 0 0 3 0" stroke="currentColor" stroke-width="1.4" stroke-linecap="round"/>
+      </svg>
+      <svg class="bell-off" width="15" height="15" viewBox="0 0 15 15" fill="none">
+        <path d="M3.5 10.5V7a4 4 0 0 1 8 0v3.5l1 1.2h-10l1-1.2Z" stroke="currentColor" stroke-width="1.4" stroke-linejoin="round"/>
+        <path d="M6 13.2a1.6 1.6 0 0 0 3 0" stroke="currentColor" stroke-width="1.4" stroke-linecap="round"/>
+        <path d="M2 2l11 11" stroke="currentColor" stroke-width="1.4" stroke-linecap="round"/>
+      </svg>
+    </button>
     <button class="icon-btn" title="Afsluiten" onclick="onQuit()">
       <svg width="15" height="15" viewBox="0 0 15 15" fill="none">
         <path d="M3 3l9 9M12 3l-9 9" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"/>
@@ -424,6 +440,9 @@ function render(d) {
   }
   document.getElementById('lastUpdated').textContent = d.last_updated ? 'Bijgewerkt: ' + d.last_updated : '';
 
+  // Notifications toggle (hidden when running outside the app bundle)
+  renderNotifyBtn(!!d.notifications_enabled, !!d.notifications_available);
+
   // Fetching spinner
   window.setStatus(d.fetching ? 'fetching' : 'ready');
 }
@@ -440,6 +459,24 @@ function onRefresh() {
 function onOpenSettings() {
   if (window.webkit && window.webkit.messageHandlers && window.webkit.messageHandlers.openSettings) {
     window.webkit.messageHandlers.openSettings.postMessage(null);
+  }
+}
+
+function renderNotifyBtn(enabled, available) {
+  const btn = document.getElementById('notifyBtn');
+  btn.hidden = !available;
+  btn.setAttribute('aria-pressed', enabled ? 'true' : 'false');
+  btn.title = enabled
+    ? 'Meldingen aan (80/95% sessie, 90% week) — klik om uit te zetten'
+    : 'Meldingen uit — klik om aan te zetten';
+}
+
+function onToggleNotifications() {
+  const btn = document.getElementById('notifyBtn');
+  const enabled = btn.getAttribute('aria-pressed') !== 'true';
+  renderNotifyBtn(enabled, true);  // optimistic; Python pushes the saved state back
+  if (window.webkit && window.webkit.messageHandlers && window.webkit.messageHandlers.setNotifications) {
+    window.webkit.messageHandlers.setNotifications.postMessage(enabled);
   }
 }
 

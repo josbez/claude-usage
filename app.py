@@ -51,6 +51,7 @@ from core import (
     build_fetch_js, limits_output, format_reset_time, format_reset_compact,
     status_title, title_from_limits, load_limits, limits_are_fresh, MENUBAR_STYLES,
     due_notifications, load_notify_state, save_notify_state, color_for_pct, face_icon,
+    account_label,
     load_settings, save_settings,
     UPDATE_STATE_FILE, load_json, save_json, is_newer, update_check_due,
 )
@@ -841,6 +842,7 @@ class AppDelegate(NSObject):
             "weekly_pct": int(weekly_pct),
             "weekly_reset": weekly_reset,
             "account": limits.get("account_email", ""),
+            "account_label": account_label(limits),
             "fetching": self._fetching,
             "last_updated": last_updated,
             "status": status,

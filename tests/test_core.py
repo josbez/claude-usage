@@ -438,3 +438,48 @@ def test_settings_reject_unknown_menubar_style(tmp_path):
     path = tmp_path / "s.json"
     path.write_text('{"menubar_style": "huge"}')
     assert core.load_settings(str(path))["menubar_style"] == "full"
+
+
+# ---------------------------------------------------------------------------
+# Account label (footer)
+# ---------------------------------------------------------------------------
+
+def test_account_label_name_and_plan():
+    lbl = core.account_label({"account_email": "j@x.nl", "account_name": " Jos ", "account_plan": "Pro"})
+    assert lbl == {"name": "Jos", "plan": "Pro", "email": "j@x.nl"}
+
+
+def test_account_label_falls_back_to_email():
+    assert core.account_label({"account_email": "someone@example.com"}) == {
+        "name": "someone@example.com", "plan": "", "email": "someone@example.com"}
+    assert core.account_label({}) == {"name": "", "plan": "", "email": ""}
+
+
+def test_limits_output_carries_name_and_plan():
+    out = core.limits_output({"org_id": "o", "account_email": "e", "account_name": "Jos",
+                              "account_plan": "Max", "data": {}})
+    assert (out["account_name"], out["account_plan"]) == ("Jos", "Max")
+
+
+def test_fetch_js_sends_only_name_and_plan():
+    js = core.build_fetch_js("x(s);")
+    assert "account_name: name" in js and "account_plan: best.plan" in js
+    assert "JSON.stringify(d)" not in js
+
+
+@pytest.mark.parametrize("plan,label", [
+    ({"label": "", "capabilities": ["claude_pro", "chat"], "tier": "default_claude_ai"}, "Pro"),
+    # Not observed yet: must show nothing rather than a guess
+    ({"label": "", "capabilities": ["claude_max", "chat"], "tier": "default_claude_max_20x"}, ""),
+    ({"label": "Team", "capabilities": ["claude_pro"], "tier": ""}, "Team"),
+    ({"label": "", "capabilities": ["api", "api_individual"], "tier": "auto_trust_tier_c"}, ""),
+    ({}, ""), (None, ""), ("Pro", "Pro"),
+])
+def test_plan_label(plan, label):
+    assert core.plan_label(plan) == label
+
+
+def test_limits_output_derives_plan_from_capabilities():
+    out = core.limits_output({"org_id": "o", "data": {},
+                              "account_plan": {"label": "", "capabilities": ["claude_pro"], "tier": ""}})
+    assert out["account_plan"] == "Pro"

@@ -34,11 +34,17 @@ fetch('/api/bootstrap', {credentials:'include', headers:{Accept:'application/jso
 .then(async d => {
     const acct = d.account || {};
     const email = acct.email_address || acct.email || '';
+    // Only name and plan leave the page — never the whole bootstrap payload
+    const name = acct.display_name || acct.full_name || '';
     const memberships = acct.memberships || [];
     let best = null;
     for (const m of memberships) {
-        const orgId = m.organization ? m.organization.uuid : null;
+        const org = m.organization || {};
+        const orgId = org.uuid || null;
         if (!orgId) continue;
+        // Raw plan data; core.plan_label() turns it into a label (observed values only)
+        const plan = {label: org.plan_display_label || org.plan_display_name || '',
+                      capabilities: org.capabilities || [], tier: org.rate_limit_tier || ''};
         try {
             const r = await fetch('/api/organizations/' + orgId + '/usage', {
                 credentials: 'include',
@@ -49,13 +55,15 @@ fetch('/api/bootstrap', {credentials:'include', headers:{Accept:'application/jso
             if (data.five_hour === undefined) continue;
             const util = (data.five_hour && data.five_hour.utilization) || 0;
             if (!best || util > best.util) {
-                best = {util, org_id: orgId, account_email: email, data};
+                best = {util, org_id: orgId, account_email: email, plan, data};
             }
         } catch(e) { continue; }
     }
     if (best) {
         deliver(JSON.stringify({ok: true, org_id: best.org_id,
-                                account_email: best.account_email, data: best.data}));
+                                account_email: best.account_email,
+                                account_name: name, account_plan: best.plan,
+                                data: best.data}));
     } else {
         deliver(JSON.stringify({ok: false, error: 'no org with usage data'}));
     }
@@ -288,8 +296,41 @@ def limits_output(parsed: dict) -> dict:
         "fetched_at": datetime.now(timezone.utc).isoformat(),
         "org_id": parsed["org_id"],
         "account_email": parsed.get("account_email", ""),
+        "account_name": parsed.get("account_name", ""),
+        "account_plan": plan_label(parsed.get("account_plan")),
         **parsed["data"],
     }
+
+
+# Capability -> label, only for values actually observed in API responses.
+# Evidence: a Pro account returns capabilities ["claude_pro", "chat"] with an
+# empty plan_display_label, and claude.ai shows "Pro". Add an entry only after
+# seeing real data for that plan — never guess (unknown plans show nothing).
+OBSERVED_PLAN_CAPABILITIES = {"claude_pro": "Pro"}
+
+
+def plan_label(plan) -> str:
+    """Plan name for display: the API's own label if present, otherwise an
+    observed capability mapping, otherwise ''."""
+    if isinstance(plan, str):          # already a label
+        return plan.strip()
+    if not isinstance(plan, dict):
+        return ""
+    if (plan.get("label") or "").strip():
+        return plan["label"].strip()
+    for cap in plan.get("capabilities") or []:
+        if cap in OBSERVED_PLAN_CAPABILITIES:
+            return OBSERVED_PLAN_CAPABILITIES[cap]
+    return ""
+
+
+def account_label(limits: dict) -> dict:
+    """Who the numbers belong to, for the footer: name and plan.
+    Falls back to the e-mail address (older caches have no name/plan)."""
+    email = limits.get("account_email", "") or ""
+    name = (limits.get("account_name", "") or "").strip()
+    plan = (limits.get("account_plan", "") or "").strip()
+    return {"name": name or email, "plan": plan, "email": email}
 
 
 def limits_are_fresh(limits: dict, max_age_minutes: int = 5) -> bool:

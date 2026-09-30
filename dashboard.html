@@ -283,11 +283,11 @@
     min-width: 0;
     flex-shrink: 1;
   }
-  #accountText {
-    overflow: hidden;
-    text-overflow: ellipsis;
-    white-space: nowrap;
+  .account-name {
+    color: var(--text); font-size: 12px; font-weight: 600;
+    overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
   }
+  .account-plan { white-space: nowrap; flex-shrink: 0; }
   #lastUpdated {
     flex-shrink: 0;
     margin-left: 8px;
@@ -379,9 +379,10 @@
 
   <!-- Footer -->
   <div class="footer">
-    <div class="footer-left">
+    <div class="footer-left" id="accountBox">
       <span class="status-dot" id="statusDot"></span>
-      <span id="accountText"></span>
+      <span class="account-name" id="accountName"></span>
+      <span class="account-plan" id="accountPlan"></span>
     </div>
     <span id="lastUpdated"></span>
   </div>
@@ -526,8 +527,10 @@ function render(d) {
     : 'Verbonden met Anthropic API';
   const dot = document.getElementById('statusDot');
   dot.className = 'status-dot' + (problem ? ' ' + problem : '');
-  dot.title = problem ? statusText : '';
-  document.getElementById('accountText').textContent = d.account || '';
+  const acc = d.account_label || { name: d.account || '', plan: '', email: d.account || '' };
+  document.getElementById('accountName').textContent = acc.name;
+  document.getElementById('accountPlan').textContent = acc.plan ? '· ' + acc.plan : '';
+  document.getElementById('accountBox').title = problem ? statusText + ' — ' + acc.email : acc.email;
   document.getElementById('lastUpdated').textContent = d.last_updated ? 'Bijgewerkt: ' + d.last_updated : '';
 
   // Settings view
@@ -670,7 +673,7 @@ function onQuit() {
 // ---- Init placeholder ----
 (function init() {
   // Placeholder until Python calls updateData
-  document.getElementById('accountText').textContent = 'Laden…';
+  document.getElementById('accountName').textContent = 'Laden…';
 })();
 </script>
 </body>

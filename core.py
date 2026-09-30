@@ -5,6 +5,7 @@ Keep it that way: anything that needs Foundation/AppKit/WebKit belongs in app.py
 """
 
 import json
+import math
 import os
 import glob
 import sqlite3
@@ -237,6 +238,19 @@ def face_icon(session_pct: int) -> str:
     if session_pct >= 20:
         return "🙂"
     return "🚀"
+
+
+def color_for_pct(pct: float) -> tuple:
+    """Green -> orange -> red as usage fills up. Mirrors colorForPct() in
+    dashboard.html so notification images match the popover."""
+    pct = max(0.0, min(100.0, float(pct)))
+    if pct <= 50:
+        (p0, *c0), (p1, *c1) = (0, 47, 168, 74), (50, 255, 149, 0)
+    else:
+        (p0, *c0), (p1, *c1) = (50, 255, 149, 0), (100, 255, 59, 48)
+    t = (pct - p0) / (p1 - p0)
+    # math.floor(x + 0.5) == JS Math.round; Python's round() rounds half to even
+    return tuple(math.floor(a + (b - a) * t + 0.5) for a, b in zip(c0, c1))
 
 
 def status_title(session_pct: int, weekly_pct: int, session_reset_compact: str) -> str:
@@ -473,6 +487,7 @@ def due_notifications(limits: dict, state: dict,
                 "body": f"Reset {format_reset_time(block.get('resets_at', ''))}.",
                 "limit": limit,
                 "threshold": max(crossed),
+                "pct": pct,
             })
             sent = sorted(set(sent) | set(crossed))
         new_state[key] = {"window": wk, "sent": sent}

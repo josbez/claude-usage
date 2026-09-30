@@ -389,3 +389,17 @@ def test_settings_ignore_unknown_and_corrupt(tmp_path):
     assert core.load_settings(str(path)) == {"notifications": False}
     path.write_text("{nope")
     assert core.load_settings(str(path)) == {"notifications": True}
+
+
+@pytest.mark.parametrize("pct,rgb", [
+    (0, (47, 168, 74)), (50, (255, 149, 0)), (100, (255, 59, 48)),
+    (25, (151, 159, 37)), (75, (255, 104, 24)), (-5, (47, 168, 74)), (140, (255, 59, 48)),
+])
+def test_color_for_pct_matches_dashboard(pct, rgb):
+    # Values computed with colorForPct() from dashboard.html (Math.round).
+    assert core.color_for_pct(pct) == rgb
+
+
+def test_notification_carries_pct():
+    notes, _ = core.due_notifications(_limits(five=86), {})
+    assert notes[0]["pct"] == 86

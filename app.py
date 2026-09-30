@@ -8,6 +8,7 @@ import objc
 import json
 import os
 import sys
+import tempfile
 import hashlib
 from datetime import datetime
 
@@ -23,6 +24,8 @@ from Foundation import (
 # (menu bar accessory app, no visible window) after a few minutes.
 NS_ACTIVITY_USER_INITIATED_ALLOWING_IDLE_SYSTEM_SLEEP = 0x00FFFFFF
 from AppKit import (
+    NSBitmapImageRep, NSGraphicsContext, NSBezierPath, NSColor, NSFont,
+    NSAttributedString, NSFontAttributeName, NSDeviceRGBColorSpace,
     NSApplication, NSApplicationActivationPolicyAccessory,
     NSStatusBar, NSVariableStatusItemLength, NSMinYEdge,
     NSViewController, NSWorkspace, NSPopover,
@@ -35,6 +38,7 @@ from WebKit import (
 
 from UserNotifications import (
     UNUserNotificationCenter, UNMutableNotificationContent, UNNotificationRequest,
+    UNNotificationAttachment,
     UNNotificationSound, UNAuthorizationOptionAlert, UNAuthorizationOptionSound,
     UNNotificationPresentationOptionBanner, UNNotificationPresentationOptionList,
     UNNotificationPresentationOptionSound,
@@ -44,7 +48,7 @@ from core import (
     LIMITS_FILE, log, find_cookie_db, decrypt_claude_cookies, session_key_from,
     build_fetch_js, limits_output, format_reset_time, format_reset_compact,
     status_title, title_from_limits, load_limits, limits_are_fresh,
-    due_notifications, load_notify_state, save_notify_state,
+    due_notifications, load_notify_state, save_notify_state, color_for_pct, face_icon,
     load_settings, save_settings,
 )
 
@@ -94,6 +98,67 @@ class FetchNavDelegate(NSObject):
     def webView_didFailProvisionalNavigation_withError_(self, webview, navigation, error):
         if self.delegate:
             self.delegate._on_fetch_failed()
+
+
+NS_BITMAP_PNG = 4          # NSBitmapImageFileTypePNG
+NS_LINE_CAP_ROUND = 1      # NSLineCapStyleRound
+
+
+def _ns_rgb(rgb, mix_with_white: float = 0.0):
+    r, g, b = (c / 255 for c in rgb)
+    w = mix_with_white
+    return NSColor.colorWithDeviceRed_green_blue_alpha_(
+        r + (1 - r) * w, g + (1 - g) * w, b + (1 - b) * w, 1.0)
+
+
+def render_status_image(pct: int, path: str, size: int = 256):
+    """Draw the popover's session donut as a PNG: ring filled to pct, stress
+    colour, menu bar emoji in the centre. Used as notification thumbnail."""
+    rep = NSBitmapImageRep.alloc().initWithBitmapDataPlanes_pixelsWide_pixelsHigh_bitsPerSample_samplesPerPixel_hasAlpha_isPlanar_colorSpaceName_bytesPerRow_bitsPerPixel_(
+        None, size, size, 8, 4, True, False, NSDeviceRGBColorSpace, 0, 0)
+    color = color_for_pct(pct)
+    NSGraphicsContext.saveGraphicsState()
+    try:
+        NSGraphicsContext.setCurrentContext_(
+            NSGraphicsContext.graphicsContextWithBitmapImageRep_(rep))
+
+        # Tinted tile, like .card-session (stress colour 14% over white)
+        _ns_rgb(color, 0.86).setFill()
+        radius = size * 0.22
+        NSBezierPath.bezierPathWithRoundedRect_xRadius_yRadius_(
+            ((0, 0), (size, size)), radius, radius).fill()
+
+        center = (size / 2, size / 2)
+        ring_r = size * 0.34
+        line = size * 0.1
+
+        track = NSBezierPath.bezierPath()
+        track.appendBezierPathWithArcWithCenter_radius_startAngle_endAngle_(
+            center, ring_r, 0, 360)
+        track.setLineWidth_(line)
+        _ns_rgb(color, 0.70).setStroke()
+        track.stroke()
+
+        fill = max(0, min(100, pct))
+        if fill > 0:
+            arc = NSBezierPath.bezierPath()
+            # y-up coordinates: 90° is 12 o'clock, clockwise like the popover
+            arc.appendBezierPathWithArcWithCenter_radius_startAngle_endAngle_clockwise_(
+                center, ring_r, 90, 90 - 360 * fill / 100, True)
+            arc.setLineWidth_(line)
+            arc.setLineCapStyle_(NS_LINE_CAP_ROUND)
+            _ns_rgb(color).setStroke()
+            arc.stroke()
+
+        face = NSAttributedString.alloc().initWithString_attributes_(
+            face_icon(pct), {NSFontAttributeName: NSFont.systemFontOfSize_(size * 0.3)})
+        w, h = face.size()
+        face.drawAtPoint_((center[0] - w / 2, center[1] - h / 2))
+    finally:
+        NSGraphicsContext.restoreGraphicsState()
+
+    png = rep.representationUsingType_properties_(NS_BITMAP_PNG, {})
+    png.writeToFile_atomically_(path, True)
 
 
 def _log_notify_error(note_id: str):
@@ -182,6 +247,22 @@ class AppDelegate(NSObject):
             log(f"instelling opslaan mislukt: {e}")
         self._push_data()
 
+    def _status_attachment(self, note: dict):
+        """Thumbnail with ring/colour/emoji for this limit. The system moves
+        the file into its own store, so each notification gets a fresh one."""
+        try:
+            fd, path = tempfile.mkstemp(prefix="claudeusage-", suffix=".png")
+            os.close(fd)
+            render_status_image(note["pct"], path)
+            attachment, error = UNNotificationAttachment.attachmentWithIdentifier_URL_options_error_(
+                "status", NSURL.fileURLWithPath_(path), None, None)
+            if error is not None:
+                log(f"notificatie-afbeelding mislukt: {error}")
+            return attachment
+        except Exception as e:
+            log(f"notificatie-afbeelding mislukt: {e}")
+            return None
+
     def _notify_limits(self, limits: dict):
         if self._notify_center is None:
             return
@@ -198,6 +279,9 @@ class AppDelegate(NSObject):
                 content.setTitle_(note["title"])
                 content.setBody_(note["body"])
                 content.setSound_(UNNotificationSound.defaultSound())
+                attachment = self._status_attachment(note)
+                if attachment is not None:
+                    content.setAttachments_([attachment])
                 request = UNNotificationRequest.requestWithIdentifier_content_trigger_(
                     note["id"], content, None
                 )

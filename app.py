@@ -207,6 +207,7 @@ class AppDelegate(NSObject):
         self._last_fetch_error = None
         self._last_cookie_mtime = None
         self._last_session_hash = None
+        self._pending_title = None     # menu bar title held back while popover is open
         self._update = None            # latest release dict when newer than us
         self._update_checking = False  # release check running on a thread
         self._update_installing = False
@@ -478,23 +479,19 @@ class AppDelegate(NSObject):
         self._push_data()
 
     def _set_status_title(self, text: str):
-        btn = self.statusItem.button()
-        btn.setTitle_(text)
-        # While the popover is open the item has a pinned width (see
-        # _pin_status_width); only let it grow, so text never gets clipped.
-        if self.statusItem.length() != NSVariableStatusItemLength:
-            needed = btn.fittingSize().width
-            if needed > self.statusItem.length():
-                self.statusItem.setLength_(needed)
-
-    def _pin_status_width(self):
-        """The popover hangs off the middle of the status item. If the item
-        shrinks while it's open (shorter title style, '…' during a fetch),
-        the popover jumps sideways — so pin the width until it closes."""
-        self.statusItem.setLength_(self.statusItem.button().frame().size.width)
+        # The popover hangs off the middle of the status item: changing the
+        # title width while it's open makes it jump. Hold the new title until
+        # the popover closes (the popover itself shows live data meanwhile).
+        popover = getattr(self, "popover", None)
+        if popover is not None and popover.isShown():
+            self._pending_title = text
+            return
+        self.statusItem.button().setTitle_(text)
 
     def popoverDidClose_(self, notification):
-        self.statusItem.setLength_(NSVariableStatusItemLength)
+        if self._pending_title is not None:
+            self.statusItem.button().setTitle_(self._pending_title)
+            self._pending_title = None
 
     def _schedule_timer(self, interval, selector, repeats):
         """Schedule on NSRunLoopCommonModes, not just the default mode — otherwise
@@ -514,7 +511,7 @@ class AppDelegate(NSObject):
         self.popover = NSPopover.new()
         self.popover.setContentSize_(NSMakeSize(360, 296))
         self.popover.setBehavior_(1)  # NSPopoverBehaviorTransient
-        self.popover.setDelegate_(self)  # popoverDidClose_ releases the pinned width
+        self.popover.setDelegate_(self)  # popoverDidClose_ applies a held-back title
 
         config = WKWebViewConfiguration.new()
         ucc = WKUserContentController.new()
@@ -547,7 +544,6 @@ class AppDelegate(NSObject):
             self.popover.performClose_(sender)
         else:
             btn = self.statusItem.button()
-            self._pin_status_width()
             self.popover.showRelativeToRect_ofView_preferredEdge_(
                 btn.bounds(), btn, NSMinYEdge
             )

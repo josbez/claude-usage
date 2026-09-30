@@ -7,21 +7,16 @@ Keep it that way: anything that needs Foundation/AppKit/WebKit belongs in app.py
 import json
 import math
 import os
-import glob
 import sqlite3
 import shutil
 import subprocess
 import tempfile
 import hashlib
-import time
-from datetime import datetime, timezone, timedelta, date
-from collections import defaultdict
+from datetime import datetime, timezone, timedelta
 
 from Crypto.Cipher import AES
 
 
-STATS_CACHE = os.path.expanduser("~/.claude/stats-cache.json")
-PROJECTS_DIR = os.path.expanduser("~/.claude/projects")
 LIMITS_FILE = os.path.expanduser("~/.claude/usage-limits.json")
 LOG_FILE = os.path.expanduser("~/Library/Logs/ClaudeUsage.log")
 CLAUDE_APP_SUPPORT = os.path.expanduser("~/Library/Application Support/Claude")
@@ -176,14 +171,6 @@ def session_key_from(cookies: dict) -> str:
 # Formatting
 # ---------------------------------------------------------------------------
 
-def format_tokens(n: int) -> str:
-    if n >= 1_000_000:
-        return f"{n / 1_000_000:.1f}M"
-    if n >= 1_000:
-        return f"{n / 1_000:.1f}k"
-    return str(n)
-
-
 def format_reset_time(iso_str: str) -> str:
     if not iso_str:
         return "—"
@@ -304,134 +291,6 @@ def limits_are_fresh(limits: dict, max_age_minutes: int = 5) -> bool:
         return age.total_seconds() < max_age_minutes * 60
     except Exception:
         return False
-
-
-# ---------------------------------------------------------------------------
-# Local Claude Code token statistics
-# ---------------------------------------------------------------------------
-
-def load_stats_cache(path: str = STATS_CACHE) -> dict:
-    try:
-        with open(path) as f:
-            return json.load(f)
-    except Exception:
-        return {}
-
-
-def scan_jsonl_files(projects_dir: str = PROJECTS_DIR) -> dict:
-    daily: dict = defaultdict(lambda: {
-        "msgs": 0, "input_tokens": 0, "output_tokens": 0, "cache_read": 0,
-        "models": defaultdict(int),
-    })
-    for jsonl_path in glob.glob(os.path.join(projects_dir, "*", "*.jsonl")):
-        try:
-            with open(jsonl_path) as f:
-                for line in f:
-                    line = line.strip()
-                    if not line:
-                        continue
-                    try:
-                        obj = json.loads(line)
-                    except Exception:
-                        continue
-                    ts = obj.get("timestamp")
-                    if not ts:
-                        continue
-                    try:
-                        # Group by local calendar day, not UTC
-                        date_key = parse_dt(ts).astimezone().date().isoformat()
-                    except Exception:
-                        continue
-                    if obj.get("type") == "user" and obj.get("message", {}).get("role") == "user":
-                        daily[date_key]["msgs"] += 1
-                    elif obj.get("type") == "assistant":
-                        usage = obj.get("message", {}).get("usage", {})
-                        model = obj.get("message", {}).get("model", "unknown")
-                        tok_in = usage.get("input_tokens", 0)
-                        tok_out = usage.get("output_tokens", 0)
-                        tok_cache = usage.get("cache_read_input_tokens", 0)
-                        daily[date_key]["input_tokens"] += tok_in
-                        daily[date_key]["output_tokens"] += tok_out
-                        daily[date_key]["cache_read"] += tok_cache
-                        daily[date_key]["models"][model] += tok_in + tok_out + tok_cache
-        except Exception:
-            pass
-    return daily
-
-
-_scan_cache = {"ts": 0.0, "data": None}
-
-
-def scan_jsonl_files_cached(max_age_sec: float = 60.0) -> dict:
-    """Cached wrapper: scanning every popover-open/refresh is wasteful."""
-    now = time.monotonic()
-    if _scan_cache["data"] is None or now - _scan_cache["ts"] > max_age_sec:
-        _scan_cache["data"] = scan_jsonl_files()
-        _scan_cache["ts"] = now
-    return _scan_cache["data"]
-
-
-def build_stats(jsonl_daily: dict = None, stats_cache: dict = None, now: datetime = None) -> dict:
-    cache = load_stats_cache() if stats_cache is None else stats_cache
-    if jsonl_daily is None:
-        jsonl_daily = scan_jsonl_files_cached()
-    if now is None:
-        now = datetime.now()
-
-    today = now.date()
-    week_ago = today - timedelta(days=7)
-    month_ago = today - timedelta(days=30)
-
-    today_msgs = today_tokens = week_msgs = week_tokens = 0
-    month_msgs = month_tokens = 0
-    model_tokens: dict = defaultdict(int)
-
-    for date_str, day in jsonl_daily.items():
-        try:
-            d = date.fromisoformat(date_str)
-        except Exception:
-            continue
-        msgs = day["msgs"]
-        tokens = day["input_tokens"] + day["output_tokens"]
-        for model, tok in day["models"].items():
-            model_tokens[model] += tok
-        if d == today:
-            today_msgs += msgs
-            today_tokens += tokens
-        if d >= week_ago:
-            week_msgs += msgs
-            week_tokens += tokens
-        if d >= month_ago:
-            month_msgs += msgs
-            month_tokens += tokens
-
-    return {
-        "total_sessions": cache.get("totalSessions", 0),
-        "total_messages": cache.get("totalMessages", 0),
-        "today_msgs": today_msgs,
-        "today_tokens": today_tokens,
-        "week_msgs": week_msgs,
-        "week_tokens": week_tokens,
-        "month_msgs": month_msgs,
-        "month_tokens": month_tokens,
-        "model_totals": dict(model_tokens),
-        "last_updated": now.strftime("%H:%M"),
-        "jsonl_daily": {k: {"input_tokens": v["input_tokens"],
-                             "output_tokens": v["output_tokens"],
-                             "cache_read": v["cache_read"]}
-                        for k, v in jsonl_daily.items()},
-    }
-
-
-def compute_weekly_tokens(jsonl_daily: dict, base_date: date) -> list:
-    """Return list of 7 token counts (input+output only) for 7 days ending on base_date."""
-    result = []
-    for i in range(6, -1, -1):
-        d = base_date - timedelta(days=i)
-        day = jsonl_daily.get(d.isoformat(), {})
-        tokens = day.get("input_tokens", 0) + day.get("output_tokens", 0)
-        result.append(tokens)
-    return result
 
 
 # ---------------------------------------------------------------------------

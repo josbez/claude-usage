@@ -1,6 +1,6 @@
 # ClaudeUsage
 
-macOS-menubalk-app die Claude-plangebruik toont (5-uurs- en weeklimiet via claude.ai) plus lokale Claude Code-tokenstatistieken.
+macOS-menubalk-app die Claude-plangebruik toont (5-uurs- en weeklimiet via claude.ai), met een melding als je een limiet nadert.
 
 Werkt via het account dat in de Claude desktop-app is ingelogd — leest de sessiecookie live uit de macOS Keychain en stuurt niets naar derden.
 

@@ -4,12 +4,10 @@ Run: /usr/bin/python3 -m pytest
 """
 
 import hashlib
-import json
 import os
 import sqlite3
 import sys
-import time
-from datetime import datetime, timedelta, timezone, date
+from datetime import datetime, timedelta, timezone
 
 import pytest
 from Crypto.Cipher import AES
@@ -104,14 +102,6 @@ def test_session_key_from_missing():
 # Formatting
 # ---------------------------------------------------------------------------
 
-@pytest.mark.parametrize("n,expected", [
-    (0, "0"), (999, "999"), (1_000, "1.0k"), (12_345, "12.3k"),
-    (1_000_000, "1.0M"), (2_550_000, "2.5M"),
-])
-def test_format_tokens(n, expected):
-    assert core.format_tokens(n) == expected
-
-
 def _iso_in(**delta) -> str:
     # +30 s margin so the minute count doesn't tick over while the test runs
     return (datetime.now(timezone.utc) + timedelta(seconds=30, **delta)).isoformat()
@@ -199,99 +189,6 @@ def test_build_fetch_js_substitutes_delivery():
     js = core.build_fetch_js("window.__x = s;")
     assert "DELIVER" not in js
     assert "window.__x = s;" in js
-
-
-# ---------------------------------------------------------------------------
-# JSONL scan — grouping by local calendar day
-# ---------------------------------------------------------------------------
-
-@pytest.fixture
-def amsterdam_tz():
-    old = os.environ.get("TZ")
-    os.environ["TZ"] = "Europe/Amsterdam"
-    time.tzset()
-    yield
-    if old is None:
-        del os.environ["TZ"]
-    else:
-        os.environ["TZ"] = old
-    time.tzset()
-
-
-def _write_session(projects_dir, lines):
-    proj = projects_dir / "-Users-test-proj"
-    proj.mkdir(parents=True, exist_ok=True)
-    with open(proj / "session.jsonl", "w") as f:
-        for obj in lines:
-            f.write((obj if isinstance(obj, str) else json.dumps(obj)) + "\n")
-
-
-def _assistant(ts, model="claude-x", i=10, o=5, c=100):
-    return {"type": "assistant", "timestamp": ts, "message": {
-        "model": model,
-        "usage": {"input_tokens": i, "output_tokens": o, "cache_read_input_tokens": c},
-    }}
-
-
-def _user(ts):
-    return {"type": "user", "timestamp": ts, "message": {"role": "user"}}
-
-
-def test_scan_groups_by_local_day_around_midnight(tmp_path, amsterdam_tz):
-    _write_session(tmp_path, [
-        _user("2026-09-29T21:59:00Z"),        # 23:59 CEST -> 29th
-        _assistant("2026-09-29T22:01:00Z"),   # 00:01 CEST -> 30th
-        _user("2026-09-29T22:30:00.123Z"),
-    ])
-    daily = core.scan_jsonl_files(str(tmp_path))
-    assert daily["2026-09-29"]["msgs"] == 1
-    assert daily["2026-09-29"]["input_tokens"] == 0
-    assert daily["2026-09-30"]["msgs"] == 1
-    assert daily["2026-09-30"]["input_tokens"] == 10
-    assert daily["2026-09-30"]["models"]["claude-x"] == 115
-
-
-def test_scan_winter_time_offset(tmp_path, amsterdam_tz):
-    # CET is +1 in January: 23:30Z is already the next local day
-    _write_session(tmp_path, [_user("2026-01-14T23:30:00Z")])
-    assert core.scan_jsonl_files(str(tmp_path))["2026-01-15"]["msgs"] == 1
-
-
-def test_scan_skips_junk_lines(tmp_path, amsterdam_tz):
-    _write_session(tmp_path, [
-        "", "{broken", {"type": "user"}, {"type": "user", "timestamp": "nope"},
-        {"type": "summary", "timestamp": "2026-09-30T10:00:00Z"},
-        _assistant("2026-09-30T10:00:00Z"),
-    ])
-    daily = core.scan_jsonl_files(str(tmp_path))
-    assert list(daily) == ["2026-09-30"]
-    assert daily["2026-09-30"]["output_tokens"] == 5
-
-
-def test_build_stats_windows():
-    now = datetime(2026, 9, 30, 12, 0)
-    day = lambda msgs, i: {"msgs": msgs, "input_tokens": i, "output_tokens": 0,
-                           "cache_read": 0, "models": {"m": i}}
-    daily = {
-        "2026-09-30": day(1, 100),
-        "2026-09-23": day(2, 20),   # exactly 7 days back: in week window
-        "2026-09-22": day(4, 3),    # outside week, inside month
-        "2026-08-01": day(8, 1),    # outside month
-        "bogus": day(99, 99),
-    }
-    s = core.build_stats(jsonl_daily=daily, stats_cache={"totalSessions": 7}, now=now)
-    assert (s["today_msgs"], s["today_tokens"]) == (1, 100)
-    assert (s["week_msgs"], s["week_tokens"]) == (3, 120)
-    assert (s["month_msgs"], s["month_tokens"]) == (7, 123)
-    assert s["total_sessions"] == 7
-    assert "bogus" in s["jsonl_daily"]
-
-
-def test_compute_weekly_tokens():
-    daily = {"2026-09-30": {"input_tokens": 5, "output_tokens": 1},
-             "2026-09-24": {"input_tokens": 2, "output_tokens": 0},
-             "2026-09-23": {"input_tokens": 99, "output_tokens": 0}}
-    assert core.compute_weekly_tokens(daily, date(2026, 9, 30)) == [2, 0, 0, 0, 0, 0, 6]
 
 
 def test_core_does_not_import_pyobjc():

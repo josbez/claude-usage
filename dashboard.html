@@ -82,6 +82,11 @@
   .icon-btn.spinning svg { animation: spin 1s linear infinite; }
   #settingsBtn { position: relative; }
   #settingsBtn.active { color: var(--accent-blue); }
+  #settingsBtn svg { transition: transform 0.35s cubic-bezier(0.16, 1, 0.3, 1); }
+  #settingsBtn.active svg { transform: rotate(90deg); }
+  @media (prefers-reduced-motion: reduce) {
+    #settingsBtn svg { transition: none; }
+  }
   #settingsBtn .badge {
     position: absolute; top: 4px; right: 4px;
     width: 6px; height: 6px; border-radius: 50%;
@@ -413,7 +418,7 @@ window.updateData = function(data) {
 // Called on popover open: reset donut + bar to 0 without transition, then
 // fill them in with a smooth transition so the open feels alive every time.
 window.openWithAnimation = function(data) {
-  toggleSettings(false);  // always open on the main view
+  toggleSettings(false, true);  // always open on the main view, no animation
   const donut = document.getElementById('donutFill');
   const bar = document.getElementById('weeklyBar');
   donut.classList.add('no-transition');
@@ -529,12 +534,48 @@ function onRefresh() {
   document.getElementById('refreshBtn').classList.add('spinning');
 }
 
-function toggleSettings(show) {
-  const open = show === undefined ? document.getElementById('settingsView').hidden : show;
-  document.getElementById('settingsView').hidden = !open;
-  document.getElementById('mainView').hidden = open;
+let _viewAnimating = false;
+
+// Swap main <-> settings. Outgoing view fades and slides out, incoming slides
+// in from the other side (settings from the right, main from the left).
+function toggleSettings(show, instant) {
+  const settings = document.getElementById('settingsView');
+  const main = document.getElementById('mainView');
+  const open = show === undefined ? settings.hidden : show;
+  if (open === !settings.hidden) return;
+  if (_viewAnimating && !instant) return;
+
   document.getElementById('settingsBtn').classList.toggle('active', open);
-  document.getElementById('headerTitle').textContent = open ? 'Instellingen' : 'Claude Stats';
+  const title = document.getElementById('headerTitle');
+  const from = open ? main : settings;
+  const to = open ? settings : main;
+  const swap = () => {
+    from.hidden = true;
+    to.hidden = false;
+    title.textContent = open ? 'Instellingen' : 'Claude Stats';
+  };
+
+  const reduced = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+  if (instant || reduced || !from.animate) { swap(); return; }
+
+  _viewAnimating = true;
+  const dir = open ? 1 : -1;
+  const ease = 'cubic-bezier(0.16, 1, 0.3, 1)';
+  const out = from.animate(
+    [{ opacity: 1, transform: 'translateX(0)' },
+     { opacity: 0, transform: `translateX(${-12 * dir}px)` }],
+    { duration: 110, easing: 'ease-in', fill: 'forwards' });
+  title.animate([{ opacity: 1 }, { opacity: 0 }], { duration: 110, fill: 'forwards' });
+  out.onfinish = () => {
+    swap();
+    out.cancel();
+    title.animate([{ opacity: 0 }, { opacity: 1 }], { duration: 200, easing: ease });
+    const inn = to.animate(
+      [{ opacity: 0, transform: `translateX(${16 * dir}px)` },
+       { opacity: 1, transform: 'translateX(0)' }],
+      { duration: 240, easing: ease });
+    inn.onfinish = () => { _viewAnimating = false; };
+  };
 }
 
 function renderUpdate(u) {

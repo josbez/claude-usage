@@ -10,8 +10,8 @@ OPTIONS = {
         'CFBundleName': 'ClaudeUsage',
         'CFBundleDisplayName': 'Claude Usage',
         'CFBundleIdentifier': 'com.jos.claude-usage',
-        'CFBundleVersion': '1.2',
-        'CFBundleShortVersionString': '1.2',
+        'CFBundleVersion': '1.2.1',
+        'CFBundleShortVersionString': '1.2.1',
         'LSUIElement': True,          # Geen dock-icon
         'NSHighResolutionCapable': True,
     },

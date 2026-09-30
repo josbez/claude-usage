@@ -565,10 +565,13 @@ function toggleSettings(show, instant) {
     [{ opacity: 1, transform: 'translateX(0)' },
      { opacity: 0, transform: `translateX(${-12 * dir}px)` }],
     { duration: 110, easing: 'ease-in', fill: 'forwards' });
-  title.animate([{ opacity: 1 }, { opacity: 0 }], { duration: 110, fill: 'forwards' });
+  const titleOut = title.animate([{ opacity: 1 }, { opacity: 0 }], { duration: 110, fill: 'forwards' });
   out.onfinish = () => {
     swap();
+    // Cancel the filled fade-outs, otherwise they keep holding opacity 0
+    // once the fade-ins below have finished.
     out.cancel();
+    titleOut.cancel();
     title.animate([{ opacity: 0 }, { opacity: 1 }], { duration: 200, easing: ease });
     const inn = to.animate(
       [{ opacity: 0, transform: `translateX(${16 * dir}px)` },

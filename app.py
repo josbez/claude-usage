@@ -190,6 +190,8 @@ class AppDelegate(NSObject):
             if not load_settings()["notifications"]:
                 # Still record crossed thresholds, so switching back on
                 # doesn't replay warnings for this window.
+                for note in notes:
+                    log(f"notificatie onderdrukt (meldingen uit): {note['title']}")
                 notes = []
             for note in notes:
                 content = UNMutableNotificationContent.new()

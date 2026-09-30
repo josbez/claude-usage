@@ -6,7 +6,7 @@ Werkt via het account dat in de Claude desktop-app is ingelogd — leest de sess
 
 ## Installeren (DMG)
 
-1. Download `ClaudeUsage.dmg` uit de [releases](https://github.com/josbez/claude-usage/releases) en open hem.
+1. **[Download ClaudeUsage.dmg](https://github.com/josbez/claude-usage/releases/latest/download/ClaudeUsage.dmg)** (altijd de nieuwste versie; oudere versies en wijzigingen staan bij de [releases](https://github.com/josbez/claude-usage/releases)) en open hem.
 2. Sleep **ClaudeUsage.app** naar de **Applications**-map in hetzelfde venster.
 3. Open Terminal en voer uit:
 

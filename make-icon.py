@@ -21,7 +21,7 @@ SS = 4                      # supersampling factor for smooth edges
 S = 1024 * SS               # canvas
 TILE = 824 * SS             # macOS icon grid: 824pt body on a 1024 canvas
 RADIUS = 185 * SS
-FILL_FRACTION = 0.68        # how much of the ring is "used"
+FILL_FRACTION = 1.0         # how much of the ring is "used" (1.0 = full circle)
 
 BG_TOP = (252, 250, 246)
 BG_BOTTOM = (236, 231, 224)
@@ -45,8 +45,8 @@ def lerp_hsv(a, b, t):
 
 
 def arc_color(t):
-    # t in 0..1 along the used part of the ring: green -> orange -> red-ish
-    return lerp_hsv(GREEN, ORANGE, t * 2) if t < 0.5 else lerp_hsv(ORANGE, RED, (t - 0.5) * 2 * 0.55)
+    # t in 0..1 along the used part of the ring: green -> orange -> red
+    return lerp_hsv(GREEN, ORANGE, t * 2) if t < 0.5 else lerp_hsv(ORANGE, RED, (t - 0.5) * 2)
 
 
 def render() -> Image.Image:
@@ -81,12 +81,12 @@ def render() -> Image.Image:
     steps = 720
     for i in range(steps):
         a0 = start + sweep * i / steps
-        a1 = start + sweep * (i + 1) / steps + 0.4   # overlap to avoid seams
+        a1 = min(start + sweep * (i + 1) / steps + 0.4, start + sweep)  # overlap to avoid seams
         d.arc(box, a0, a1, fill=arc_color(i / steps), width=w)
 
-    # Round caps at both ends of the arc
+    # Round caps at both ends of the arc (a full ring has no ends)
     ring_r = r - w / 2
-    for ang, col in ((start, arc_color(0)), (start + sweep, arc_color(1))):
+    for ang, col in () if FILL_FRACTION >= 1 else ((start, arc_color(0)), (start + sweep, arc_color(1))):
         x = cx + ring_r * math.cos(math.radians(ang))
         y = cy + ring_r * math.sin(math.radians(ang))
         d.ellipse((x - w / 2, y - w / 2, x + w / 2, y + w / 2), fill=col)

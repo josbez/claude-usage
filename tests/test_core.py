@@ -275,9 +275,10 @@ def test_notify_state_roundtrip(tmp_path):
 
 def test_settings_default_and_roundtrip(tmp_path):
     path = str(tmp_path / "s.json")
-    assert core.load_settings(path) == {"notifications": True, "update_check": True}
-    core.save_settings({"notifications": False, "update_check": True}, path)
-    assert core.load_settings(path) == {"notifications": False, "update_check": True}
+    assert core.load_settings(path) == core.DEFAULT_SETTINGS
+    core.save_settings(dict(core.DEFAULT_SETTINGS, notifications=False, menubar_style="emoji"), path)
+    loaded = core.load_settings(path)
+    assert loaded["notifications"] is False and loaded["menubar_style"] == "emoji"
 
 
 def test_settings_ignore_unknown_and_corrupt(tmp_path):
@@ -414,3 +415,26 @@ def test_log_writes_utf8_regardless_of_locale(tmp_path, monkeypatch):
     core.log("account gewisseld — geïnstalleerd")
     monkeypatch.undo()
     assert "— geïnstalleerd" in log_file.read_text(encoding="utf-8")
+
+
+
+@pytest.mark.parametrize("style,expected", [
+    ("full", "😅 45% / 82% · 2u10m"),
+    ("session", "😅 45%"),
+    ("emoji", "😅"),
+    ("bogus", "😅 45% / 82% · 2u10m"),
+])
+def test_status_title_styles(style, expected):
+    assert core.status_title(45, 82, "2u10m", style) == expected
+
+
+def test_title_from_limits_passes_style():
+    limits = {"five_hour": {"utilization": 91}, "seven_day": {"utilization": 10}}
+    assert core.title_from_limits(limits, "session") == "😱 91%"
+    assert core.title_from_limits(limits, "emoji") == "😱"
+
+
+def test_settings_reject_unknown_menubar_style(tmp_path):
+    path = tmp_path / "s.json"
+    path.write_text('{"menubar_style": "huge"}')
+    assert core.load_settings(str(path))["menubar_style"] == "full"

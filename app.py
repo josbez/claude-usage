@@ -49,7 +49,7 @@ from UserNotifications import (
 from core import (
     LIMITS_FILE, log, find_cookie_db, decrypt_claude_cookies, session_key_from,
     build_fetch_js, limits_output, format_reset_time, format_reset_compact,
-    status_title, title_from_limits, load_limits, limits_are_fresh,
+    status_title, title_from_limits, load_limits, limits_are_fresh, MENUBAR_STYLES,
     due_notifications, load_notify_state, save_notify_state, color_for_pct, face_icon,
     load_settings, save_settings,
     UPDATE_STATE_FILE, load_json, save_json, is_newer, update_check_due,
@@ -77,6 +77,9 @@ class MessageHandler(NSObject):
         elif name == "setNotifications":
             if self.delegate:
                 self.delegate.set_notifications_enabled(bool(message.body()))
+        elif name == "setMenubarStyle":
+            if self.delegate:
+                self.delegate.set_menubar_style(str(message.body()))
         elif name == "startUpdate":
             if self.delegate:
                 self.delegate.start_update()
@@ -457,6 +460,23 @@ class AppDelegate(NSObject):
         btn.setTarget_(self)
         btn.setAction_(objc.selector(self.togglePopover_, signature=b"v@:@"))
 
+    def _menubar_style(self) -> str:
+        return load_settings()["menubar_style"]
+
+    def set_menubar_style(self, style: str):
+        if style not in MENUBAR_STYLES:
+            return
+        settings = load_settings()
+        settings["menubar_style"] = style
+        try:
+            save_settings(settings)
+            log(f"menubalkweergave: {style}")
+        except Exception as e:
+            log(f"instelling opslaan mislukt: {e}")
+        if not self._fetching:
+            self._show_cached_pct()
+        self._push_data()
+
     def _set_status_title(self, text: str):
         self.statusItem.button().setTitle_(text)
 
@@ -489,6 +509,7 @@ class AppDelegate(NSObject):
         ucc.addScriptMessageHandler_name_(handler, "quit")
         ucc.addScriptMessageHandler_name_(handler, "setNotifications")
         ucc.addScriptMessageHandler_name_(handler, "startUpdate")
+        ucc.addScriptMessageHandler_name_(handler, "setMenubarStyle")
 
         self.webView = WKWebView.alloc().initWithFrame_configuration_(
             NSMakeRect(0, 0, 360, 296), config
@@ -647,7 +668,8 @@ class AppDelegate(NSObject):
         self._fetching = True
         cur_title = self.statusItem.button().title() or ""
         icon = cur_title.split(" ")[0] if cur_title else "🚀"
-        self._set_status_title(f"{icon} …")
+        # Emoji-only style stays emoji-only while fetching; others show "…"
+        self._set_status_title(icon if self._menubar_style() == "emoji" else f"{icon} …")
         self._push_status("fetching")
 
         # Watchdog: without this a fetch that never calls back leaves
@@ -679,7 +701,7 @@ class AppDelegate(NSObject):
 
     def _show_cached_pct(self):
         try:
-            self._set_status_title(title_from_limits(load_limits()))
+            self._set_status_title(title_from_limits(load_limits(), self._menubar_style()))
         except Exception:
             self._set_status_title("🚀")
 
@@ -726,7 +748,8 @@ class AppDelegate(NSObject):
             session_pct = data.get("session_pct", 0)
             weekly_pct = data.get("weekly_pct", 0)
             reset_compact = data.get("session_reset_compact", "—")
-            self._set_status_title(status_title(session_pct, weekly_pct, reset_compact))
+            self._set_status_title(
+                status_title(session_pct, weekly_pct, reset_compact, self._menubar_style()))
             js = f"if(window.updateData) window.updateData({json.dumps(data, ensure_ascii=False)})"
             self.webView.evaluateJavaScript_completionHandler_(js, None)
         except Exception as e:
@@ -813,6 +836,11 @@ class AppDelegate(NSObject):
             "version": self._version,
             "build": self._build,
             "update": self._update_view(),
+            "menubar_style": load_settings()["menubar_style"],
+            "menubar_previews": {
+                style: status_title(int(session_pct), int(weekly_pct), session_reset_compact, style)
+                for style in MENUBAR_STYLES
+            },
         }
 
     def _push_status(self, status: str):
@@ -829,7 +857,7 @@ class AppDelegate(NSObject):
             self._push_data()
         else:
             try:
-                self._set_status_title(title_from_limits(limits))
+                self._set_status_title(title_from_limits(limits, self._menubar_style()))
             except Exception:
                 pass
 

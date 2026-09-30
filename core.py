@@ -241,17 +241,27 @@ def color_for_pct(pct: float) -> tuple:
     return tuple(math.floor(a + (b - a) * t + 0.5) for a, b in zip(c0, c1))
 
 
-def status_title(session_pct: int, weekly_pct: int, session_reset_compact: str) -> str:
-    return f"{face_icon(session_pct)} {session_pct}% / {weekly_pct}% · {session_reset_compact}"
+MENUBAR_STYLES = ("full", "session", "emoji")
 
 
-def title_from_limits(limits: dict) -> str:
+def status_title(session_pct: int, weekly_pct: int, session_reset_compact: str,
+                 style: str = "full") -> str:
+    """Menu bar text. 'full': 😅 45% / 82% · 2u10m, 'session': 😅 45%, 'emoji': 😅."""
+    face = face_icon(session_pct)
+    if style == "emoji":
+        return face
+    if style == "session":
+        return f"{face} {session_pct}%"
+    return f"{face} {session_pct}% / {weekly_pct}% · {session_reset_compact}"
+
+
+def title_from_limits(limits: dict, style: str = "full") -> str:
     five_h = limits.get("five_hour") or {}
     seven_d = limits.get("seven_day") or {}
     session_pct = int(five_h.get("utilization", 0) or 0)
     weekly_pct = int(seven_d.get("utilization", 0) or 0)
     reset_compact = format_reset_compact(five_h.get("resets_at", ""))
-    return status_title(session_pct, weekly_pct, reset_compact)
+    return status_title(session_pct, weekly_pct, reset_compact, style)
 
 
 # ---------------------------------------------------------------------------
@@ -384,13 +394,15 @@ def save_notify_state(state: dict, path: str = NOTIFY_STATE_FILE):
 # ---------------------------------------------------------------------------
 
 SETTINGS_FILE = os.path.expanduser("~/.claude/usage-tracker-settings.json")
-DEFAULT_SETTINGS = {"notifications": True, "update_check": True}
+DEFAULT_SETTINGS = {"notifications": True, "update_check": True, "menubar_style": "full"}
 
 
 def load_settings(path: str = SETTINGS_FILE) -> dict:
     settings = dict(DEFAULT_SETTINGS)
     stored = load_json(path)
     settings.update({k: v for k, v in stored.items() if k in DEFAULT_SETTINGS})
+    if settings["menubar_style"] not in MENUBAR_STYLES:
+        settings["menubar_style"] = DEFAULT_SETTINGS["menubar_style"]
     return settings
 
 

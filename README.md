@@ -32,22 +32,30 @@ rm -rf /Applications/ClaudeUsage.app
 
 ## Zelf bouwen
 
-Vereisten: macOS, Xcode command line tools (`xcode-select --install`), en:
+Vereisten: macOS, Xcode command line tools (`xcode-select --install`), en in de **systeem-Python** (`/usr/bin/python3`, niet Homebrew):
 
 ```bash
-pip3 install py2app pycryptodome
+/usr/bin/python3 -m pip install --user py2app pycryptodome pyobjc pytest
 ```
 
-Bouwen en verpakken:
+Scripts:
 
 ```bash
-./make-dmg.sh          # bouwt dist/ClaudeUsage.app + ClaudeUsage.dmg
+./build.sh             # tests + import-check + py2app + buildnummer + ad-hoc codesign
+./deploy.sh            # build.sh, uitrollen naar /Applications, LaunchAgent-herstart, verifieert verse fetch
+./make-dmg.sh          # build.sh + ClaudeUsage.dmg
+/usr/bin/python3 -m pytest   # alleen de tests
 ```
 
-Alleen de app bouwen en direct lokaal uitrollen (rebuild → /Applications → LaunchAgent-herstart):
+`deploy.sh` eindigt met `✓ fetch geverifieerd` of faalt met de laatste logregels. `CFBundleVersion` is de buildtijd (`YYYYMMDD.HHMMSS`), zo zie je welke build draait.
 
-```bash
-./deploy.sh
-```
+Structuur: `core.py` bevat alle logica zonder PyObjC (getest in `tests/`); `app.py` is alleen de menubalk/WebKit-glue; `fetch_limits.py` is een los debugscript voor de fetch-pipeline.
+
+## Logs en valkuilen
+
+- Logboek: `~/Library/Logs/ClaudeUsage.log`; opgehaalde data: `~/.claude/usage-limits.json`.
+- **PyObjC-selectors:** methodes op `NSObject`-subclasses worden Objective-C selectors (underscore → dubbele punt). Callbacks: camelCase met één trailing underscore per argument (`fetchWatchdogFired_`).
+- **Geen Python-subprocess vanuit de bundle:** de gebundelde interpreter-helper is kapot gelinkt; alles in-process.
+- **Source ≠ deployed:** wijzigingen zijn pas actief na `./deploy.sh`.
 
 Gebouwd met py2app tegen de systeem-Python (3.9 op macOS); de bundle is universal (x86_64 + arm64) en draait dus op Intel en Apple Silicon.

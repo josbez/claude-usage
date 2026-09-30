@@ -478,7 +478,23 @@ class AppDelegate(NSObject):
         self._push_data()
 
     def _set_status_title(self, text: str):
-        self.statusItem.button().setTitle_(text)
+        btn = self.statusItem.button()
+        btn.setTitle_(text)
+        # While the popover is open the item has a pinned width (see
+        # _pin_status_width); only let it grow, so text never gets clipped.
+        if self.statusItem.length() != NSVariableStatusItemLength:
+            needed = btn.fittingSize().width
+            if needed > self.statusItem.length():
+                self.statusItem.setLength_(needed)
+
+    def _pin_status_width(self):
+        """The popover hangs off the middle of the status item. If the item
+        shrinks while it's open (shorter title style, '…' during a fetch),
+        the popover jumps sideways — so pin the width until it closes."""
+        self.statusItem.setLength_(self.statusItem.button().frame().size.width)
+
+    def popoverDidClose_(self, notification):
+        self.statusItem.setLength_(NSVariableStatusItemLength)
 
     def _schedule_timer(self, interval, selector, repeats):
         """Schedule on NSRunLoopCommonModes, not just the default mode — otherwise
@@ -498,6 +514,7 @@ class AppDelegate(NSObject):
         self.popover = NSPopover.new()
         self.popover.setContentSize_(NSMakeSize(360, 296))
         self.popover.setBehavior_(1)  # NSPopoverBehaviorTransient
+        self.popover.setDelegate_(self)  # popoverDidClose_ releases the pinned width
 
         config = WKWebViewConfiguration.new()
         ucc = WKUserContentController.new()
@@ -530,6 +547,7 @@ class AppDelegate(NSObject):
             self.popover.performClose_(sender)
         else:
             btn = self.statusItem.button()
+            self._pin_status_width()
             self.popover.showRelativeToRect_ofView_preferredEdge_(
                 btn.bounds(), btn, NSMinYEdge
             )

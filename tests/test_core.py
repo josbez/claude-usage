@@ -830,3 +830,79 @@ def test_reset_notification_in_english():
     notes, _ = core.due_notifications(
         _limits(five=3, five_reset=_NEXT_FIVE), state, lang="en", now=_NOW)
     assert notes[0]["title"] == "Claude: 5-hour limit has reset"
+
+
+# --- Claude service status (taak 30) -------------------------------------
+
+def _summary(indicator="none", description="All Systems Operational", components=None, incidents=None):
+    comps = components if components is not None else [
+        {"name": "claude.ai", "status": "operational"},
+        {"name": "Claude Code", "status": "operational"},
+    ]
+    return {"status": {"indicator": indicator, "description": description},
+            "components": comps, "incidents": incidents or [], "scheduled_maintenances": []}
+
+
+def test_service_status_all_operational():
+    s = core.service_status(_summary())
+    assert s["level"] == "ok" and s["issues"] == [] and s["incidents"] == []
+    assert s["description"] == "All Systems Operational" and s["unknown"] == []
+
+
+def test_service_status_degraded_component():
+    s = core.service_status(_summary(
+        "minor", "Minor Service Outage",
+        components=[{"name": "claude.ai", "status": "operational"},
+                    {"name": "Claude Code", "status": "degraded_performance"}]))
+    assert s["level"] == "minor"
+    assert s["issues"] == [{"name": "Claude Code", "status": "degraded_performance"}]
+    assert s["unknown"] == []
+
+
+def test_service_status_incident_link_is_built_from_id():
+    s = core.service_status(_summary(
+        "major", "Partial System Outage",
+        incidents=[{"name": "Elevated errors", "id": "abc123xyz"},
+                   {"name": "Odd id", "id": "../evil"},
+                   {"name": "No id"}]))
+    assert s["incidents"][0] == {"name": "Elevated errors",
+                                 "url": "https://status.claude.com/incidents/abc123xyz"}
+    assert s["incidents"][1]["url"] == core.STATUS_PAGE_URL
+    assert s["incidents"][2]["url"] == core.STATUS_PAGE_URL
+    assert all(core.is_status_url(i["url"]) for i in s["incidents"])
+
+
+def test_service_status_unknown_values_are_neutral_and_listed():
+    s = core.service_status(_summary(
+        "weird", "Something",
+        components=[{"name": "claude.ai", "status": "on_fire"}]))
+    assert s["level"] == "unknown"
+    assert s["unknown"] == ["indicator=weird", "component:claude.ai=on_fire"]
+
+
+def test_service_status_skips_component_groups():
+    s = core.service_status(_summary(components=[
+        {"name": "Group", "status": "major_outage", "group": True},
+        {"name": "claude.ai", "status": "operational"}]))
+    assert s["issues"] == []
+
+
+@pytest.mark.parametrize("bad", [None, [], "x", {}, {"status": "x"}, {"status": {}},
+                                 {"status": {"indicator": 3}}])
+def test_service_status_rejects_garbage(bad):
+    assert core.service_status(bad) is None
+
+
+def test_is_status_url_only_accepts_status_page():
+    assert core.is_status_url("https://status.claude.com/incidents/x")
+    assert not core.is_status_url("https://status.claude.com.evil.com/")
+    assert not core.is_status_url("http://status.claude.com/")
+    assert not core.is_status_url(None)
+
+
+def test_status_badge_class():
+    assert core.status_badge_class(None) == ""
+    assert core.status_badge_class({"level": "ok"}) == ""
+    assert core.status_badge_class({"level": "unknown"}) == ""
+    assert core.status_badge_class({"level": "minor"}) == "stale"
+    assert core.status_badge_class({"level": "critical"}) == "disconnected"

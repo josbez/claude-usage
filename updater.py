@@ -77,6 +77,19 @@ def cleanup_stale():
             shutil.rmtree(path, ignore_errors=True)
 
 
+def fetch_status_summary(url: str = core.STATUS_SUMMARY_URL):
+    """Return the parsed Statuspage summary.json (raises UpdateError on a network
+    or JSON error). Separate from the release check: no GitHub headers."""
+    r = _run([CURL, "-fsSL", "--max-time", "15", "-H", "Accept: application/json",
+              "-H", "User-Agent: ClaudeUsage-status", url], timeout=25)
+    if r.returncode != 0:
+        raise UpdateError("download", detail=r.stderr.strip() or r.returncode)
+    try:
+        return json.loads(r.stdout)
+    except ValueError:
+        raise UpdateError("bad_response")
+
+
 def fetch_latest_release(url: str = core.UPDATE_API_URL):
     """Return parse_release() of the latest release, or None if there is none."""
     try:

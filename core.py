@@ -148,6 +148,10 @@ STRINGS = {
         "reason_not_fetched": "nog niet opgehaald",
         "reason_data_at": "data van {time}",
         "reason_stale": "data verouderd",
+        "svc_ok": "Alle Claude-diensten werken",
+        "svc_unknown": "Status onbekend",
+        "svc_checking": "Claude-status ophalen…",
+        "svc_open": "Open status.claude.com",
         # notifications
         "limit_five_hour": "5-uurslimiet",
         "limit_seven_day": "Weeklimiet",
@@ -228,6 +232,10 @@ STRINGS = {
         "reason_not_fetched": "not fetched yet",
         "reason_data_at": "data from {time}",
         "reason_stale": "data out of date",
+        "svc_ok": "All Claude services are working",
+        "svc_unknown": "Status unknown",
+        "svc_checking": "Checking Claude status…",
+        "svc_open": "Open status.claude.com",
         "limit_five_hour": "5-hour limit",
         "limit_seven_day": "Weekly limit",
         "notif_limit_title": "Claude: {limit} at {pct}%",
@@ -726,6 +734,88 @@ def due_notifications(limits: dict, state: dict,
             sent = sorted(set(sent) | set(crossed))
         new_state[key] = {"window": wk, "sent": sent}
     return notes, new_state
+
+
+# ---------------------------------------------------------------------------
+# Claude service status (public Statuspage API, no login)
+# ---------------------------------------------------------------------------
+
+STATUS_SUMMARY_URL = "https://status.claude.com/api/v2/summary.json"
+STATUS_PAGE_URL = "https://status.claude.com/"
+STATUS_CHECK_INTERVAL_SEC = 300
+
+# Documented Atlassian Statuspage values. "none"/"operational" were observed
+# on status.claude.com (1-10-2026); the others are documented but not yet seen.
+STATUS_INDICATOR_LEVELS = {"none": "ok", "minor": "minor", "major": "major", "critical": "critical"}
+STATUS_COMPONENT_OK = "operational"
+STATUS_COMPONENT_VALUES = {"operational", "degraded_performance", "partial_outage",
+                           "major_outage", "under_maintenance"}
+
+
+def service_status(summary):
+    """Distil a Statuspage summary.json into what the popover shows.
+
+    Returns None for anything that is not a usable summary. Otherwise
+    {level, description, issues: [{name, status}], incidents: [{name, url}],
+    unknown: [...]}. level is ok / minor / major / critical, or "unknown" when
+    the indicator is a value Statuspage does not document (shown neutral, never
+    guessed); `unknown` lists such values so the app can log them once."""
+    if not isinstance(summary, dict) or not isinstance(summary.get("status"), dict):
+        return None
+    status = summary["status"]
+    indicator = status.get("indicator")
+    if not isinstance(indicator, str):
+        return None
+    unknown = []
+    level = STATUS_INDICATOR_LEVELS.get(indicator)
+    if level is None:
+        level = "unknown"
+        unknown.append(f"indicator={indicator}")
+    description = status.get("description")
+    description = description.strip() if isinstance(description, str) else ""
+
+    issues = []
+    for comp in summary.get("components") or []:
+        if not isinstance(comp, dict) or comp.get("group"):
+            continue
+        name, cstatus = comp.get("name"), comp.get("status")
+        if not isinstance(name, str) or not isinstance(cstatus, str):
+            continue
+        if cstatus == STATUS_COMPONENT_OK:
+            continue
+        if cstatus not in STATUS_COMPONENT_VALUES:
+            unknown.append(f"component:{name}={cstatus}")
+        issues.append({"name": name, "status": cstatus})
+
+    incidents = []
+    for inc in summary.get("incidents") or []:
+        if not isinstance(inc, dict) or not isinstance(inc.get("name"), str):
+            continue
+        inc_id = inc.get("id")
+        url = STATUS_PAGE_URL
+        if isinstance(inc_id, str) and inc_id.isalnum():
+            url = STATUS_PAGE_URL + "incidents/" + inc_id
+        incidents.append({"name": inc["name"], "url": url})
+
+    return {"level": level, "description": description, "issues": issues,
+            "incidents": incidents, "unknown": unknown}
+
+
+def is_status_url(url) -> bool:
+    """Only ever open the status page itself."""
+    return isinstance(url, str) and url.startswith(STATUS_PAGE_URL)
+
+
+def status_badge_class(service) -> str:
+    """Gear-badge colour for a service_status() result: orange for minor
+    trouble, red for major/critical, nothing for ok / unknown / no data."""
+    level = (service or {}).get("level")
+    if level == "minor":
+        return "stale"
+    if level in ("major", "critical"):
+        return "disconnected"
+    return ""
+
 
 
 def load_json(path: str) -> dict:

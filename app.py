@@ -10,6 +10,7 @@ import os
 import sys
 import tempfile
 import threading
+import time
 import hashlib
 from datetime import datetime, timezone
 
@@ -55,6 +56,7 @@ from core import (
     history_record, append_history,
     new_block_log_entries, load_block_log_state, save_block_log_state,
     load_settings, save_settings,
+    service_status, is_status_url, status_badge_class, STATUS_CHECK_INTERVAL_SEC,
     UPDATE_STATE_FILE, load_json, save_json, is_newer, update_check_due,
 )
 import updater
@@ -86,6 +88,9 @@ class MessageHandler(NSObject):
         elif name == "startUpdate":
             if self.delegate:
                 self.delegate.start_update()
+        elif name == "openStatusPage":
+            if self.delegate:
+                self.delegate.open_status_page(str(message.body()))
         elif name == "quit":
             NSApp.terminate_(None)
         elif name == "fetchResult":
@@ -220,6 +225,10 @@ class AppDelegate(NSObject):
         self._update_checking = False  # release check running on a thread
         self._update_installing = False
         self._update_error = None
+        self._service = None           # service_status() result; {"level": "unreachable"} on network error
+        self._service_checking = False
+        self._service_checked_at = None   # time.monotonic() of the last status check
+        self._logged_unknown_status = set()
         self._version, self._build = app_version()
         self._lang = current_language()
         log(f"app gestart (versie {self._version}, taal {self._lang})")
@@ -236,6 +245,7 @@ class AppDelegate(NSObject):
         self._setup_fetch_webview()
         self._start_fetch()
         self._maybe_check_updates()
+        self._maybe_check_service_status()
         # Periodic timer every minute
         self._timer = self._schedule_timer(
             60.0, objc.selector(self.tickFired_, signature=b"v@:@"), True
@@ -384,6 +394,53 @@ class AppDelegate(NSObject):
                 AppHelper.callAfter(self._on_update_checked, None, str(e))
 
         threading.Thread(target=work, daemon=True).start()
+
+    # ------------------------------------------------------------------
+    # Claude service status (separate from the usage fetch, so an outage
+    # at Claude never blocks it)
+    # ------------------------------------------------------------------
+
+    def _maybe_check_service_status(self):
+        if self._service_checking:
+            return
+        last = self._service_checked_at
+        if last is not None and time.monotonic() - last < STATUS_CHECK_INTERVAL_SEC:
+            return
+        self._service_checking = True
+        self._service_checked_at = time.monotonic()
+
+        def work():
+            try:
+                summary = updater.fetch_status_summary()
+                AppHelper.callAfter(self._on_service_status, summary, None)
+            except Exception as e:
+                AppHelper.callAfter(self._on_service_status, None, str(e))
+
+        threading.Thread(target=work, daemon=True).start()
+
+    def _on_service_status(self, summary, error):
+        self._service_checking = False
+        if error:
+            log(f"claude-status ophalen mislukt: {error}")
+            self._service = {"level": "unreachable"}
+        else:
+            parsed = service_status(summary)
+            if parsed is None:
+                log("claude-status: onbruikbare respons")
+                self._service = {"level": "unreachable"}
+            else:
+                for value in parsed["unknown"]:
+                    if value not in self._logged_unknown_status:
+                        self._logged_unknown_status.add(value)
+                        log(f"claude-status: onbekende waarde {value}")
+                self._service = parsed
+        self._push_data()
+
+    def open_status_page(self, url: str):
+        if not is_status_url(url):
+            log(f"claude-status: link geweigerd: {url[:80]}")
+            return
+        NSWorkspace.sharedWorkspace().openURL_(NSURL.URLWithString_(url))
 
     def _on_update_checked(self, release, error):
         self._update_checking = False
@@ -560,6 +617,7 @@ class AppDelegate(NSObject):
         ucc.addScriptMessageHandler_name_(handler, "setNotifications")
         ucc.addScriptMessageHandler_name_(handler, "startUpdate")
         ucc.addScriptMessageHandler_name_(handler, "setMenubarStyle")
+        ucc.addScriptMessageHandler_name_(handler, "openStatusPage")
 
         self.webView = WKWebView.alloc().initWithFrame_configuration_(
             NSMakeRect(0, 0, 360, 296), config
@@ -898,6 +956,8 @@ class AppDelegate(NSObject):
             "version": self._version,
             "build": self._build,
             "update": self._update_view(),
+            "service": self._service,
+            "service_badge": status_badge_class(self._service),
             "menubar_style": load_settings()["menubar_style"],
             "lang": lang,
             "i18n": STRINGS[lang],
@@ -923,6 +983,7 @@ class AppDelegate(NSObject):
     def tickFired_(self, timer):
         self._check_account_switch()
         self._maybe_check_updates()
+        self._maybe_check_service_status()
         limits = load_limits()
         if not limits_are_fresh(limits):
             self._start_fetch()

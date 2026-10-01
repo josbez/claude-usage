@@ -329,6 +329,21 @@
   .footer .status-dot.stale, .footer .status-dot.disconnected { display: inline-block; }
   .status-dot.stale { background: var(--status-stale); }
   .status-dot.disconnected { background: var(--status-error); }
+  .status-dot.neutral { background: var(--muted); }
+
+  /* Connection row: own connection and Claude service status, one dot each */
+  .conn-line { display: flex; align-items: center; gap: 6px; }
+  .conn-line .status-dot { width: 6px; height: 6px; }
+  .conn-line span.txt { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; min-width: 0; }
+  button.conn-link {
+    border: none; background: none; padding: 0; font: inherit; font-size: 11px;
+    color: var(--muted); cursor: pointer; text-align: left;
+    display: flex; align-items: center; gap: 6px; min-width: 0; max-width: 100%;
+  }
+  button.conn-link:disabled { color: var(--muted); }
+  button.conn-link:hover span.txt { text-decoration: underline; }
+  button.conn-link:focus-visible { outline: 2px solid var(--accent-text); outline-offset: 1px; border-radius: 3px; }
+  .setting-row.conn { padding: 6px 0; }
 
   /* Fetching overlay pulse */
   .fetching-pulse {
@@ -446,12 +461,12 @@
         </div>
         <button class="update-btn" id="updateBtn" hidden onclick="onStartUpdate()"></button>
       </div>
-      <div class="setting-row">
+      <div class="setting-row conn">
         <div class="setting-text">
           <div class="setting-title" data-i18n="set_connection">Verbinding</div>
-          <div class="setting-sub" id="connText" data-i18n="connecting">Verbinden…</div>
+          <div class="setting-sub conn-line"><span class="status-dot" id="connDot"></span><span class="txt" id="connText" data-i18n="connecting">Verbinden…</span></div>
+          <div class="setting-sub conn-line" id="serviceLine"><button class="conn-link" id="serviceBtn" onclick="onOpenStatus()"><span class="status-dot neutral" id="serviceDot"></span><span class="txt" id="serviceText"></span></button></div>
         </div>
-        <span class="status-dot" id="connDot"></span>
       </div>
     </div>
   </div>
@@ -655,15 +670,55 @@ function render(d) {
   renderUpdate(d.update);
   renderMenubarStyle(d.menubar_style || 'full', d.menubar_previews || {});
 
-  // Badge on the gear: update available, or a connection problem
-  document.getElementById('settingsBadge').className =
-    'badge' + (problem ? ' ' + problem : d.update && d.update.state !== 'working' ? ' update' : '');
+  renderService(d.service);
+
+  // Badge on the gear: own connection problem, Claude outage, or update available
+  const badgeClass = problem || d.service_badge || (d.update && d.update.state !== 'working' ? 'update' : '');
+  document.getElementById('settingsBadge').className = 'badge' + (badgeClass ? ' ' + badgeClass : '');
 
   // Fetching spinner
   window.setStatus(d.fetching ? 'fetching' : 'ready');
 }
 
+// Claude service status: our own labels via T(); the API's description and
+// component/incident names are shown as delivered (English, not translated).
+let _statusUrl = '';
+function renderService(svc) {
+  const dot = document.getElementById('serviceDot');
+  const text = document.getElementById('serviceText');
+  const btn = document.getElementById('serviceBtn');
+  let cls = 'neutral', label, tip = '';
+  _statusUrl = '';
+  if (!svc) {
+    label = T('svc_checking');
+  } else if (svc.level === 'unreachable') {
+    label = T('svc_unknown');
+  } else if (svc.level === 'ok') {
+    cls = ''; label = T('svc_ok');
+  } else {
+    cls = svc.level === 'minor' ? 'stale' : svc.level === 'unknown' ? 'neutral' : 'disconnected';
+    const names = (svc.incidents || []).map(i => i.name).concat((svc.issues || []).map(i => i.name));
+    const uniq = names.filter((n, i) => names.indexOf(n) === i);
+    label = svc.description || T('svc_unknown');
+    if (uniq.length) label += ': ' + uniq.join(', ');
+    tip = label;
+    _statusUrl = (svc.incidents && svc.incidents[0] && svc.incidents[0].url) || 'https://status.claude.com/';
+  }
+  dot.className = 'status-dot' + (cls ? ' ' + cls : '');
+  text.textContent = label;
+  btn.disabled = !_statusUrl;
+  btn.style.cursor = _statusUrl ? 'pointer' : 'default';
+  btn.title = _statusUrl ? (tip + ' — ' + T('svc_open')) : '';
+}
+
 // ---- Actions ----
+
+function onOpenStatus() {
+  if (!_statusUrl) return;
+  if (window.webkit && window.webkit.messageHandlers && window.webkit.messageHandlers.openStatusPage) {
+    window.webkit.messageHandlers.openStatusPage.postMessage(_statusUrl);
+  }
+}
 
 function onRefresh() {
   if (window.webkit && window.webkit.messageHandlers && window.webkit.messageHandlers.refresh) {

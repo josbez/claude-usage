@@ -1010,3 +1010,9 @@ def test_swift_strings_json_matches_core():
     assert shared == {"strings": core.STRINGS, "days": core.DAYS, "months": core.MONTHS,
                       "default_lang": core.DEFAULT_LANG}, \
         "run /usr/bin/python3 scripts/swift-fixtures.py"
+
+
+def test_swift_fetch_js_matches_core():
+    root = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+    with open(os.path.join(root, "swift", "Resources", "fetch.js"), encoding="utf-8") as f:
+        assert f.read() == core._FETCH_JS_TEMPLATE, "run /usr/bin/python3 scripts/swift-fixtures.py"

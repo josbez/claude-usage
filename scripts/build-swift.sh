@@ -37,7 +37,7 @@ BIN="swift/.build/release/ClaudeUsage"
 rm -rf "$APP"
 mkdir -p "$APP/Contents/MacOS" "$APP/Contents/Resources"
 cp "$BIN" "$APP/Contents/MacOS/ClaudeUsage"
-cp dev/dashboard.html swift/Resources/strings.json icon/ClaudeUsage.icns "$APP/Contents/Resources/"
+cp dev/dashboard.html swift/Resources/strings.json swift/Resources/fetch.js icon/ClaudeUsage.icns "$APP/Contents/Resources/"
 
 cat > "$APP/Contents/Info.plist" <<EOF
 <?xml version="1.0" encoding="UTF-8"?>

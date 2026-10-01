@@ -5,7 +5,7 @@ import XCTest
 /// Parity with core.py: every case in Fixtures/core.json was produced by the
 /// Python function (scripts/swift-fixtures.py); the Swift port must give the
 /// exact same output at the same "now" and time zone.
-final class ParityTests: XCTestCase {
+class FixtureCase: XCTestCase {
     static let testsDir = URL(fileURLWithPath: #filePath).deletingLastPathComponent()
     static let fixtures: JSONObject = {
         let url = testsDir.appendingPathComponent("Fixtures/core.json")
@@ -38,6 +38,9 @@ final class ParityTests: XCTestCase {
         }
         XCTAssertEqual(norm(got) as? NSObject, norm(want) as? NSObject, msg, file: file, line: line)
     }
+}
+
+final class ParityTests: FixtureCase {
 
     func testFormatResetTime() {
         for c in list("format_reset_time") {

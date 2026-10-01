@@ -36,6 +36,483 @@
         }
       }
     ],
+    "cedar_ember": [
+      {
+        "limits": {},
+        "stable": null,
+        "unrecognised": false
+      },
+      {
+        "limits": {
+          "cedar_ember": "weird"
+        },
+        "stable": null,
+        "unrecognised": true
+      },
+      {
+        "limits": {
+          "cedar_ember": {
+            "eligible": true,
+            "grants": "nope"
+          }
+        },
+        "stable": null,
+        "unrecognised": true
+      },
+      {
+        "limits": {
+          "cedar_ember": {
+            "eligible": false,
+            "grants": [
+              {
+                "ends_at": "2026-10-22T21:59:00Z",
+                "id": "g1",
+                "label": "Launch week",
+                "paused": false,
+                "resets_left": 2,
+                "resets_total": 2,
+                "starts_at": "2026-09-20T00:00:00Z",
+                "usable_now": true
+              }
+            ]
+          }
+        },
+        "stable": {
+          "at_limit": null,
+          "eligible": false,
+          "grants": [
+            {
+              "ends_at": "2026-10-22T21:59:00Z",
+              "id": "g1",
+              "paused": false,
+              "resets_left": 2,
+              "resets_total": 2,
+              "starts_at": "2026-09-20T00:00:00Z",
+              "usable_now": true
+            }
+          ]
+        },
+        "unrecognised": false
+      },
+      {
+        "limits": {
+          "cedar_ember": {
+            "eligible": true,
+            "grants": [
+              {
+                "ends_at": "2026-10-22T21:59:00Z",
+                "id": "g1",
+                "label": "Launch week",
+                "paused": false,
+                "resets_left": 2,
+                "resets_total": 2,
+                "starts_at": "2026-09-20T00:00:00Z",
+                "usable_now": true
+              }
+            ]
+          }
+        },
+        "stable": {
+          "at_limit": null,
+          "eligible": true,
+          "grants": [
+            {
+              "ends_at": "2026-10-22T21:59:00Z",
+              "id": "g1",
+              "paused": false,
+              "resets_left": 2,
+              "resets_total": 2,
+              "starts_at": "2026-09-20T00:00:00Z",
+              "usable_now": true
+            }
+          ]
+        },
+        "unrecognised": false
+      },
+      {
+        "limits": {
+          "cedar_ember": {
+            "eligible": true,
+            "grants": [
+              {
+                "ends_at": "2026-10-22T21:59:00Z",
+                "id": "g1",
+                "label": "",
+                "paused": false,
+                "resets_left": 1,
+                "resets_total": 2,
+                "starts_at": "2026-09-20T00:00:00Z",
+                "usable_now": true
+              }
+            ]
+          }
+        },
+        "stable": {
+          "at_limit": null,
+          "eligible": true,
+          "grants": [
+            {
+              "ends_at": "2026-10-22T21:59:00Z",
+              "id": "g1",
+              "paused": false,
+              "resets_left": 1,
+              "resets_total": 2,
+              "starts_at": "2026-09-20T00:00:00Z",
+              "usable_now": true
+            }
+          ]
+        },
+        "unrecognised": false
+      },
+      {
+        "limits": {
+          "cedar_ember": {
+            "eligible": true,
+            "grants": [
+              {
+                "ends_at": "2026-10-22T21:59:00Z",
+                "id": "g1",
+                "label": "Launch week",
+                "paused": true,
+                "resets_left": 2,
+                "resets_total": 2,
+                "starts_at": "2026-09-20T00:00:00Z",
+                "usable_now": true
+              }
+            ]
+          }
+        },
+        "stable": {
+          "at_limit": null,
+          "eligible": true,
+          "grants": [
+            {
+              "ends_at": "2026-10-22T21:59:00Z",
+              "id": "g1",
+              "paused": true,
+              "resets_left": 2,
+              "resets_total": 2,
+              "starts_at": "2026-09-20T00:00:00Z",
+              "usable_now": true
+            }
+          ]
+        },
+        "unrecognised": false
+      },
+      {
+        "limits": {
+          "cedar_ember": {
+            "eligible": true,
+            "grants": [
+              {
+                "ends_at": "2026-10-22T21:59:00Z",
+                "id": "g1",
+                "label": "Launch week",
+                "paused": false,
+                "resets_left": 2,
+                "resets_total": 2,
+                "starts_at": "2026-10-10T00:00:00Z",
+                "usable_now": true
+              }
+            ]
+          }
+        },
+        "stable": {
+          "at_limit": null,
+          "eligible": true,
+          "grants": [
+            {
+              "ends_at": "2026-10-22T21:59:00Z",
+              "id": "g1",
+              "paused": false,
+              "resets_left": 2,
+              "resets_total": 2,
+              "starts_at": "2026-10-10T00:00:00Z",
+              "usable_now": true
+            }
+          ]
+        },
+        "unrecognised": false
+      },
+      {
+        "limits": {
+          "cedar_ember": {
+            "eligible": true,
+            "grants": [
+              {
+                "ends_at": "2026-09-30T00:00:00Z",
+                "id": "g1",
+                "label": "Launch week",
+                "paused": false,
+                "resets_left": 2,
+                "resets_total": 2,
+                "starts_at": "2026-09-20T00:00:00Z",
+                "usable_now": true
+              }
+            ]
+          }
+        },
+        "stable": {
+          "at_limit": null,
+          "eligible": true,
+          "grants": [
+            {
+              "ends_at": "2026-09-30T00:00:00Z",
+              "id": "g1",
+              "paused": false,
+              "resets_left": 2,
+              "resets_total": 2,
+              "starts_at": "2026-09-20T00:00:00Z",
+              "usable_now": true
+            }
+          ]
+        },
+        "unrecognised": false
+      },
+      {
+        "limits": {
+          "cedar_ember": {
+            "eligible": true,
+            "grants": [
+              {
+                "ends_at": null,
+                "id": "g1",
+                "label": "Launch week",
+                "paused": false,
+                "resets_left": 2,
+                "resets_total": 2,
+                "starts_at": "2026-09-20T00:00:00Z",
+                "usable_now": true
+              },
+              {
+                "ends_at": "2026-10-15T10:00:00Z",
+                "id": "g2",
+                "label": "Bonus",
+                "paused": false,
+                "resets_left": 3,
+                "resets_total": 2,
+                "starts_at": "2026-09-20T00:00:00Z",
+                "usable_now": true
+              }
+            ]
+          }
+        },
+        "stable": {
+          "at_limit": null,
+          "eligible": true,
+          "grants": [
+            {
+              "id": "g1",
+              "paused": false,
+              "resets_left": 2,
+              "resets_total": 2,
+              "starts_at": "2026-09-20T00:00:00Z",
+              "usable_now": true
+            },
+            {
+              "ends_at": "2026-10-15T10:00:00Z",
+              "id": "g2",
+              "paused": false,
+              "resets_left": 3,
+              "resets_total": 2,
+              "starts_at": "2026-09-20T00:00:00Z",
+              "usable_now": true
+            }
+          ]
+        },
+        "unrecognised": false
+      },
+      {
+        "limits": {
+          "cedar_ember": {
+            "eligible": true,
+            "grants": [
+              {
+                "ends_at": "2026-10-22T21:59:00Z",
+                "id": "g1",
+                "label": "Launch week",
+                "paused": false,
+                "resets_left": true,
+                "resets_total": 2,
+                "starts_at": "2026-09-20T00:00:00Z",
+                "usable_now": true
+              }
+            ]
+          }
+        },
+        "stable": {
+          "at_limit": null,
+          "eligible": true,
+          "grants": [
+            {
+              "ends_at": "2026-10-22T21:59:00Z",
+              "id": "g1",
+              "paused": false,
+              "resets_left": true,
+              "resets_total": 2,
+              "starts_at": "2026-09-20T00:00:00Z",
+              "usable_now": true
+            }
+          ]
+        },
+        "unrecognised": false
+      },
+      {
+        "limits": {
+          "cedar_ember": {
+            "eligible": true,
+            "grants": [
+              {
+                "ends_at": "2026-10-22T21:59:00Z",
+                "id": "g1",
+                "label": "Launch week",
+                "paused": false,
+                "resets_left": 1.0,
+                "resets_total": 2,
+                "starts_at": "2026-09-20T00:00:00Z",
+                "usable_now": true
+              }
+            ]
+          }
+        },
+        "stable": {
+          "at_limit": null,
+          "eligible": true,
+          "grants": [
+            {
+              "ends_at": "2026-10-22T21:59:00Z",
+              "id": "g1",
+              "paused": false,
+              "resets_left": 1.0,
+              "resets_total": 2,
+              "starts_at": "2026-09-20T00:00:00Z",
+              "usable_now": true
+            }
+          ]
+        },
+        "unrecognised": false
+      },
+      {
+        "limits": {
+          "cedar_ember": {
+            "eligible": true,
+            "grants": [
+              {
+                "ends_at": "bad",
+                "id": "g1",
+                "label": "Launch week",
+                "paused": false,
+                "resets_left": 2,
+                "resets_total": 2,
+                "starts_at": "2026-09-20T00:00:00Z",
+                "usable_now": true
+              }
+            ]
+          }
+        },
+        "stable": {
+          "at_limit": null,
+          "eligible": true,
+          "grants": [
+            {
+              "ends_at": "bad",
+              "id": "g1",
+              "paused": false,
+              "resets_left": 2,
+              "resets_total": 2,
+              "starts_at": "2026-09-20T00:00:00Z",
+              "usable_now": true
+            }
+          ]
+        },
+        "unrecognised": false
+      },
+      {
+        "limits": {
+          "cedar_ember": {
+            "grants": [
+              {
+                "ends_at": null,
+                "id": "g1",
+                "label": "  ",
+                "paused": false,
+                "resets_left": 2,
+                "resets_total": 2,
+                "starts_at": "2026-09-20T00:00:00Z",
+                "usable_now": true
+              }
+            ]
+          }
+        },
+        "stable": {
+          "at_limit": null,
+          "eligible": null,
+          "grants": [
+            {
+              "id": "g1",
+              "paused": false,
+              "resets_left": 2,
+              "resets_total": 2,
+              "starts_at": "2026-09-20T00:00:00Z",
+              "usable_now": true
+            }
+          ]
+        },
+        "unrecognised": false
+      }
+    ],
+    "decrypt_cookie_value": [
+      {
+        "enc": "7631301a83e9ff505e195f09abc1fe95e7122a60c4aa99ea77cc364e80d15a09840e5f8caa3324fadc7e333f28c62cace02847",
+        "host": ".claude.ai",
+        "key": "8d980c26091f4ec99749af7dd4090b2e",
+        "out": "sk-ant-test-123"
+      },
+      {
+        "enc": "763130a7a739c9391a82f0b3670776127e79bc",
+        "host": ".claude.ai",
+        "key": "8d980c26091f4ec99749af7dd4090b2e",
+        "out": "old-style"
+      },
+      {
+        "enc": "6e6f742d656e63727970746564",
+        "host": ".claude.ai",
+        "key": "8d980c26091f4ec99749af7dd4090b2e",
+        "out": null
+      },
+      {
+        "enc": "76313100000000000000000000000000000000",
+        "host": ".claude.ai",
+        "key": "8d980c26091f4ec99749af7dd4090b2e",
+        "out": null
+      },
+      {
+        "enc": "76313001010101010101010101010101010101",
+        "host": ".claude.ai",
+        "key": "8d980c26091f4ec99749af7dd4090b2e",
+        "out": null
+      },
+      {
+        "enc": "7631301a83e9ff505e195f09abc1fe95e7122a60c4aa99ea77cc364e80d15a09840e5f8caa3324fadc7e333f28c62cace02847",
+        "host": ".claude.ai",
+        "key": "7d8f8846922fc5623f7a9f6e2fd1f5dd",
+        "out": null
+      }
+    ],
+    "derive_cookie_key": [
+      {
+        "out": "8d980c26091f4ec99749af7dd4090b2e",
+        "password": "test-safe-storage-password"
+      },
+      {
+        "out": "1cbee826d6938327ae9043f63bfc26d7",
+        "password": ""
+      },
+      {
+        "out": "c44f2208f685b841bb890cdf67449f17",
+        "password": "pässwörd"
+      }
+    ],
     "face_icon": [
       {
         "in": 0,
@@ -1240,6 +1717,49 @@
         "out": false
       }
     ],
+    "limits_output": [
+      {
+        "in": {
+          "account_email": "user@example.com",
+          "account_name": "Sam",
+          "account_plan": {
+            "capabilities": [
+              "claude_pro",
+              "chat"
+            ],
+            "label": ""
+          },
+          "data": {
+            "account_email": "from-data@example.com",
+            "five_hour": {
+              "resets_at": "2026-10-01T12:00:00+00:00",
+              "utilization": 12.0
+            },
+            "seven_day": {
+              "resets_at": "2026-10-05T07:00:00+00:00",
+              "utilization": 40
+            }
+          },
+          "ok": true,
+          "org_id": "org-1"
+        },
+        "out": {
+          "account_email": "from-data@example.com",
+          "account_name": "Sam",
+          "account_plan": "Pro",
+          "fetched_at": "2026-10-01T10:00:00+00:00",
+          "five_hour": {
+            "resets_at": "2026-10-01T12:00:00+00:00",
+            "utilization": 12.0
+          },
+          "org_id": "org-1",
+          "seven_day": {
+            "resets_at": "2026-10-05T07:00:00+00:00",
+            "utilization": 40
+          }
+        }
+      }
+    ],
     "load_settings": [
       {
         "out": {
@@ -1295,6 +1815,304 @@
           "update_check": true
         },
         "stored": []
+      }
+    ],
+    "new_block_log_entries": [
+      {
+        "account": "user@example.com",
+        "bootstrap": {},
+        "limits": {},
+        "out": [
+          [],
+          {}
+        ],
+        "seen": {}
+      },
+      {
+        "account": "user@example.com",
+        "bootstrap": {
+          "access_block": {
+            "reason": "x"
+          },
+          "api_disabled_until": "2026-11-01",
+          "billing_issue": null
+        },
+        "limits": {
+          "five_hour": {
+            "locked_reason": "rate_limited"
+          },
+          "seven_day": {
+            "locked_reason": ""
+          }
+        },
+        "out": [
+          [
+            "blokkering: five_hour__locked_reason=rate_limited",
+            "blokkering: access_block={'reason': 'x'}",
+            "blokkering: api_disabled_until=2026-11-01"
+          ],
+          {
+            "user@example.com|access_block|{'reason': 'x'}": true,
+            "user@example.com|api_disabled_until|2026-11-01": true,
+            "user@example.com|five_hour__locked_reason|rate_limited": true
+          }
+        ],
+        "seen": {}
+      },
+      {
+        "account": "user@example.com",
+        "bootstrap": {},
+        "limits": {
+          "five_hour": {
+            "locked_reason": "rate_limited"
+          }
+        },
+        "out": [
+          [],
+          {
+            "user@example.com|five_hour__locked_reason|rate_limited": true
+          }
+        ],
+        "seen": {
+          "user@example.com|five_hour__locked_reason|rate_limited": true
+        }
+      },
+      {
+        "account": "user@example.com",
+        "bootstrap": "not a dict",
+        "limits": {
+          "seven_day": {
+            "locked_reason": "  "
+          }
+        },
+        "out": [
+          [],
+          {}
+        ],
+        "seen": {}
+      },
+      {
+        "account": "a@b",
+        "bootstrap": {
+          "subscription_pause": 3
+        },
+        "limits": {
+          "five_hour": {
+            "locked_reason": true
+          }
+        },
+        "out": [
+          [
+            "blokkering: five_hour__locked_reason=True",
+            "blokkering: subscription_pause=3"
+          ],
+          {
+            "a@b|five_hour__locked_reason|True": true,
+            "a@b|subscription_pause|3": true
+          }
+        ],
+        "seen": {}
+      }
+    ],
+    "plan_label": [
+      {
+        "in": null,
+        "out": ""
+      },
+      {
+        "in": 5,
+        "out": ""
+      },
+      {
+        "in": "  Max  ",
+        "out": "Max"
+      },
+      {
+        "in": {},
+        "out": ""
+      },
+      {
+        "in": {
+          "label": " Team "
+        },
+        "out": "Team"
+      },
+      {
+        "in": {
+          "capabilities": [
+            "chat",
+            "claude_pro"
+          ],
+          "label": ""
+        },
+        "out": "Pro"
+      },
+      {
+        "in": {
+          "capabilities": [
+            "claude_max"
+          ],
+          "label": null
+        },
+        "out": ""
+      },
+      {
+        "in": {
+          "capabilities": null
+        },
+        "out": ""
+      }
+    ],
+    "read_cookies": {
+      "out": {
+        "legacy": {
+          "domain": ".claude.ai",
+          "path": "/",
+          "value": "old-style"
+        },
+        "sessionKey": {
+          "domain": ".claude.ai",
+          "path": "/",
+          "value": "sk-ant-test-123"
+        }
+      },
+      "password": "test-safe-storage-password"
+    },
+    "service_status": [
+      {
+        "in": null,
+        "out": null
+      },
+      {
+        "in": [],
+        "out": null
+      },
+      {
+        "in": {
+          "status": "x"
+        },
+        "out": null
+      },
+      {
+        "in": {
+          "status": {
+            "indicator": 1
+          }
+        },
+        "out": null
+      },
+      {
+        "in": {
+          "components": [
+            {
+              "name": "claude.ai",
+              "status": "operational"
+            }
+          ],
+          "status": {
+            "description": " All Systems Operational ",
+            "indicator": "none"
+          }
+        },
+        "out": {
+          "description": "All Systems Operational",
+          "incidents": [],
+          "issues": [],
+          "level": "ok",
+          "unknown": []
+        }
+      },
+      {
+        "in": {
+          "components": [
+            {
+              "name": "API",
+              "status": "degraded_performance"
+            },
+            {
+              "group": true,
+              "name": "Group",
+              "status": "major_outage"
+            },
+            {
+              "name": "Odd",
+              "status": "melting"
+            },
+            {
+              "name": 3,
+              "status": "x"
+            },
+            "junk"
+          ],
+          "incidents": [
+            {
+              "id": "abc123",
+              "name": "Errors"
+            },
+            {
+              "name": "No id"
+            },
+            {
+              "id": "../x",
+              "name": "Bad id"
+            },
+            {
+              "id": "zz"
+            }
+          ],
+          "status": {
+            "description": "Minor",
+            "indicator": "minor"
+          }
+        },
+        "out": {
+          "description": "Minor",
+          "incidents": [
+            {
+              "name": "Errors",
+              "url": "https://status.claude.com/incidents/abc123"
+            },
+            {
+              "name": "No id",
+              "url": "https://status.claude.com/"
+            },
+            {
+              "name": "Bad id",
+              "url": "https://status.claude.com/"
+            }
+          ],
+          "issues": [
+            {
+              "name": "API",
+              "status": "degraded_performance"
+            },
+            {
+              "name": "Odd",
+              "status": "melting"
+            }
+          ],
+          "level": "minor",
+          "unknown": [
+            "component:Odd=melting"
+          ]
+        }
+      },
+      {
+        "in": {
+          "status": {
+            "description": null,
+            "indicator": "apocalyptic"
+          }
+        },
+        "out": {
+          "description": "",
+          "incidents": [],
+          "issues": [],
+          "level": "unknown",
+          "unknown": [
+            "indicator=apocalyptic"
+          ]
+        }
       }
     ],
     "status_badge_class": [

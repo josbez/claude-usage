@@ -3,6 +3,8 @@
 
 - swift/Resources/strings.json: STRINGS, DAYS and MONTHS — one source of truth
   for both stacks (tests/test_core.py checks it is up to date).
+- swift/Resources/fetch.js: core._FETCH_JS_TEMPLATE (the usage fetch run inside
+  claude.ai), with DELIVER still to be filled in by the app.
 - swift/Tests/UsageCoreTests/Fixtures/core.json: inputs and the outputs
   core.py gives for them, at a fixed "now" and time zone. The Swift tests must
   reproduce every output exactly (parity is the acceptance criterion).
@@ -10,8 +12,10 @@
 Run after changing STRINGS or the pure functions: /usr/bin/python3 scripts/swift-fixtures.py
 """
 
+import hashlib
 import json
 import os
+import sqlite3
 import sys
 import time
 from datetime import datetime, timezone
@@ -26,7 +30,13 @@ sys.path.insert(0, ROOT)
 import core  # noqa: E402
 
 STRINGS_PATH = os.path.join(ROOT, "swift", "Resources", "strings.json")
-FIXTURES_PATH = os.path.join(ROOT, "swift", "Tests", "UsageCoreTests", "Fixtures", "core.json")
+FETCH_JS_PATH = os.path.join(ROOT, "swift", "Resources", "fetch.js")
+FIXTURES_DIR = os.path.join(ROOT, "swift", "Tests", "UsageCoreTests", "Fixtures")
+FIXTURES_PATH = os.path.join(FIXTURES_DIR, "core.json")
+COOKIE_DB_PATH = os.path.join(FIXTURES_DIR, "Cookies")
+
+# Synthetic values only (same as tests/test_core.py) — never real cookies.
+TEST_PASSWORD = "test-safe-storage-password"
 
 
 def shared_strings() -> dict:
@@ -127,6 +137,72 @@ T_CASES = [
 ]
 
 
+def _encrypt(value: str, host: str, key: bytes, host_prefix: bool = True) -> bytes:
+    from Crypto.Cipher import AES
+    plain = value.encode()
+    if host_prefix:
+        plain = hashlib.sha256(host.encode()).digest() + plain
+    pad = 16 - len(plain) % 16
+    plain += bytes([pad]) * pad
+    return b"v10" + AES.new(key, AES.MODE_CBC, IV=b" " * 16).encrypt(plain)
+
+
+COOKIE_ROWS = None
+
+
+def write_cookie_db(key: bytes):
+    """Chromium-style cookie DB for read_cookies(); rebuilt on every run."""
+    rows = [
+        ("sessionKey", _encrypt("sk-ant-test-123", ".claude.ai", key), ".claude.ai", "/"),
+        ("legacy", _encrypt("old-style", ".claude.ai", key, host_prefix=False), ".claude.ai", "/"),
+        ("plain", b"not-encrypted", ".claude.ai", "/"),
+        ("v11scheme", b"v11" + b"\x00" * 16, ".claude.ai", "/"),
+        ("badpad", b"v10" + b"\x01" * 16, ".claude.ai", "/"),
+    ]
+    if os.path.exists(COOKIE_DB_PATH):
+        os.unlink(COOKIE_DB_PATH)
+    conn = sqlite3.connect(COOKIE_DB_PATH)
+    conn.execute("CREATE TABLE cookies (name TEXT, encrypted_value BLOB, host_key TEXT, path TEXT)")
+    conn.executemany("INSERT INTO cookies VALUES (?, ?, ?, ?)", rows)
+    conn.commit()
+    conn.close()
+    return rows
+
+
+PARSED_FETCH = {"ok": True, "org_id": "org-1", "account_email": "user@example.com",
+                "account_name": "Sam", "account_plan": {"label": "", "capabilities": ["claude_pro", "chat"]},
+                "data": {"five_hour": {"utilization": 12.0, "resets_at": "2026-10-01T12:00:00+00:00"},
+                         "seven_day": {"utilization": 40, "resets_at": "2026-10-05T07:00:00+00:00"},
+                         "account_email": "from-data@example.com"}}
+
+PLAN_CASES = [None, 5, "  Max  ", {}, {"label": " Team "}, {"label": "", "capabilities": ["chat", "claude_pro"]},
+              {"label": None, "capabilities": ["claude_max"]}, {"capabilities": None}]
+
+BLOCK_CASES = [
+    ({}, {}, "user@example.com", {}),
+    ({"five_hour": {"locked_reason": "rate_limited"}, "seven_day": {"locked_reason": ""}},
+     {"access_block": {"reason": "x"}, "billing_issue": None, "api_disabled_until": "2026-11-01"},
+     "user@example.com", {}),
+    ({"five_hour": {"locked_reason": "rate_limited"}}, {}, "user@example.com",
+     {"user@example.com|five_hour__locked_reason|rate_limited": True}),
+    ({"seven_day": {"locked_reason": "  "}}, "not a dict", "user@example.com", {}),
+    ({"five_hour": {"locked_reason": True}}, {"subscription_pause": 3}, "a@b", {}),
+]
+
+STATUS_SUMMARIES = [
+    None, [], {"status": "x"}, {"status": {"indicator": 1}},
+    {"status": {"indicator": "none", "description": " All Systems Operational "},
+     "components": [{"name": "claude.ai", "status": "operational"}]},
+    {"status": {"indicator": "minor", "description": "Minor"},
+     "components": [{"name": "API", "status": "degraded_performance"},
+                    {"name": "Group", "status": "major_outage", "group": True},
+                    {"name": "Odd", "status": "melting"}, {"name": 3, "status": "x"}, "junk"],
+     "incidents": [{"name": "Errors", "id": "abc123"}, {"name": "No id"},
+                   {"name": "Bad id", "id": "../x"}, {"id": "zz"}]},
+    {"status": {"indicator": "apocalyptic", "description": None}},
+]
+
+
 def build_fixtures() -> dict:
     core.datetime = _FixedNow
     now = datetime.fromisoformat(NOW)
@@ -165,6 +241,27 @@ def build_fixtures() -> dict:
         c["load_settings"].append({"stored": stored, "out": core.load_settings(path)})
         os.unlink(path)
     c["status_badge_class"] = [{"in": s, "out": core.status_badge_class(s)} for s in SERVICE_CASES]
+    key = core.derive_cookie_key(TEST_PASSWORD)
+    rows = write_cookie_db(key)
+    c["derive_cookie_key"] = [{"password": pw, "out": core.derive_cookie_key(pw).hex()}
+                              for pw in (TEST_PASSWORD, "", "pässwörd")]
+    c["decrypt_cookie_value"] = [{"enc": bytes(enc).hex(), "host": host, "key": key.hex(),
+                                  "out": core.decrypt_cookie_value(bytes(enc), host, key)}
+                                 for _, enc, host, _ in rows]
+    c["decrypt_cookie_value"].append({"enc": rows[0][1].hex(), "host": ".claude.ai",
+                                      "key": core.derive_cookie_key("wrong").hex(),
+                                      "out": core.decrypt_cookie_value(rows[0][1], ".claude.ai",
+                                                                       core.derive_cookie_key("wrong"))})
+    c["read_cookies"] = {"password": TEST_PASSWORD, "out": core.read_cookies(COOKIE_DB_PATH, key)}
+    c["plan_label"] = [{"in": p, "out": core.plan_label(p)} for p in PLAN_CASES]
+    c["limits_output"] = [{"in": PARSED_FETCH, "out": core.limits_output(PARSED_FETCH)}]
+    c["new_block_log_entries"] = [
+        {"limits": lim, "bootstrap": bs, "account": acct, "seen": seen,
+         "out": list(core.new_block_log_entries(lim, bs, acct, seen))}
+        for lim, bs, acct, seen in BLOCK_CASES]
+    c["cedar_ember"] = [{"limits": lim, "unrecognised": core.cedar_ember_unrecognised(lim),
+                         "stable": core.cedar_ember_stable(lim)} for lim in RESETS_CASES]
+    c["service_status"] = [{"in": s, "out": core.service_status(s)} for s in STATUS_SUMMARIES]
     c["t"] = [{"key": k, "lang": l, "kw": kw, "out": core.t(k, l, **kw)}
               for k, kw in T_CASES for l in langs]
     return fx
@@ -172,6 +269,8 @@ def build_fixtures() -> dict:
 
 def main():
     write_json(STRINGS_PATH, shared_strings())
+    with open(FETCH_JS_PATH, "w", encoding="utf-8") as f:
+        f.write(core._FETCH_JS_TEMPLATE)
     write_json(FIXTURES_PATH, build_fixtures())
     print(f"✓ {os.path.relpath(STRINGS_PATH, ROOT)}")
     print(f"✓ {os.path.relpath(FIXTURES_PATH, ROOT)}")

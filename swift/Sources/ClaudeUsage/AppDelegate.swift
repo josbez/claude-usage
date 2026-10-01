@@ -2,9 +2,9 @@ import AppKit
 import UsageCore
 import WebKit
 
-/// Native port of app.py. Fase 1: menu bar + popover with dashboard.html, fed
-/// from the limits file the running app writes. Fetching, notifications,
-/// history and updates follow in fasen 2–4.
+/// Native port of app.py: menu bar + popover with dashboard.html (fase 1) and
+/// the usage fetch through a hidden WKWebView (fase 2, Fetching.swift).
+/// Notifications, history and updates follow in fasen 3–4.
 final class AppDelegate: NSObject, NSApplicationDelegate, NSPopoverDelegate {
     static let popoverWidth: CGFloat = 360
     static let popoverMinHeight: CGFloat = 296   // main view; fixed
@@ -23,6 +23,17 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSPopoverDelegate {
     var timer: Timer?
     var activity: NSObjectProtocol?
 
+    // Fetching (Fetching.swift)
+    var fetchJSTemplate = ""
+    var fetchWebView: WKWebView?
+    var fetchNavDelegate: FetchNavDelegate?
+    var watchdog: Timer?
+    var lastCookieMtime: Date?
+    var lastSessionHash: String?
+    var serviceChecking = false
+    var serviceCheckedAt: Date?
+    var loggedUnknownStatus = Set<String>()
+
     func applicationDidFinishLaunching(_ notification: Notification) {
         guard let url = Bundle.main.url(forResource: "strings", withExtension: "json"),
               let strings = try? Strings(contentsOf: url)
@@ -32,6 +43,12 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSPopoverDelegate {
             return
         }
         self.strings = strings
+        if let js = Bundle.main.url(forResource: "fetch", withExtension: "js"),
+           let template = try? String(contentsOf: js, encoding: .utf8) {
+            fetchJSTemplate = template
+        } else {
+            log("fetch.js ontbreekt in de bundle")
+        }
         lang = languageFrom(Locale.preferredLanguages, defaultLang: strings.defaultLang)
         let info = Bundle.main.infoDictionary ?? [:]
         state.version = info["CFBundleShortVersionString"] as? String ?? "dev"
@@ -44,7 +61,9 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSPopoverDelegate {
 
         setupStatusItem()
         setupPopover()
-        showCachedTitle()
+        setupFetchWebView()
+        startFetch()
+        maybeCheckServiceStatus()
         // Every minute, also while the popover is open (common run loop modes).
         let t = Timer(timeInterval: 60, repeats: true) { [weak self] _ in self?.tick() }
         RunLoop.current.add(t, forMode: .common)
@@ -110,7 +129,15 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSPopoverDelegate {
     }
 
     func tick() {
-        if popover.isShown { pushData() } else { showCachedTitle() }
+        checkAccountSwitch()
+        maybeCheckServiceStatus()
+        if !limitsAreFresh(loadJSONObject(paths.limits), now: Date()) {
+            startFetch()
+        } else if popover.isShown {
+            pushData()
+        } else {
+            showCachedTitle()
+        }
     }
 
     // MARK: - Popover
@@ -146,6 +173,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSPopoverDelegate {
         } else if let button = statusItem.button {
             popover.show(relativeTo: button.bounds, of: button, preferredEdge: .minY)
             lang = languageFrom(Locale.preferredLanguages, defaultLang: strings.defaultLang)
+            checkAccountSwitch()
             pushData(animated: true)
         }
     }
@@ -188,9 +216,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSPopoverDelegate {
     func handle(_ name: String, _ body: Any) {
         switch name {
         case "refresh":
-            // Fase 1 has no fetch of its own: re-read what the running app fetched.
-            showCachedTitle()
-            pushData()
+            startFetch()
         case "quit":
             NSApp.terminate(nil)
         case "setNotifications":
@@ -217,6 +243,8 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSPopoverDelegate {
             if let s = body as? String, isStatusURL(s), let url = URL(string: s) {
                 NSWorkspace.shared.open(url)
             }
+        case "fetchResult":
+            onFetchResult(body as? String ?? "")
         default:
             break
         }

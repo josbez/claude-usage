@@ -18,9 +18,8 @@ public struct Paths {
         claudeDir.appendingPathComponent(isDev ? "\(name).dev.\(ext)" : "\(name).\(ext)")
     }
 
-    /// Read-only until the native fetch exists (fase 2): the dev build shows what
-    /// the running app fetched.
-    public var limits: URL { claudeDir.appendingPathComponent("usage-limits.json") }
+    public var limits: URL { own("usage-limits", ext: "json") }
+    public var blockLogState: URL { own("usage-tracker-blocks", ext: "json") }
     public var settings: URL { own("usage-tracker-settings", ext: "json") }
     public var log: URL {
         home.appendingPathComponent("Library/Logs")

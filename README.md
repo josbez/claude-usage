@@ -10,6 +10,8 @@ It uses the account that is signed in to the Claude desktop app. It reads the se
 
 ## Install (DMG)
 
+Requires macOS 11 or later (Apple Silicon and Intel).
+
 1. **[Download ClaudeUsage.dmg](https://github.com/josbez/claude-usage/releases/latest/download/ClaudeUsage.dmg)** (always the latest version; older versions and changelogs are on the [releases page](https://github.com/josbez/claude-usage/releases)) and open it.
 2. Drag **ClaudeUsage.app** to the **Applications** folder in the same window.
 3. Open Terminal and run:
@@ -18,21 +20,23 @@ It uses the account that is signed in to the Claude desktop app. It reads the se
 bash /Volumes/ClaudeUsage/install.sh
 ```
 
-This installs a LaunchAgent (starts at login) and removes the Gatekeeper quarantine flag from the app. Then click ◆ in the menu bar.
+This installs a LaunchAgent (starts at login) and removes the Gatekeeper quarantine flag from the app. Then click the face (🚀 and the percentages) in the menu bar.
 
-On first launch macOS asks for access to the Keychain item *Claude Safe Storage*. Choose **Always Allow**. macOS then asks whether ClaudeUsage may send notifications: allow it to get alerts at 80% and 95% of the 5-hour limit and at 90% of the weekly limit. The bell icon in the popover turns notifications on or off. The first numbers appear after about 10–20 seconds.
+On first launch macOS asks for access to the Keychain item *Claude Safe Storage*. Choose **Always Allow**. macOS then asks whether ClaudeUsage may send notifications: allow it to get alerts at 80% and 95% of the 5-hour limit and at 90% of the weekly limit. You can turn notifications on or off in settings (the gear in the popover). The first numbers appear after about 10–20 seconds.
 
 ### Updating
 
-From version 1.2 the app checks daily for a new version. If there is one, an orange arrow appears in the popover (plus a notification). Click it and choose **Update**: the app downloads the update, verifies the digital signature, replaces itself and restarts. Updates without a valid signature are rejected. If you have an older version, update once manually via the DMG above.
+From version 1.2 the app checks daily for a new version. If there is one, the gear in the popover gets an orange dot (plus a notification). Open settings, click **Update** and confirm: the app downloads the update, verifies the digital signature, replaces itself and restarts. Updates without a valid signature are rejected. If you have an older version, update once manually via the DMG above.
 
-The version number is shown next to the title in the popover.
+The version number is shown in settings.
 
 ### Why the Terminal step
 
 The app is not Apple-signed or notarized (that requires a paid Developer account). Without `install.sh`, Gatekeeper blocks the first launch, and since macOS 15 Sequoia the old right-click → *Open* trick no longer works. Manual alternative: double-click the app, then go to **System Settings → Privacy & Security** and click **Open Anyway** under *Security*.
 
 ### Uninstall
+
+From version 2.0: settings (gear) → **Uninstall…** at the bottom. It moves the app to the Trash, stops it starting at login and removes its own files; you choose whether to keep the usage history. Older versions, in Terminal:
 
 ```bash
 launchctl unload ~/Library/LaunchAgents/com.jos.claude-usage.plist

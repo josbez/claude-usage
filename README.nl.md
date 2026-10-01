@@ -10,6 +10,8 @@ Werkt via het account dat in de Claude desktop-app is ingelogd — leest de sess
 
 ## Installeren (DMG)
 
+Vereist macOS 11 of nieuwer (Apple Silicon en Intel).
+
 1. **[Download ClaudeUsage.dmg](https://github.com/josbez/claude-usage/releases/latest/download/ClaudeUsage.dmg)** (altijd de nieuwste versie; oudere versies en wijzigingen staan bij de [releases](https://github.com/josbez/claude-usage/releases)) en open hem.
 2. Sleep **ClaudeUsage.app** naar de **Applications**-map in hetzelfde venster.
 3. Open Terminal en voer uit:
@@ -18,21 +20,23 @@ Werkt via het account dat in de Claude desktop-app is ingelogd — leest de sess
 bash /Volumes/ClaudeUsage/install.sh
 ```
 
-Dat installeert een LaunchAgent (start automatisch bij inloggen) en zet de Gatekeeper-quarantaine van de app af. Klik daarna ◆ in de menubalk.
+Dat installeert een LaunchAgent (start automatisch bij inloggen) en zet de Gatekeeper-quarantaine van de app af. Klik daarna op het gezichtje (🚀 en de percentages) in de menubalk.
 
-Bij de eerste start vraagt macOS toegang tot de Keychain-sleutel *Claude Safe Storage* — kies **Always Allow**. Daarna vraagt macOS of ClaudeUsage meldingen mag sturen: sta dat toe voor een waarschuwing bij 80% en 95% van de 5-uurslimiet en 90% van de weeklimiet. Met het bel-icoon in de popover zet je meldingen aan of uit. Eerste cijfers verschijnen na ~10–20 seconden.
+Bij de eerste start vraagt macOS toegang tot de Keychain-sleutel *Claude Safe Storage* — kies **Always Allow**. Daarna vraagt macOS of ClaudeUsage meldingen mag sturen: sta dat toe voor een waarschuwing bij 80% en 95% van de 5-uurslimiet en 90% van de weeklimiet. Meldingen zet je aan of uit in de instellingen (het tandwiel in de popover). Eerste cijfers verschijnen na ~10–20 seconden.
 
 ### Bijwerken
 
-Vanaf versie 1.2 checkt de app dagelijks of er een nieuwe versie is. Is die er, dan verschijnt een oranje pijl in de popover (en een melding). Klik erop en kies **Bijwerken**: de app downloadt de update, controleert de digitale handtekening, vervangt zichzelf en start opnieuw. Updates zonder geldige handtekening worden geweigerd. Heb je een oudere versie, werk dan één keer handmatig bij via de DMG hierboven.
+Vanaf versie 1.2 checkt de app dagelijks of er een nieuwe versie is. Is die er, dan krijgt het tandwiel in de popover een oranje stip (en komt er een melding). Open de instellingen, klik **Bijwerken** en bevestig: de app downloadt de update, controleert de digitale handtekening, vervangt zichzelf en start opnieuw. Updates zonder geldige handtekening worden geweigerd. Heb je een oudere versie, werk dan één keer handmatig bij via de DMG hierboven.
 
-Het versienummer staat naast de titel in de popover.
+Het versienummer staat in de instellingen.
 
 ### Waarom die Terminal-stap
 
 De app is niet Apple-signed of notarized (vereist een betaald Developer-account). Zonder `install.sh` blokkeert Gatekeeper de eerste start; sinds macOS 15 Sequoia werkt de oude rechtsklik → *Open*-truc daar niet meer voor. Handmatig alternatief: dubbelklik de app, ga dan naar **Systeeminstellingen → Privacy en beveiliging** en klik onderaan bij *Beveiliging* op **Toch openen**.
 
 ### Verwijderen
+
+Vanaf versie 2.0: instellingen (tandwiel) → **Verwijderen…** onderaan. De app gaat naar de Prullenbak, start niet meer bij inloggen en zijn eigen bestanden worden opgeruimd; je kiest zelf of de gebruiksgeschiedenis blijft staan. Oudere versies, in Terminal:
 
 ```bash
 launchctl unload ~/Library/LaunchAgents/com.jos.claude-usage.plist

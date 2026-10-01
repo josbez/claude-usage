@@ -123,6 +123,33 @@
   .setting-sub.error { color: var(--status-error); white-space: normal; }
   .ring-preview { vertical-align: -2px; color: var(--text); }
   .setting-value { font-size: 12px; color: var(--muted); white-space: nowrap; }
+
+  /* Grouped settings: small caps label above each card */
+  .settings-group { display: flex; flex-direction: column; gap: 5px; }
+  .group-label {
+    font-size: 10.5px; font-weight: 600; letter-spacing: 0.06em;
+    text-transform: uppercase; color: var(--muted); padding: 0 14px;
+  }
+  .setting-row.has-preview { flex-direction: column; align-items: stretch; gap: 8px; padding-bottom: 10px; }
+  .setting-main { display: flex; align-items: center; gap: 10px; }
+  /* Preview: a strip of "menu bar" with the item as it will look */
+  .preview-box {
+    display: flex; align-items: center; justify-content: space-between; gap: 10px;
+    background: var(--bg); border-radius: 8px; padding: 6px 6px 6px 10px;
+  }
+  .preview-label { font-size: 11px; color: var(--muted); }
+  .menubar-pill {
+    display: inline-flex; align-items: center; gap: 4px; min-height: 22px;
+    padding: 2px 8px; border-radius: 5px; background: var(--card-bg);
+    border: 1px solid var(--track);
+    font-size: 12px; font-weight: 500; color: var(--text);
+    white-space: nowrap; overflow: hidden; text-overflow: ellipsis; max-width: 220px;
+  }
+  .version-chip {
+    font: 11px ui-monospace, 'SF Mono', Menlo, monospace; color: var(--muted);
+    background: var(--track); border-radius: 4px; padding: 1px 5px; margin-left: 4px;
+    vertical-align: 1px;
+  }
   .version-status { display: flex; align-items: center; gap: 9px; }
   .version-status .setting-sub { margin-top: 0; }
 
@@ -471,68 +498,86 @@
 
   <!-- Settings -->
   <div class="view" id="settingsView" hidden>
-    <div class="card settings-card">
-      <div class="setting-row">
-        <div class="setting-text">
-          <div class="setting-title" data-i18n="set_notifications">Meldingen</div>
-          <div class="setting-sub" data-i18n="set_notifications_sub">Bij 80% en 95% sessie, 90% week</div>
+    <div class="settings-group">
+      <div class="group-label" data-i18n="set_group_display">Menubalk &amp; weergave</div>
+      <div class="card settings-card">
+        <div class="setting-row has-preview">
+          <div class="setting-main">
+            <div class="setting-text">
+              <div class="setting-title" data-i18n="set_menubar">Menubalk</div>
+            </div>
+            <div class="segmented" role="radiogroup" id="menubarStyle">
+              <button role="radio" data-style="full" onclick="onMenubarStyle('full')" data-i18n="style_full">Alles</button>
+              <button role="radio" data-style="session" onclick="onMenubarStyle('session')" data-i18n="style_session">Sessie</button>
+              <button role="radio" data-style="emoji" onclick="onMenubarStyle('emoji')" data-i18n="style_emoji">Emoji</button>
+            </div>
+          </div>
+          <div class="preview-box">
+            <span class="preview-label" data-i18n="set_preview">Voorbeeld</span>
+            <span class="menubar-pill" id="menubarPreview"></span>
+          </div>
         </div>
-        <button class="switch" id="notifySwitch" role="switch" aria-checked="false" onclick="onToggleNotifications()"></button>
-      </div>
-      <div class="setting-row">
-        <div class="setting-text">
-          <div class="setting-title" data-i18n="set_menubar">Menubalk</div>
-          <div class="setting-sub" id="menubarPreview"></div>
+        <div class="setting-row">
+          <div class="setting-text">
+            <div class="setting-title" data-i18n="set_icon">Pictogram</div>
+          </div>
+          <div class="segmented" role="radiogroup" id="menubarIcon">
+            <button role="radio" data-icon="ring" onclick="onMenubarIcon('ring')" data-i18n="icon_ring">Ring</button>
+            <button role="radio" data-icon="emoji" onclick="onMenubarIcon('emoji')" data-i18n="icon_emoji">Emoji</button>
+          </div>
         </div>
-        <div class="segmented" role="radiogroup" id="menubarStyle">
-          <button role="radio" data-style="full" onclick="onMenubarStyle('full')" data-i18n="style_full">Alles</button>
-          <button role="radio" data-style="session" onclick="onMenubarStyle('session')" data-i18n="style_session">Sessie</button>
-          <button role="radio" data-style="emoji" onclick="onMenubarStyle('emoji')" data-i18n="style_emoji">Emoji</button>
-        </div>
-      </div>
-      <div class="setting-row">
-        <div class="setting-text">
-          <div class="setting-title" data-i18n="set_icon">Pictogram</div>
-        </div>
-        <div class="segmented" role="radiogroup" id="menubarIcon">
-          <button role="radio" data-icon="ring" onclick="onMenubarIcon('ring')" data-i18n="icon_ring">Ring</button>
-          <button role="radio" data-icon="emoji" onclick="onMenubarIcon('emoji')" data-i18n="icon_emoji">Emoji</button>
-        </div>
-      </div>
-      <div class="setting-row">
-        <div class="setting-text">
-          <div class="setting-title" data-i18n="set_appearance">Weergave</div>
-        </div>
-        <div class="segmented" role="radiogroup" id="appearanceStyle">
-          <button role="radio" data-appearance="system" onclick="onAppearance('system')" data-i18n="appearance_system">Systeem</button>
-          <button role="radio" data-appearance="light" onclick="onAppearance('light')" data-i18n="appearance_light">Licht</button>
-          <button role="radio" data-appearance="dark" onclick="onAppearance('dark')" data-i18n="appearance_dark">Donker</button>
-        </div>
-      </div>
-      <div class="setting-row">
-        <div class="setting-text">
-          <div class="setting-title" data-i18n="set_refresh">Verversen</div>
-        </div>
-        <div class="segmented" role="radiogroup" id="refreshChoice">
-          <button role="radio" data-minutes="1" onclick="onRefreshChoice(1)"></button>
-          <button role="radio" data-minutes="5" onclick="onRefreshChoice(5)"></button>
-          <button role="radio" data-minutes="15" onclick="onRefreshChoice(15)"></button>
+        <div class="setting-row">
+          <div class="setting-text">
+            <div class="setting-title" data-i18n="set_appearance">Weergave</div>
+          </div>
+          <div class="segmented" role="radiogroup" id="appearanceStyle">
+            <button role="radio" data-appearance="system" onclick="onAppearance('system')" data-i18n="appearance_system">Systeem</button>
+            <button role="radio" data-appearance="light" onclick="onAppearance('light')" data-i18n="appearance_light">Licht</button>
+            <button role="radio" data-appearance="dark" onclick="onAppearance('dark')" data-i18n="appearance_dark">Donker</button>
+          </div>
         </div>
       </div>
-      <div class="setting-row version">
-        <div class="setting-text">
-          <div class="setting-title"><span data-i18n="set_version">Versie</span> <span class="setting-value" id="versionText"></span></div>
+    </div>
+    <div class="settings-group">
+      <div class="group-label" data-i18n="set_group_updates">Meldingen &amp; verversen</div>
+      <div class="card settings-card">
+        <div class="setting-row">
+          <div class="setting-text">
+            <div class="setting-title" data-i18n="set_notifications">Meldingen</div>
+            <div class="setting-sub" data-i18n="set_notifications_sub">Bij 80% en 95% sessie, 90% week</div>
+          </div>
+          <button class="switch" id="notifySwitch" role="switch" aria-checked="false" onclick="onToggleNotifications()"></button>
         </div>
-        <div class="version-status">
-          <div class="setting-sub" id="updateText" data-i18n="up_to_date">Up-to-date</div>
-          <button class="update-btn" id="updateBtn" hidden onclick="onStartUpdate()"></button>
+        <div class="setting-row">
+          <div class="setting-text">
+            <div class="setting-title" data-i18n="set_refresh">Verversen</div>
+          </div>
+          <div class="segmented" role="radiogroup" id="refreshChoice">
+            <button role="radio" data-minutes="1" onclick="onRefreshChoice(1)"></button>
+            <button role="radio" data-minutes="5" onclick="onRefreshChoice(5)"></button>
+            <button role="radio" data-minutes="15" onclick="onRefreshChoice(15)"></button>
+          </div>
         </div>
       </div>
-      <div class="setting-row conn">
-        <div class="setting-text">
-          <div class="setting-title" data-i18n="set_connection">Verbinding</div>
-          <div class="setting-sub conn-line"><span class="status-dot" id="connDot"></span><span class="txt" id="connText" data-i18n="connecting">Verbinden…</span></div>
-          <div class="setting-sub conn-line" id="serviceLine"><button class="conn-link" id="serviceBtn" onclick="onOpenStatus()"><span class="status-dot neutral" id="serviceDot"></span><span class="txt" id="serviceText"></span></button></div>
+    </div>
+    <div class="settings-group">
+      <div class="group-label" data-i18n="set_group_system">Status &amp; systeem</div>
+      <div class="card settings-card">
+        <div class="setting-row version">
+          <div class="setting-text">
+            <div class="setting-title"><span data-i18n="set_version">Versie</span> <span class="version-chip" id="versionText"></span></div>
+          </div>
+          <div class="version-status">
+            <div class="setting-sub" id="updateText" data-i18n="up_to_date">Up-to-date</div>
+            <button class="update-btn" id="updateBtn" hidden onclick="onStartUpdate()"></button>
+          </div>
+        </div>
+        <div class="setting-row conn">
+          <div class="setting-text">
+            <div class="setting-title" data-i18n="set_connection">Verbinding</div>
+            <div class="setting-sub conn-line"><span class="status-dot" id="connDot"></span><span class="txt" id="connText" data-i18n="connecting">Verbinden…</span></div>
+            <div class="setting-sub conn-line" id="serviceLine"><button class="conn-link" id="serviceBtn" onclick="onOpenStatus()"><span class="status-dot neutral" id="serviceDot"></span><span class="txt" id="serviceText"></span></button></div>
+          </div>
         </div>
       </div>
     </div>

@@ -10,7 +10,7 @@ import WebKit
 final class AppDelegate: NSObject, NSApplicationDelegate, NSPopoverDelegate {
     static let popoverWidth: CGFloat = 360
     static let popoverMinHeight: CGFloat = 296   // main view; fixed
-    static let popoverMaxHeight: CGFloat = 520   // settings view may grow up to this (fits a 13" screen)
+    static let popoverMaxHeight: CGFloat = 640   // settings view may grow up to this (fits a 13" screen)
 
     let isDev = Bundle.main.bundleIdentifier?.hasSuffix(".dev") ?? true
     lazy var paths = Paths(isDev: isDev)

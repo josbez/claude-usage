@@ -129,6 +129,10 @@ STRINGS = {
         "style_full": "Alles",
         "style_session": "Sessie",
         "style_emoji": "Emoji",
+        "set_appearance": "Weergave",
+        "appearance_system": "Systeem",
+        "appearance_light": "Licht",
+        "appearance_dark": "Donker",
         "set_version": "Versie",
         "up_to_date": "Up-to-date",
         "update_available": "v{version} is beschikbaar",
@@ -219,6 +223,10 @@ STRINGS = {
         "style_full": "All",
         "style_session": "Session",
         "style_emoji": "Emoji",
+        "set_appearance": "Appearance",
+        "appearance_system": "System",
+        "appearance_light": "Light",
+        "appearance_dark": "Dark",
         "set_version": "Version",
         "up_to_date": "Up to date",
         "update_available": "v{version} is available",
@@ -470,6 +478,7 @@ def color_for_pct(pct: float) -> tuple:
 
 
 MENUBAR_STYLES = ("full", "session", "emoji")
+APPEARANCE_STYLES = ("system", "light", "dark")
 
 
 def status_title(session_pct: int, weekly_pct: int, session_reset_compact: str,
@@ -1036,7 +1045,7 @@ def save_block_log_state(state: dict, path: str = BLOCK_LOG_STATE_FILE):
 # ---------------------------------------------------------------------------
 
 SETTINGS_FILE = os.path.expanduser("~/.claude/usage-tracker-settings.json")
-DEFAULT_SETTINGS = {"notifications": True, "update_check": True, "menubar_style": "full"}
+DEFAULT_SETTINGS = {"notifications": True, "update_check": True, "menubar_style": "full", "appearance": "system"}
 
 
 def load_settings(path: str = SETTINGS_FILE) -> dict:
@@ -1045,6 +1054,8 @@ def load_settings(path: str = SETTINGS_FILE) -> dict:
     settings.update({k: v for k, v in stored.items() if k in DEFAULT_SETTINGS})
     if settings["menubar_style"] not in MENUBAR_STYLES:
         settings["menubar_style"] = DEFAULT_SETTINGS["menubar_style"]
+    if settings["appearance"] not in APPEARANCE_STYLES:
+        settings["appearance"] = DEFAULT_SETTINGS["appearance"]
     return settings
 
 

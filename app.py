@@ -31,7 +31,7 @@ from AppKit import (
     NSApplication, NSApplicationActivationPolicyAccessory,
     NSStatusBar, NSVariableStatusItemLength, NSMinYEdge,
     NSViewController, NSWorkspace, NSPopover, NSAlert,
-    NSApp,
+    NSApp, NSAppearance, NSAppearanceNameAqua, NSAppearanceNameDarkAqua,
 )
 from PyObjCTools import AppHelper
 from WebKit import (
@@ -51,6 +51,7 @@ from core import (
     LIMITS_FILE, log, find_cookie_db, decrypt_claude_cookies, session_key_from,
     build_fetch_js, limits_output, format_reset_time, format_reset_compact,
     status_title, title_from_limits, load_limits, limits_are_fresh, MENUBAR_STYLES,
+    APPEARANCE_STYLES,
     due_notifications, load_notify_state, save_notify_state, color_for_pct, face_icon,
     account_label, week_window, week_progress, STRINGS, t, language_from,
     history_record, append_history,
@@ -65,6 +66,8 @@ import updater
 
 SCRIPT_DIR = os.path.dirname(os.path.abspath(__file__))
 FETCH_TIMEOUT_SEC = 45.0
+POPOVER_MIN_HEIGHT = 296      # main view; fixed
+POPOVER_MAX_HEIGHT = 420      # settings view may grow up to this
 
 FETCH_JS = build_fetch_js("window.webkit.messageHandlers.fetchResult.postMessage(s);")
 
@@ -86,9 +89,15 @@ class MessageHandler(NSObject):
         elif name == "setMenubarStyle":
             if self.delegate:
                 self.delegate.set_menubar_style(str(message.body()))
+        elif name == "setAppearance":
+            if self.delegate:
+                self.delegate.set_appearance(str(message.body()))
         elif name == "startUpdate":
             if self.delegate:
                 self.delegate.start_update()
+        elif name == "resize":
+            if self.delegate:
+                self.delegate.set_popover_height(message.body())
         elif name == "openResetsPage":
             if self.delegate:
                 self.delegate.open_resets_page()
@@ -440,6 +449,16 @@ class AppDelegate(NSObject):
                 self._service = parsed
         self._push_data()
 
+    def set_popover_height(self, height):
+        """The settings view asks for more room than the 296 px main view."""
+        try:
+            h = max(POPOVER_MIN_HEIGHT, min(POPOVER_MAX_HEIGHT, int(height)))
+        except (TypeError, ValueError):
+            return
+        size = self.popover.contentSize()
+        if int(size.height) != h:
+            self.popover.setContentSize_(NSMakeSize(360, h))
+
     def open_resets_page(self):
         # Fixed URL, no argument from the page: opening is all the app ever does here.
         NSWorkspace.sharedWorkspace().openURL_(NSURL.URLWithString_(RESETS_URL))
@@ -606,6 +625,34 @@ class AppDelegate(NSObject):
             self._show_cached_pct()
         self._push_data()
 
+    def _appearance(self) -> str:
+        return load_settings()["appearance"]
+
+    def set_appearance(self, appearance: str):
+        if appearance not in APPEARANCE_STYLES:
+            return
+        settings = load_settings()
+        settings["appearance"] = appearance
+        try:
+            save_settings(settings)
+            log(f"weergave: {appearance}")
+        except Exception as e:
+            log(f"instelling opslaan mislukt: {e}")
+        self._apply_appearance()
+        self._push_data()
+
+    def _apply_appearance(self):
+        """Set the popover's appearance based on the current setting."""
+        appearance_name = self._appearance()
+        if appearance_name == "light":
+            app_appearance = NSAppearance.appearanceNamed_(NSAppearanceNameAqua)
+        elif appearance_name == "dark":
+            app_appearance = NSAppearance.appearanceNamed_(NSAppearanceNameDarkAqua)
+        else:
+            app_appearance = None
+        if self.popover:
+            self.popover.setAppearance_(app_appearance)
+
     def _set_status_title(self, text: str):
         # The popover hangs off the middle of the status item: changing the
         # title width while it's open makes it jump. Hold the new title until
@@ -617,6 +664,9 @@ class AppDelegate(NSObject):
         self.statusItem.button().setTitle_(text)
 
     def popoverDidClose_(self, notification):
+        # The next open starts on the main view: back to its fixed height now,
+        # so the popover doesn't appear tall and then shrink.
+        self.set_popover_height(POPOVER_MIN_HEIGHT)
         if self._pending_title is not None:
             self.statusItem.button().setTitle_(self._pending_title)
             self._pending_title = None
@@ -652,8 +702,10 @@ class AppDelegate(NSObject):
         ucc.addScriptMessageHandler_name_(handler, "setNotifications")
         ucc.addScriptMessageHandler_name_(handler, "startUpdate")
         ucc.addScriptMessageHandler_name_(handler, "setMenubarStyle")
+        ucc.addScriptMessageHandler_name_(handler, "setAppearance")
         ucc.addScriptMessageHandler_name_(handler, "openStatusPage")
         ucc.addScriptMessageHandler_name_(handler, "openResetsPage")
+        ucc.addScriptMessageHandler_name_(handler, "resize")
 
         self.webView = WKWebView.alloc().initWithFrame_configuration_(
             NSMakeRect(0, 0, 360, 296), config
@@ -671,6 +723,7 @@ class AppDelegate(NSObject):
         vc = NSViewController.new()
         vc.setView_(self.webView)
         self.popover.setContentViewController_(vc)
+        self._apply_appearance()
 
     def togglePopover_(self, sender):
         if self.popover.isShown():
@@ -997,6 +1050,7 @@ class AppDelegate(NSObject):
             "service": self._service,
             "service_badge": status_badge_class(self._service),
             "menubar_style": load_settings()["menubar_style"],
+            "appearance": load_settings()["appearance"],
             "lang": lang,
             "i18n": STRINGS[lang],
             "menubar_previews": {

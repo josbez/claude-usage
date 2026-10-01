@@ -114,6 +114,9 @@
     display: flex; align-items: center; gap: 10px;
     padding: 8px 0; min-height: 46px;
   }
+  .setting-row.version {
+    min-height: 40px; flex-wrap: wrap;
+  }
   .setting-row + .setting-row { border-top: 1px solid var(--track); }
   .setting-text { flex: 1; min-width: 0; }
   .setting-title { font-size: 13px; font-weight: 600; color: var(--text); }
@@ -123,6 +126,8 @@
   }
   .setting-sub.error { color: var(--status-error); white-space: normal; }
   .setting-value { font-size: 12px; color: var(--muted); white-space: nowrap; }
+  .version-status { display: flex; align-items: center; gap: 9px; }
+  .version-status .setting-sub { margin-top: 0; }
 
   .switch {
     position: relative; width: 36px; height: 21px; flex-shrink: 0;
@@ -353,7 +358,6 @@
   }
   button.conn-link:hover span.txt { text-decoration: underline; }
   button.conn-link:focus-visible { outline: 2px solid var(--accent-text); outline-offset: 1px; border-radius: 3px; }
-  .setting-row.conn { padding: 6px 0; }
 
   /* Fetching overlay pulse */
   .fetching-pulse {
@@ -467,10 +471,22 @@
       </div>
       <div class="setting-row">
         <div class="setting-text">
-          <div class="setting-title"><span data-i18n="set_version">Versie</span> <span class="setting-value" id="versionText"></span></div>
-          <div class="setting-sub" id="updateText" data-i18n="up_to_date">Up-to-date</div>
+          <div class="setting-title" data-i18n="set_appearance">Weergave</div>
         </div>
-        <button class="update-btn" id="updateBtn" hidden onclick="onStartUpdate()"></button>
+        <div class="segmented" role="radiogroup" id="appearanceStyle">
+          <button role="radio" data-appearance="system" onclick="onAppearance('system')" data-i18n="appearance_system">Systeem</button>
+          <button role="radio" data-appearance="light" onclick="onAppearance('light')" data-i18n="appearance_light">Licht</button>
+          <button role="radio" data-appearance="dark" onclick="onAppearance('dark')" data-i18n="appearance_dark">Donker</button>
+        </div>
+      </div>
+      <div class="setting-row version">
+        <div class="setting-text">
+          <div class="setting-title"><span data-i18n="set_version">Versie</span> <span class="setting-value" id="versionText"></span></div>
+        </div>
+        <div class="version-status">
+          <div class="setting-sub" id="updateText" data-i18n="up_to_date">Up-to-date</div>
+          <button class="update-btn" id="updateBtn" hidden onclick="onStartUpdate()"></button>
+        </div>
       </div>
       <div class="setting-row conn">
         <div class="setting-text">
@@ -685,6 +701,7 @@ function render(d) {
   document.getElementById('versionText').title = d.build ? 'Build ' + d.build : '';
   renderUpdate(d.update);
   renderMenubarStyle(d.menubar_style || 'full', d.menubar_previews || {});
+  renderAppearance(d.appearance || 'system');
 
   renderService(d.service);
 
@@ -694,6 +711,7 @@ function render(d) {
 
   // Fetching spinner
   window.setStatus(d.fetching ? 'fetching' : 'ready');
+  reportHeight();
 }
 
 // Claude service status: our own labels via T(); the API's description and
@@ -766,6 +784,7 @@ function toggleSettings(show, instant) {
     from.hidden = true;
     to.hidden = false;
     title.textContent = T(open ? 'settings_title' : 'app_title');
+    reportHeight();
   };
 
   const reduced = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
@@ -792,6 +811,22 @@ function toggleSettings(show, instant) {
       { duration: 240, easing: ease });
     inn.onfinish = () => { _viewAnimating = false; };
   };
+}
+
+// The popover is 296 px for the main view; the settings view reports its own
+// content height so rows can breathe (app.py clamps and resizes the popover).
+const MAIN_HEIGHT = 296;
+let _reportedHeight = 0;
+function reportHeight() {
+  const settingsOpen = !document.getElementById('settingsView').hidden;
+  const h = settingsOpen
+    ? Math.max(MAIN_HEIGHT, Math.ceil(document.querySelector('.container').scrollHeight))
+    : MAIN_HEIGHT;
+  if (h === _reportedHeight) return;
+  _reportedHeight = h;
+  if (window.webkit && window.webkit.messageHandlers && window.webkit.messageHandlers.resize) {
+    window.webkit.messageHandlers.resize.postMessage(h);
+  }
 }
 
 function renderUpdate(u) {
@@ -834,6 +869,18 @@ function onMenubarStyle(style) {
   renderMenubarStyle(style, _menubarPreviews);  // optimistic; Python pushes saved state back
   if (window.webkit && window.webkit.messageHandlers && window.webkit.messageHandlers.setMenubarStyle) {
     window.webkit.messageHandlers.setMenubarStyle.postMessage(style);
+  }
+}
+
+function renderAppearance(appearance) {
+  document.querySelectorAll('#appearanceStyle button').forEach(b =>
+    b.setAttribute('aria-checked', b.dataset.appearance === appearance ? 'true' : 'false'));
+}
+
+function onAppearance(appearance) {
+  renderAppearance(appearance);  // optimistic; Python pushes saved state back
+  if (window.webkit && window.webkit.messageHandlers && window.webkit.messageHandlers.setAppearance) {
+    window.webkit.messageHandlers.setAppearance.postMessage(appearance);
   }
 }
 

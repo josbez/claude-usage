@@ -441,6 +441,12 @@ def test_settings_reject_unknown_menubar_style(tmp_path):
     assert core.load_settings(str(path))["menubar_style"] == "full"
 
 
+def test_settings_reject_unknown_appearance(tmp_path):
+    path = tmp_path / "s.json"
+    path.write_text('{"appearance": "neon"}')
+    assert core.load_settings(str(path))["appearance"] == "system"
+
+
 # ---------------------------------------------------------------------------
 # Account label (footer)
 # ---------------------------------------------------------------------------

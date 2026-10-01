@@ -1,0 +1,103 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" width="512" height="512">
+  <defs>
+    <!-- Multi-stage macOS elevation shadow -->
+    <filter id="dockShadow512" x="-20%" y="-15%" width="140%" height="145%" filterUnits="userSpaceOnUse">
+      <feDropShadow dx="0" dy="12" stdDeviation="11" flood-color="#000000" flood-opacity="0.18" />
+      <feDropShadow dx="0" dy="4" stdDeviation="4" flood-color="#000000" flood-opacity="0.12" />
+      <feDropShadow dx="0" dy="1" stdDeviation="1" flood-color="#000000" flood-opacity="0.08" />
+    </filter>
+
+    <linearGradient id="innerRimHighlight512" x1="0%" y1="0%" x2="0%" y2="100%">
+      <stop offset="0%" stop-color="#FFFFFF" stop-opacity="0.85" />
+      <stop offset="12%" stop-color="#FFFFFF" stop-opacity="0.25" />
+      <stop offset="85%" stop-color="#000000" stop-opacity="0.03" />
+      <stop offset="100%" stop-color="#000000" stop-opacity="0.10" />
+    </linearGradient>
+
+    <linearGradient id="dockSquircleBorder512" x1="0%" y1="0%" x2="0%" y2="100%">
+      <stop offset="0%" stop-color="#000000" stop-opacity="0.12" />
+      <stop offset="100%" stop-color="#000000" stop-opacity="0.22" />
+    </linearGradient>
+
+    <linearGradient id="tileSurface512" x1="0%" y1="0%" x2="0%" y2="100%">
+      <stop offset="0%" stop-color="#FFFFFF" />
+      <stop offset="70%" stop-color="#FBFBFB" />
+      <stop offset="100%" stop-color="#F2F3F0" />
+    </linearGradient>
+
+    <linearGradient id="plateGradient512" x1="0%" y1="0%" x2="0%" y2="100%">
+      <stop offset="0%" stop-color="#F5F8F0" />
+      <stop offset="100%" stop-color="#EBF0E1" />
+    </linearGradient>
+
+    <filter id="softPlateShadow512" x="-10%" y="-10%" width="120%" height="120%">
+      <feDropShadow dx="0" dy="1.5" stdDeviation="2" flood-color="#557030" flood-opacity="0.09" />
+    </filter>
+
+    <linearGradient id="activeArcGrad512" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#76B528" />
+      <stop offset="100%" stop-color="#5B931C" />
+    </linearGradient>
+
+    <filter id="elementShadow512" x="-15%" y="-15%" width="130%" height="130%">
+      <feDropShadow dx="0" dy="3" stdDeviation="3" flood-color="#3A5016" flood-opacity="0.14" />
+    </filter>
+
+    <linearGradient id="faceGrad512" x1="0%" y1="0%" x2="0%" y2="100%">
+      <stop offset="0%" stop-color="#FFD642" />
+      <stop offset="85%" stop-color="#FFBA1A" />
+      <stop offset="100%" stop-color="#FFA80A" />
+    </linearGradient>
+
+    <linearGradient id="faceRim512" x1="0%" y1="0%" x2="0%" y2="100%">
+      <stop offset="0%" stop-color="#FFF0A8" stop-opacity="0.75" />
+      <stop offset="40%" stop-color="#FFA80A" stop-opacity="0.0" />
+      <stop offset="100%" stop-color="#D97A00" stop-opacity="0.35" />
+    </linearGradient>
+
+    <filter id="faceDropShadow512" x="-20%" y="-15%" width="140%" height="140%">
+      <feDropShadow dx="0" dy="4" stdDeviation="4" flood-color="#805000" flood-opacity="0.18" />
+      <feDropShadow dx="0" dy="1" stdDeviation="1.5" flood-color="#805000" flood-opacity="0.12" />
+    </filter>
+  </defs>
+
+  <!-- macOS Big Sur/Sonoma Squircle: 412x412 with 92.5px radius inside 512x512 -->
+  <g filter="url(#dockShadow512)">
+    <rect x="50" y="50" width="412" height="412" rx="92.5" ry="92.5" fill="url(#tileSurface512)" />
+    <rect x="50.5" y="50.5" width="411" height="411" rx="92" ry="92" fill="none" stroke="url(#innerRimHighlight512)" stroke-width="1.5" />
+    <rect x="50" y="50" width="412" height="412" rx="92.5" ry="92.5" fill="none" stroke="url(#dockSquircleBorder512)" stroke-width="1" />
+  </g>
+
+  <!-- Central Content -->
+  <g>
+    <!-- Soft circular plate -->
+    <circle cx="256" cy="256" r="137.5" fill="url(#plateGradient512)" filter="url(#softPlateShadow512)" />
+    <circle cx="256" cy="256" r="137.5" fill="none" stroke="#FFFFFF" stroke-opacity="0.65" stroke-width="1" />
+
+    <!-- Inactive Track: R=106, Circumference ≈ 666px, Stroke=19 -->
+    <circle cx="256" cy="256" r="106" fill="none" stroke="#D3E0C0" stroke-width="19" stroke-linecap="round" />
+
+    <!-- Active 10% arc: 10% of 666 ≈ 66.6px dash length -->
+    <g filter="url(#elementShadow512)">
+      <circle cx="256" cy="256" r="106" fill="none" stroke="url(#activeArcGrad512)" stroke-width="19"
+              stroke-linecap="round" stroke-dasharray="66.6 666" transform="rotate(-90 256 256)" />
+    </g>
+
+    <!-- Center Smiley: R=69 -->
+    <g filter="url(#faceDropShadow512)">
+      <circle cx="256" cy="256" r="69" fill="url(#faceGrad512)" />
+      <circle cx="256" cy="256" r="68.2" fill="none" stroke="url(#faceRim512)" stroke-width="1.5" />
+
+      <!-- Eyes -->
+      <path d="M 222 242.5 C 222 233, 237 233, 237 242.5" fill="none" stroke="#704400" stroke-width="6" stroke-linecap="round" />
+      <path d="M 275 242.5 C 275 233, 290 233, 290 242.5" fill="none" stroke="#704400" stroke-width="6" stroke-linecap="round" />
+
+      <!-- Cheeks -->
+      <circle cx="217" cy="261" r="9" fill="#F08A24" opacity="0.32" />
+      <circle cx="295" cy="261" r="9" fill="#F08A24" opacity="0.32" />
+
+      <!-- Smile -->
+      <path d="M 231 267 Q 256 291 281 267" fill="none" stroke="#704400" stroke-width="6" stroke-linecap="round" />
+    </g>
+  </g>
+</svg>

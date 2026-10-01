@@ -167,8 +167,8 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSPopoverDelegate {
 
         let config = WKWebViewConfiguration()
         let handler = ScriptHandler(owner: self)
-        for name in ["refresh", "quit", "setNotifications", "startUpdate", "setMenubarStyle",
-                     "setAppearance", "openStatusPage", "openResetsPage", "resize"] {
+        for name in ["refresh", "close", "quit", "uninstall", "setNotifications", "startUpdate",
+                     "setMenubarStyle", "setAppearance", "openStatusPage", "openResetsPage", "resize"] {
             config.userContentController.add(handler, name: name)
         }
         webView = WKWebView(frame: NSRect(x: 0, y: 0, width: Self.popoverWidth,
@@ -244,8 +244,13 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSPopoverDelegate {
         switch name {
         case "refresh":
             startFetch()
+        case "close":
+            popover.performClose(nil)
         case "quit":
             NSApp.terminate(nil)
+        case "uninstall":
+            // After the message handler returns: runModal inside it would block WebKit.
+            DispatchQueue.main.async { self.confirmUninstall() }
         case "setNotifications":
             let enabled = (body as? Bool) ?? ((body as? NSNumber)?.boolValue ?? false)
             updateSetting("notifications", enabled)

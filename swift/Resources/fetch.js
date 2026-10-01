@@ -6,7 +6,7 @@ fetch('/api/bootstrap', {credentials:'include', headers:{Accept:'application/jso
 .then(async d => {
     const acct = d.account || {};
     const email = acct.email_address || acct.email || '';
-    // Only name and plan leave the page — never the whole bootstrap payload
+    // Only name, plan and a shared org's name leave the page — never the whole bootstrap payload
     const name = acct.display_name || acct.full_name || '';
     const memberships = acct.memberships || [];
     let best = null;
@@ -16,7 +16,10 @@ fetch('/api/bootstrap', {credentials:'include', headers:{Accept:'application/jso
         if (!orgId) continue;
         // Raw plan data; core.plan_label() turns it into a label (observed values only)
         const plan = {label: org.plan_display_label || org.plan_display_name || '',
-                      capabilities: org.capabilities || [], tier: org.rate_limit_tier || ''};
+                      capabilities: org.capabilities || [], tier: org.rate_limit_tier || '',
+                      raven: org.raven_type || ''};
+        // Org name only for shared (Team) orgs: personal orgs are named after the e-mail address
+        const orgName = org.raven_type ? (org.name || '') : '';
         try {
             const r = await fetch('/api/organizations/' + orgId + '/usage?cedar_ember=1', {
                 credentials: 'include',
@@ -27,7 +30,7 @@ fetch('/api/bootstrap', {credentials:'include', headers:{Accept:'application/jso
             if (data.five_hour === undefined) continue;
             const util = (data.five_hour && data.five_hour.utilization) || 0;
             if (!best || util > best.util) {
-                best = {util, org_id: orgId, account_email: email, plan, data};
+                best = {util, org_id: orgId, account_email: email, plan, org_name: orgName, data};
             }
         } catch(e) { continue; }
     }
@@ -42,6 +45,7 @@ fetch('/api/bootstrap', {credentials:'include', headers:{Accept:'application/jso
         deliver(JSON.stringify({ok: true, org_id: best.org_id,
                                 account_email: best.account_email,
                                 account_name: name, account_plan: best.plan,
+                                account_org: best.org_name,
                                 bootstrap_fields: bootstrapFields,
                                 data: best.data}));
     } else {

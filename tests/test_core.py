@@ -453,13 +453,19 @@ def test_settings_reject_unknown_appearance(tmp_path):
 
 def test_account_label_name_and_plan():
     lbl = core.account_label({"account_email": "j@x.nl", "account_name": " Jos ", "account_plan": "Pro"})
-    assert lbl == {"name": "Jos", "plan": "Pro", "email": "j@x.nl"}
+    assert lbl == {"name": "Jos", "org": "", "plan": "Pro", "email": "j@x.nl"}
+
+
+def test_account_label_with_shared_org():
+    lbl = core.account_label({"account_email": "j@x.nl", "account_name": "Jos",
+                              "account_org": " Example Org ", "account_plan": "Team"})
+    assert lbl == {"name": "Jos", "org": "Example Org", "plan": "Team", "email": "j@x.nl"}
 
 
 def test_account_label_falls_back_to_email():
     assert core.account_label({"account_email": "someone@example.com"}) == {
-        "name": "someone@example.com", "plan": "", "email": "someone@example.com"}
-    assert core.account_label({}) == {"name": "", "plan": "", "email": ""}
+        "name": "someone@example.com", "org": "", "plan": "", "email": "someone@example.com"}
+    assert core.account_label({}) == {"name": "", "org": "", "plan": "", "email": ""}
 
 
 def test_limits_output_carries_name_and_plan():
@@ -471,6 +477,8 @@ def test_limits_output_carries_name_and_plan():
 def test_fetch_js_sends_only_name_and_plan():
     js = core.build_fetch_js("x(s);")
     assert "account_name: name" in js and "account_plan: best.plan" in js
+    # Org name only for shared orgs (personal orgs are named after the e-mail)
+    assert "org.raven_type ? (org.name || '') : ''" in js and "account_org: best.org_name" in js
     assert "JSON.stringify(d)" not in js
 
 
@@ -481,6 +489,10 @@ def test_fetch_js_sends_only_name_and_plan():
     ({"label": "Team", "capabilities": ["claude_pro"], "tier": ""}, "Team"),
     ({"label": "", "capabilities": ["api", "api_individual"], "tier": "auto_trust_tier_c"}, ""),
     ({}, ""), (None, ""), ("Pro", "Pro"),
+    # Team org as observed 1-10-2026
+    ({"label": "", "capabilities": ["chat", "raven"], "tier": "default_raven", "raven": "team"}, "Team"),
+    # Other raven types not observed yet
+    ({"label": "", "capabilities": ["chat", "raven"], "raven": "enterprise"}, ""),
 ])
 def test_plan_label(plan, label):
     assert core.plan_label(plan) == label

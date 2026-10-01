@@ -28,6 +28,22 @@ public struct Paths {
         home.appendingPathComponent("Library/Logs")
             .appendingPathComponent(isDev ? "ClaudeUsage-Dev.log" : "ClaudeUsage.log")
     }
+
+    /// Login item written by install.sh. The dev build has none.
+    public static let launchAgentLabel = "com.jos.claude-usage"
+    public var launchAgent: URL? {
+        isDev ? nil : home.appendingPathComponent("Library/LaunchAgents/\(Self.launchAgentLabel).plist")
+    }
+
+    /// Files "Uninstall…" removes (taak 38): exactly these paths, never a glob, so
+    /// the dev build can't touch the released app's files and nothing else in
+    /// ~/.claude (that belongs to Claude Code) is ever removed.
+    public func uninstallTargets(keepHistory: Bool) -> [URL] {
+        var urls = [limits, blockLogState, settings, notifyState, updateState]
+        if !keepHistory { urls.append(historyDir) }
+        urls.append(log)
+        return urls
+    }
 }
 
 public let defaultSettings: JSONObject = [

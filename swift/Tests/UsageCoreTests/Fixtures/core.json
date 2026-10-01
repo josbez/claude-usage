@@ -8,6 +8,7 @@
         "out": {
           "email": "user@example.com",
           "name": "user@example.com",
+          "org": "",
           "plan": ""
         }
       },
@@ -15,23 +16,27 @@
         "limits": {
           "account_email": "user@example.com",
           "account_name": "  Sam  ",
-          "account_plan": " Pro "
+          "account_org": "  Example Org  ",
+          "account_plan": " Team "
         },
         "out": {
           "email": "user@example.com",
           "name": "Sam",
-          "plan": "Pro"
+          "org": "Example Org",
+          "plan": "Team"
         }
       },
       {
         "limits": {
           "account_email": null,
           "account_name": null,
+          "account_org": null,
           "account_plan": null
         },
         "out": {
           "email": "",
           "name": "",
+          "org": "",
           "plan": ""
         }
       }
@@ -2881,7 +2886,8 @@
         "limits": {
           "account_email": "user@example.com",
           "account_name": "  Sam  ",
-          "account_plan": " Pro "
+          "account_org": "  Example Org  ",
+          "account_plan": " Team "
         },
         "out": false
       },
@@ -2889,6 +2895,7 @@
         "limits": {
           "account_email": null,
           "account_name": null,
+          "account_org": null,
           "account_plan": null
         },
         "out": false
@@ -2917,6 +2924,7 @@
         "in": {
           "account_email": "user@example.com",
           "account_name": "Sam",
+          "account_org": " Example Org ",
           "account_plan": {
             "capabilities": [
               "claude_pro",
@@ -2941,6 +2949,7 @@
         "out": {
           "account_email": "from-data@example.com",
           "account_name": "Sam",
+          "account_org": "Example Org",
           "account_plan": "Pro",
           "fetched_at": "2026-10-01T10:00:00+00:00",
           "five_hour": {
@@ -3352,6 +3361,38 @@
           "capabilities": null
         },
         "out": ""
+      },
+      {
+        "in": {
+          "capabilities": [
+            "chat",
+            "raven"
+          ],
+          "label": "",
+          "raven": "team"
+        },
+        "out": "Team"
+      },
+      {
+        "in": {
+          "capabilities": [
+            "chat",
+            "raven"
+          ],
+          "label": "",
+          "raven": "enterprise"
+        },
+        "out": ""
+      },
+      {
+        "in": {
+          "capabilities": [
+            "claude_pro"
+          ],
+          "label": "",
+          "raven": null
+        },
+        "out": "Pro"
       }
     ],
     "read_cookies": {
@@ -4190,7 +4231,8 @@
         "limits": {
           "account_email": "user@example.com",
           "account_name": "  Sam  ",
-          "account_plan": " Pro "
+          "account_org": "  Example Org  ",
+          "account_plan": " Team "
         },
         "out": null
       },
@@ -4198,6 +4240,7 @@
         "limits": {
           "account_email": null,
           "account_name": null,
+          "account_org": null,
           "account_plan": null
         },
         "out": null

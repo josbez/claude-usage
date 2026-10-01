@@ -87,8 +87,9 @@ LIMITS_CASES = [
     {"seven_day": {"utilization": 10, "resets_at": "2026-10-01T10:00:00Z"}},
     {"seven_day": {"utilization": 10, "resets_at": "2026-10-08T10:00:00Z"}},
     {"account_email": "user@example.com"},
-    {"account_email": "user@example.com", "account_name": "  Sam  ", "account_plan": " Pro "},
-    {"account_email": None, "account_name": None, "account_plan": None},
+    {"account_email": "user@example.com", "account_name": "  Sam  ", "account_plan": " Team ",
+     "account_org": "  Example Org  "},
+    {"account_email": None, "account_name": None, "account_plan": None, "account_org": None},
     {"fetched_at": "2026-10-01T09:57:00+00:00"},
     {"fetched_at": "2026-10-01T09:50:00+00:00"},
     {"fetched_at": "nonsense"},
@@ -171,12 +172,16 @@ def write_cookie_db(key: bytes):
 
 PARSED_FETCH = {"ok": True, "org_id": "org-1", "account_email": "user@example.com",
                 "account_name": "Sam", "account_plan": {"label": "", "capabilities": ["claude_pro", "chat"]},
+                "account_org": " Example Org ",
                 "data": {"five_hour": {"utilization": 12.0, "resets_at": "2026-10-01T12:00:00+00:00"},
                          "seven_day": {"utilization": 40, "resets_at": "2026-10-05T07:00:00+00:00"},
                          "account_email": "from-data@example.com"}}
 
 PLAN_CASES = [None, 5, "  Max  ", {}, {"label": " Team "}, {"label": "", "capabilities": ["chat", "claude_pro"]},
-              {"label": None, "capabilities": ["claude_max"]}, {"capabilities": None}]
+              {"label": None, "capabilities": ["claude_max"]}, {"capabilities": None},
+              {"label": "", "capabilities": ["chat", "raven"], "raven": "team"},
+              {"label": "", "capabilities": ["chat", "raven"], "raven": "enterprise"},
+              {"label": "", "capabilities": ["claude_pro"], "raven": None}]
 
 BLOCK_CASES = [
     ({}, {}, "user@example.com", {}),

@@ -89,12 +89,6 @@
   .icon-btn:hover { background: var(--icon-hover-bg); color: var(--icon-hover-color); }
   .icon-btn.spinning svg { animation: spin 1s linear infinite; }
   #settingsBtn { position: relative; }
-  #settingsBtn.active { color: var(--accent-blue); }
-  #settingsBtn svg { transition: transform 0.35s cubic-bezier(0.16, 1, 0.3, 1); }
-  #settingsBtn.active svg { transform: rotate(90deg); }
-  @media (prefers-reduced-motion: reduce) {
-    #settingsBtn svg { transition: none; }
-  }
   #settingsBtn .badge {
     position: absolute; top: 4px; right: 4px;
     width: 6px; height: 6px; border-radius: 50%;
@@ -103,6 +97,8 @@
   #settingsBtn .badge.update { display: block; background: var(--status-stale); }
   #settingsBtn .badge.stale { display: block; background: var(--status-stale); }
   #settingsBtn .badge.disconnected { display: block; background: var(--status-error); }
+  .icon-btn[hidden] { display: none; }
+  #backBtn { margin-left: -6px; margin-right: -4px; }
 
   /* ---- Views: main (cards) and settings share the same space ---- */
   .view { display: flex; flex-direction: column; gap: 10px; }
@@ -166,6 +162,17 @@
   }
   .update-btn:disabled { opacity: 0.6; cursor: default; }
   .update-btn[hidden] { display: none; }
+
+  /* Quiet text buttons under the settings card: uninstall left, quit right */
+  .settings-actions {
+    display: flex; justify-content: space-between; gap: 8px; padding: 0 4px;
+  }
+  .text-btn {
+    border: none; background: none; padding: 2px 0; cursor: pointer;
+    font: inherit; font-size: 12px; color: var(--muted);   /* ≥4.5:1 on the page */
+  }
+  .text-btn:hover { color: var(--text); text-decoration: underline; text-underline-offset: 2px; }
+  .text-btn:focus-visible { outline: 2px solid var(--accent-text); outline-offset: 1px; border-radius: 3px; }
 
   @keyframes spin { to { transform: rotate(360deg); } }
 
@@ -327,8 +334,15 @@
   .account-name {
     color: var(--text); font-size: 12px; font-weight: 600;
     overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+    flex-shrink: 0; max-width: 140px;   /* the org name gives way first */
   }
   .account-plan { white-space: nowrap; flex-shrink: 0; }
+  /* Shared org (Team): gives way first when the footer gets tight */
+  .account-org {
+    min-width: 0; flex-shrink: 3;
+    overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+  }
+  .account-org:empty { display: none; }
   #lastUpdated {
     flex-shrink: 0;
     margin-left: 8px;
@@ -374,6 +388,11 @@
 
   <!-- Header -->
   <div class="header">
+    <button class="icon-btn" id="backBtn" hidden data-i18n-title="btn_back" title="Terug naar overzicht" onclick="toggleSettings(false)">
+      <svg width="15" height="15" viewBox="0 0 15 15" fill="none">
+        <path d="M9.5 3L5 7.5l4.5 4.5" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/>
+      </svg>
+    </button>
     <span class="header-title" id="headerTitle">Claude Stats</span>
     <button class="icon-btn" id="refreshBtn" data-i18n-title="btn_refresh" title="Vernieuwen" onclick="onRefresh()">
       <svg width="15" height="15" viewBox="0 0 15 15" fill="none">
@@ -388,7 +407,7 @@
       </svg>
       <span class="badge" id="settingsBadge"></span>
     </button>
-    <button class="icon-btn" data-i18n-title="btn_quit" title="Afsluiten" onclick="onQuit()">
+    <button class="icon-btn" data-i18n-title="btn_close" title="Sluiten" onclick="onClose()">
       <svg width="15" height="15" viewBox="0 0 15 15" fill="none">
         <path d="M3 3l9 9M12 3l-9 9" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"/>
       </svg>
@@ -442,6 +461,7 @@
     <div class="footer-left" id="accountBox">
       <span class="status-dot" id="statusDot"></span>
       <span class="account-name" id="accountName"></span>
+      <span class="account-org" id="accountOrg"></span>
       <span class="account-plan" id="accountPlan"></span>
     </div>
     <span id="lastUpdated"></span>
@@ -495,6 +515,10 @@
           <div class="setting-sub conn-line" id="serviceLine"><button class="conn-link" id="serviceBtn" onclick="onOpenStatus()"><span class="status-dot neutral" id="serviceDot"></span><span class="txt" id="serviceText"></span></button></div>
         </div>
       </div>
+    </div>
+    <div class="settings-actions">
+      <button class="text-btn" onclick="onUninstall()" data-i18n="set_uninstall">Verwijderen…</button>
+      <button class="text-btn" onclick="onQuit()" data-i18n="btn_quit">Afsluiten</button>
     </div>
   </div>
 
@@ -682,10 +706,14 @@ function render(d) {
     : T('status_ok');
   const dot = document.getElementById('statusDot');
   dot.className = 'status-dot' + (problem ? ' ' + problem : '');
-  const acc = d.account_label || { name: d.account || '', plan: '', email: d.account || '' };
+  const acc = d.account_label || { name: d.account || '', org: '', plan: '', email: d.account || '' };
   document.getElementById('accountName').textContent = acc.name;
+  document.getElementById('accountOrg').textContent = acc.org ? '· ' + acc.org : '';
   document.getElementById('accountPlan').textContent = acc.plan ? '· ' + acc.plan : '';
-  document.getElementById('accountBox').title = problem ? statusText + ' — ' + acc.email : acc.email;
+  // Full text in the tooltip, as the org name may be cut off
+  const full = [acc.name, acc.org, acc.plan].filter(Boolean).join(' · ');
+  const who = acc.org ? full + ' — ' + acc.email : acc.email;
+  document.getElementById('accountBox').title = problem ? statusText + ' — ' + who : who;
   document.getElementById('lastUpdated').textContent = d.last_updated ? T('updated', { when: d.last_updated }) : '';
 
   // Settings view
@@ -776,13 +804,16 @@ function toggleSettings(show, instant) {
   if (open === !settings.hidden) return;
   if (_viewAnimating && !instant) return;
 
-  document.getElementById('settingsBtn').classList.toggle('active', open);
   const title = document.getElementById('headerTitle');
   const from = open ? main : settings;
   const to = open ? settings : main;
   const swap = () => {
     from.hidden = true;
     to.hidden = false;
+    // In settings the gear becomes a back chevron, so the way back is obvious.
+    // Swapped while the title is faded out: the title shifts sideways unseen.
+    document.getElementById('settingsBtn').hidden = open;
+    document.getElementById('backBtn').hidden = !open;
     title.textContent = T(open ? 'settings_title' : 'app_title');
     reportHeight();
   };
@@ -899,6 +930,31 @@ function onQuit() {
     window.webkit.messageHandlers.quit.postMessage(null);
   }
 }
+
+// The cross only closes the popover; quitting lives in settings and on ⌘Q.
+function onClose() {
+  if (window.webkit && window.webkit.messageHandlers && window.webkit.messageHandlers.close) {
+    window.webkit.messageHandlers.close.postMessage(null);
+  }
+}
+
+function onUninstall() {
+  if (window.webkit && window.webkit.messageHandlers && window.webkit.messageHandlers.uninstall) {
+    window.webkit.messageHandlers.uninstall.postMessage(null);
+  }
+}
+
+// Escape: back from settings, otherwise close. ⌘Q quits.
+document.addEventListener('keydown', e => {
+  if (e.key === 'Escape') {
+    e.preventDefault();
+    if (!document.getElementById('settingsView').hidden) toggleSettings(false);
+    else onClose();
+  } else if (e.metaKey && !e.shiftKey && !e.altKey && !e.ctrlKey && e.key.toLowerCase() === 'q') {
+    e.preventDefault();
+    onQuit();
+  }
+});
 
 // ---- Init placeholder ----
 (function init() {

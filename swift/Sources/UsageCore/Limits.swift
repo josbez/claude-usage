@@ -1,11 +1,12 @@
 import Foundation
 
-/// core.account_label(): name and plan for the footer; falls back to the e-mail.
+/// core.account_label(): name, shared org and plan for the footer; falls back to the e-mail.
 public func accountLabel(_ limits: JSONObject) -> [String: String] {
     let email = string(limits, "account_email")
     let name = string(limits, "account_name").trimmingCharacters(in: .whitespacesAndNewlines)
+    let org = string(limits, "account_org").trimmingCharacters(in: .whitespacesAndNewlines)
     let plan = string(limits, "account_plan").trimmingCharacters(in: .whitespacesAndNewlines)
-    return ["name": name.isEmpty ? email : name, "plan": plan, "email": email]
+    return ["name": name.isEmpty ? email : name, "org": org, "plan": plan, "email": email]
 }
 
 /// core.limits_are_fresh()

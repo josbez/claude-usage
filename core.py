@@ -33,7 +33,7 @@ fetch('/api/bootstrap', {credentials:'include', headers:{Accept:'application/jso
 .then(async d => {
     const acct = d.account || {};
     const email = acct.email_address || acct.email || '';
-    // Only name and plan leave the page — never the whole bootstrap payload
+    // Only name, plan and a shared org's name leave the page — never the whole bootstrap payload
     const name = acct.display_name || acct.full_name || '';
     const memberships = acct.memberships || [];
     let best = null;
@@ -43,7 +43,10 @@ fetch('/api/bootstrap', {credentials:'include', headers:{Accept:'application/jso
         if (!orgId) continue;
         // Raw plan data; core.plan_label() turns it into a label (observed values only)
         const plan = {label: org.plan_display_label || org.plan_display_name || '',
-                      capabilities: org.capabilities || [], tier: org.rate_limit_tier || ''};
+                      capabilities: org.capabilities || [], tier: org.rate_limit_tier || '',
+                      raven: org.raven_type || ''};
+        // Org name only for shared (Team) orgs: personal orgs are named after the e-mail address
+        const orgName = org.raven_type ? (org.name || '') : '';
         try {
             const r = await fetch('/api/organizations/' + orgId + '/usage?cedar_ember=1', {
                 credentials: 'include',
@@ -54,7 +57,7 @@ fetch('/api/bootstrap', {credentials:'include', headers:{Accept:'application/jso
             if (data.five_hour === undefined) continue;
             const util = (data.five_hour && data.five_hour.utilization) || 0;
             if (!best || util > best.util) {
-                best = {util, org_id: orgId, account_email: email, plan, data};
+                best = {util, org_id: orgId, account_email: email, plan, org_name: orgName, data};
             }
         } catch(e) { continue; }
     }
@@ -69,6 +72,7 @@ fetch('/api/bootstrap', {credentials:'include', headers:{Accept:'application/jso
         deliver(JSON.stringify({ok: true, org_id: best.org_id,
                                 account_email: best.account_email,
                                 account_name: name, account_plan: best.plan,
+                                account_org: best.org_name,
                                 bootstrap_fields: bootstrapFields,
                                 data: best.data}));
     } else {
@@ -110,6 +114,9 @@ STRINGS = {
         "btn_refresh": "Vernieuwen",
         "btn_settings": "Instellingen",
         "btn_quit": "Afsluiten",
+        "btn_close": "Sluiten",
+        "btn_back": "Terug naar overzicht",
+        "set_uninstall": "Verwijderen…",
         "session_label": "Huidige sessie",
         "weekly_label": "Weeklimiet",
         "used_suffix": "% gebruikt",
@@ -180,6 +187,15 @@ STRINGS = {
         "btn_update": "Bijwerken",
         "btn_later": "Later",
         "btn_whats_new": "Wat is er nieuw?",
+        # uninstall dialog
+        "alert_uninstall_title": "ClaudeUsage verwijderen?",
+        "alert_uninstall_body": "De app gaat naar de Prullenbak, start niet meer bij inloggen en "
+                                "zijn eigen bestanden (instellingen, meldingsstatus, laatste stand, log) "
+                                "worden verwijderd. De Claude-app zelf blijft ongemoeid.",
+        "alert_uninstall_keep_history": "Gebruiksgeschiedenis bewaren",
+        "btn_uninstall": "Verwijderen",
+        "btn_cancel": "Annuleren",
+        "alert_uninstall_failed_title": "Verwijderen is niet gelukt",
         "alert_failed_title": "Bijwerken is niet gelukt",
         "alert_failed_body": "{error}. De huidige versie blijft gewoon werken.",
         # update errors
@@ -204,6 +220,9 @@ STRINGS = {
         "btn_refresh": "Refresh",
         "btn_settings": "Settings",
         "btn_quit": "Quit",
+        "btn_close": "Close",
+        "btn_back": "Back to overview",
+        "set_uninstall": "Uninstall…",
         "session_label": "Current session",
         "weekly_label": "Weekly limit",
         "used_suffix": "% used",
@@ -270,6 +289,14 @@ STRINGS = {
         "btn_update": "Update",
         "btn_later": "Later",
         "btn_whats_new": "What's new?",
+        "alert_uninstall_title": "Uninstall ClaudeUsage?",
+        "alert_uninstall_body": "The app moves to the Trash, no longer starts at login and its own "
+                                "files (settings, notification state, last reading, log) are removed. "
+                                "The Claude app itself is left alone.",
+        "alert_uninstall_keep_history": "Keep usage history",
+        "btn_uninstall": "Uninstall",
+        "btn_cancel": "Cancel",
+        "alert_uninstall_failed_title": "Uninstall failed",
         "alert_failed_title": "Update failed",
         "alert_failed_body": "{error}. The current version keeps working.",
         "err_no_dmg": "this release has no DMG",
@@ -527,6 +554,7 @@ def limits_output(parsed: dict) -> dict:
         "account_email": parsed.get("account_email", ""),
         "account_name": parsed.get("account_name", ""),
         "account_plan": plan_label(parsed.get("account_plan")),
+        "account_org": (parsed.get("account_org") or "").strip(),
         **parsed["data"],
     }
 
@@ -536,6 +564,11 @@ def limits_output(parsed: dict) -> dict:
 # empty plan_display_label, and claude.ai shows "Pro". Add an entry only after
 # seeing real data for that plan — never guess (unknown plans show nothing).
 OBSERVED_PLAN_CAPABILITIES = {"claude_pro": "Pro"}
+
+# raven_type -> label, same rule. Evidence (1-10-2026): a Team org returns
+# raven_type "team", capabilities ["chat", "raven"], billing_type
+# "stripe_subscription" and an empty plan_display_label; claude.ai shows "Team".
+OBSERVED_PLAN_RAVEN_TYPES = {"team": "Team"}
 
 
 def plan_label(plan) -> str:
@@ -550,16 +583,17 @@ def plan_label(plan) -> str:
     for cap in plan.get("capabilities") or []:
         if cap in OBSERVED_PLAN_CAPABILITIES:
             return OBSERVED_PLAN_CAPABILITIES[cap]
-    return ""
+    return OBSERVED_PLAN_RAVEN_TYPES.get(plan.get("raven") or "", "")
 
 
 def account_label(limits: dict) -> dict:
-    """Who the numbers belong to, for the footer: name and plan.
+    """Who the numbers belong to, for the footer: name, shared org and plan.
     Falls back to the e-mail address (older caches have no name/plan)."""
     email = limits.get("account_email", "") or ""
     name = (limits.get("account_name", "") or "").strip()
+    org = (limits.get("account_org", "") or "").strip()
     plan = (limits.get("account_plan", "") or "").strip()
-    return {"name": name or email, "plan": plan, "email": email}
+    return {"name": name or email, "org": org, "plan": plan, "email": email}
 
 
 def limits_are_fresh(limits: dict, max_age_minutes: int = 5) -> bool:

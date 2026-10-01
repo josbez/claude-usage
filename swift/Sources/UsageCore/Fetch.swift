@@ -11,6 +11,8 @@ public func buildFetchJS(template: String, deliver: String) -> String {
 
 /// Capability -> label, only for values actually observed (core.OBSERVED_PLAN_CAPABILITIES).
 let observedPlanCapabilities = ["claude_pro": "Pro"]
+/// raven_type -> label, observed for a Team org 1-10-2026 (core.OBSERVED_PLAN_RAVEN_TYPES).
+let observedPlanRavenTypes = ["team": "Team"]
 
 /// core.plan_label(): the API's label, else an observed capability, else "".
 public func planLabel(_ plan: Any?) -> String {
@@ -21,7 +23,7 @@ public func planLabel(_ plan: Any?) -> String {
     for cap in p["capabilities"] as? [Any] ?? [] {
         if let c = cap as? String, let l = observedPlanCapabilities[c] { return l }
     }
-    return ""
+    return observedPlanRavenTypes[p["raven"] as? String ?? ""] ?? ""
 }
 
 /// Python's datetime.isoformat() for a UTC time: microseconds only when non-zero.
@@ -44,6 +46,7 @@ public func limitsOutput(_ parsed: JSONObject, now: Date) -> JSONObject {
         "account_email": parsed["account_email"] ?? "",
         "account_name": parsed["account_name"] ?? "",
         "account_plan": planLabel(parsed["account_plan"]),
+        "account_org": (parsed["account_org"] as? String ?? "").trimmingCharacters(in: .whitespacesAndNewlines),
     ]
     for (k, v) in parsed["data"] as? JSONObject ?? [:] { out[k] = v }
     return out

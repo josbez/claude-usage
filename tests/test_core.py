@@ -4,6 +4,7 @@ Run: /usr/bin/python3 -m pytest
 """
 
 import hashlib
+import json
 import os
 import sqlite3
 import sys
@@ -615,3 +616,59 @@ def test_dashboard_script_has_no_hardcoded_ui_text():
     for phrase in ("Bijgewerkt", "Verbonden", "beschikbaar", "Mislukt", "Instellingen",
                    "gebruikt", "van de week", "Reset ", "Up-to-date", "Laden"):
         assert phrase not in script, phrase
+
+
+# ---------------------------------------------------------------------------
+# Usage history
+# ---------------------------------------------------------------------------
+
+def _full_limits():
+    return {
+        "fetched_at": "2026-10-01T07:30:00.123+00:00",
+        "account_email": "j@x.nl", "account_name": "Jos", "org_id": "org-1",
+        "five_hour": {"utilization": 22, "resets_at": "2026-10-01T10:50:00+00:00",
+                      "limit_dollars": None, "locked_reason": None},
+        "seven_day": {"utilization": 21, "resets_at": "2026-10-02T17:00:00+00:00"},
+        "seven_day_breakdown": {"as_of": "x", "window_started_at": "2026-09-25T17:00:00+00:00",
+                                "rows": [{"key": "claude_code", "display_name": "Claude Code", "percent": 55},
+                                         {"key": "chat", "display_name": "Chats", "percent": 0}]},
+        "extra_usage": {"is_enabled": True, "monthly_limit": 1700, "used_credits": 0,
+                        "currency": "EUR", "decimal_places": 2},
+        "tangelo": None, "iguana_necktie": None,
+    }
+
+
+def test_history_record_keeps_only_raw_known_fields():
+    rec = core.history_record(_full_limits())
+    assert rec == {
+        "ts": "2026-10-01T07:30:00.123+00:00", "account": "j@x.nl", "org_id": "org-1",
+        "five_hour": {"utilization": 22, "resets_at": "2026-10-01T10:50:00+00:00"},
+        "seven_day": {"utilization": 21, "resets_at": "2026-10-02T17:00:00+00:00"},
+        "breakdown": {"window_started_at": "2026-09-25T17:00:00+00:00",
+                      "rows": [{"key": "claude_code", "display_name": "Claude Code", "percent": 55},
+                               {"key": "chat", "display_name": "Chats", "percent": 0}]},
+        "extra_usage": {"used_credits": 0, "monthly_limit": 1700, "currency": "EUR"},
+    }
+
+
+def test_history_record_omits_missing_and_null():
+    lim = {"fetched_at": "2026-10-01T07:30:00+00:00", "five_hour": None,
+           "seven_day": {"utilization": 5}, "extra_usage": {"is_enabled": False, "used_credits": 3}}
+    assert core.history_record(lim) == {"ts": "2026-10-01T07:30:00+00:00", "seven_day": {"utilization": 5}}
+
+
+def test_history_path_is_monthly_utc():
+    assert core.history_path("2026-10-01T07:30:00+00:00", "/h") == "/h/2026-10.jsonl"
+    # 00:30 on 1 Nov in Amsterdam is still October in UTC
+    assert core.history_path("2026-11-01T00:30:00+01:00", "/h") == "/h/2026-10.jsonl"
+
+
+def test_append_history_creates_dir_and_appends_lines(tmp_path):
+    base = str(tmp_path / "usage-history")
+    rec = core.history_record(_full_limits())
+    path = core.append_history(rec, base)
+    core.append_history(dict(rec, ts="2026-10-01T07:35:00+00:00"), base)
+    lines = open(path, encoding="utf-8").read().splitlines()
+    assert len(lines) == 2
+    assert json.loads(lines[0]) == rec
+    assert json.loads(lines[1])["ts"] == "2026-10-01T07:35:00+00:00"

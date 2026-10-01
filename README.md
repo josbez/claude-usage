@@ -72,6 +72,7 @@ De signing key staat in `~/.config/claude-usage/release-signing-key.pem` en komt
 ## Logs en valkuilen
 
 - Logboek: `~/Library/Logs/ClaudeUsage.log`; opgehaalde data: `~/.claude/usage-limits.json`.
+- Gebruiksgeschiedenis (eigen opslag, de API bewaart geen historie): `~/.claude/usage-history/JJJJ-MM.jsonl`, één regel per fetch met alleen ruwe API-waarden — ~5,5 MB per maand. Blijft lokaal.
 - **PyObjC-selectors:** methodes op `NSObject`-subclasses worden Objective-C selectors (underscore → dubbele punt). Callbacks: camelCase met één trailing underscore per argument (`fetchWatchdogFired_`).
 - **Geen Python-subprocess vanuit de bundle:** de gebundelde interpreter-helper is kapot gelinkt; alles in-process.
 - **Source ≠ deployed:** wijzigingen zijn pas actief na `./deploy.sh`.

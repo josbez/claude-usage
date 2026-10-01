@@ -534,6 +534,61 @@ def limits_are_fresh(limits: dict, max_age_minutes: int = 5) -> bool:
 
 
 # ---------------------------------------------------------------------------
+# Usage history: the API only returns the current state, so we keep our own
+# record (source for the trends tab). Raw API values only — no derived data.
+# Measured: ~650 bytes per fetch, ~288 fetches/day: ~5.5 MB/month (~65 MB/year).
+# ---------------------------------------------------------------------------
+
+HISTORY_DIR = os.path.expanduser("~/.claude/usage-history")
+
+
+def _pick(block, keys):
+    """Copy the given keys from an API block, skipping missing/None values."""
+    if not isinstance(block, dict):
+        return None
+    out = {k: block[k] for k in keys if block.get(k) is not None}
+    return out or None
+
+
+def history_record(limits: dict) -> dict:
+    """One history line from a fetched limits dict (as written to LIMITS_FILE)."""
+    rec = {
+        "ts": limits.get("fetched_at"),
+        "account": limits.get("account_email"),
+        "org_id": limits.get("org_id"),
+        "five_hour": _pick(limits.get("five_hour"), ("utilization", "resets_at")),
+        "seven_day": _pick(limits.get("seven_day"), ("utilization", "resets_at")),
+    }
+    bd = limits.get("seven_day_breakdown")
+    if isinstance(bd, dict):
+        rows = [_pick(r, ("key", "display_name", "percent"))
+                for r in bd.get("rows") or [] if isinstance(r, dict)]
+        rec["breakdown"] = _pick({"window_started_at": bd.get("window_started_at"),
+                                  "rows": [r for r in rows if r] or None},
+                                 ("window_started_at", "rows"))
+    extra = limits.get("extra_usage")
+    if isinstance(extra, dict) and extra.get("is_enabled"):
+        rec["extra_usage"] = _pick(extra, ("used_credits", "monthly_limit", "currency"))
+    return {k: v for k, v in rec.items() if v is not None}
+
+
+def history_path(ts: str, base: str = HISTORY_DIR) -> str:
+    """Monthly file (UTC) for a record timestamp: <base>/YYYY-MM.jsonl."""
+    month = parse_dt(ts).astimezone(timezone.utc).strftime("%Y-%m")
+    return os.path.join(base, f"{month}.jsonl")
+
+
+def append_history(record: dict, base: str = HISTORY_DIR) -> str:
+    """Append one JSON line; returns the file path. Raises on I/O errors —
+    the caller logs and carries on."""
+    path = history_path(record["ts"], base)
+    os.makedirs(base, exist_ok=True)
+    with open(path, "a", encoding="utf-8") as f:
+        f.write(json.dumps(record, ensure_ascii=False, separators=(",", ":")) + "\n")
+    return path
+
+
+# ---------------------------------------------------------------------------
 # Weekly window progress (elapsed time, not usage)
 # ---------------------------------------------------------------------------
 

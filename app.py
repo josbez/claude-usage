@@ -52,6 +52,7 @@ from core import (
     status_title, title_from_limits, load_limits, limits_are_fresh, MENUBAR_STYLES,
     due_notifications, load_notify_state, save_notify_state, color_for_pct, face_icon,
     account_label, week_window, week_progress, STRINGS, t, language_from,
+    history_record, append_history,
     load_settings, save_settings,
     UPDATE_STATE_FILE, load_json, save_json, is_newer, update_check_due,
 )
@@ -291,6 +292,13 @@ class AppDelegate(NSObject):
         except Exception as e:
             log(f"notificatie-afbeelding mislukt: {e}")
             return None
+
+    def _record_history(self, limits: dict):
+        """Our own usage history (the API keeps none). Never let it break a fetch."""
+        try:
+            append_history(history_record(limits))
+        except Exception as e:
+            log(f"geschiedenis opslaan mislukt: {e}")
 
     def _post_notification(self, ident: str, title: str, body: str):
         if self._notify_center is None or not load_settings()["notifications"]:
@@ -759,6 +767,7 @@ class AppDelegate(NSObject):
                 with open(LIMITS_FILE, "w", encoding="utf-8") as f:
                     json.dump(output, f, indent=2)
                 self._last_fetch_error = None
+                self._record_history(output)
                 self._notify_limits(output)
             else:
                 error = parsed.get("error", "onbekende fout")

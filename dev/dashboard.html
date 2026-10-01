@@ -932,6 +932,9 @@ function renderMenubarStyle(style, previews) {
   _menubarPreviews = previews;
   document.querySelectorAll('#menubarStyle button').forEach(b =>
     b.setAttribute('aria-checked', b.dataset.style === style ? 'true' : 'false'));
+  // In ring mode the third style shows just the icon: "Icon", not "Emoji" (stored value stays 'emoji')
+  document.querySelector('#menubarStyle [data-style="emoji"]').textContent =
+    T(_menubarRing ? 'style_icon' : 'style_emoji');
   const el = document.getElementById('menubarPreview');
   const text = previews[style] || '';
   if (_menubarRing) {

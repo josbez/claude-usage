@@ -45,7 +45,7 @@ extension UsageFormatter {
                                          : strings.t("reason_failed_at", lang, ["time": fetchedHHMM])
         } else if ageMinutes == nil {
             status = "stale"; reason = strings.t("reason_not_fetched", lang)
-        } else if ageMinutes! > 15 {
+        } else if ageMinutes! > Double(staleAfterMinutes(refresh: refreshMinutes(settings))) {
             status = "stale"
             reason = fetchedHHMM.isEmpty ? strings.t("reason_stale", lang)
                                          : strings.t("reason_data_at", lang, ["time": fetchedHHMM])
@@ -79,6 +79,7 @@ extension UsageFormatter {
             "service_badge": statusBadgeClass(state.service),
             "menubar_style": settings["menubar_style"] ?? "full",
             "appearance": settings["appearance"] ?? "system",
+            "refresh_minutes": refreshMinutes(settings),
             "lang": lang,
             "i18n": strings.table[lang] ?? [:],
             "menubar_previews": previews,

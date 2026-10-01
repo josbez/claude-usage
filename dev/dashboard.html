@@ -499,6 +499,16 @@
           <button role="radio" data-appearance="dark" onclick="onAppearance('dark')" data-i18n="appearance_dark">Donker</button>
         </div>
       </div>
+      <div class="setting-row">
+        <div class="setting-text">
+          <div class="setting-title" data-i18n="set_refresh">Verversen</div>
+        </div>
+        <div class="segmented" role="radiogroup" id="refreshChoice">
+          <button role="radio" data-minutes="1" onclick="onRefreshChoice(1)"></button>
+          <button role="radio" data-minutes="5" onclick="onRefreshChoice(5)"></button>
+          <button role="radio" data-minutes="15" onclick="onRefreshChoice(15)"></button>
+        </div>
+      </div>
       <div class="setting-row version">
         <div class="setting-text">
           <div class="setting-title"><span data-i18n="set_version">Versie</span> <span class="setting-value" id="versionText"></span></div>
@@ -730,6 +740,7 @@ function render(d) {
   renderUpdate(d.update);
   renderMenubarStyle(d.menubar_style || 'full', d.menubar_previews || {});
   renderAppearance(d.appearance || 'system');
+  renderRefreshChoice(d.refresh_minutes || 5);
 
   renderService(d.service);
 
@@ -912,6 +923,20 @@ function onAppearance(appearance) {
   renderAppearance(appearance);  // optimistic; Python pushes saved state back
   if (window.webkit && window.webkit.messageHandlers && window.webkit.messageHandlers.setAppearance) {
     window.webkit.messageHandlers.setAppearance.postMessage(appearance);
+  }
+}
+
+function renderRefreshChoice(minutes) {
+  document.querySelectorAll('#refreshChoice button').forEach(b => {
+    b.textContent = T('refresh_choice', { n: b.dataset.minutes });
+    b.setAttribute('aria-checked', Number(b.dataset.minutes) === minutes ? 'true' : 'false');
+  });
+}
+
+function onRefreshChoice(minutes) {
+  renderRefreshChoice(minutes);  // optimistic; the app pushes saved state back
+  if (window.webkit && window.webkit.messageHandlers && window.webkit.messageHandlers.setRefresh) {
+    window.webkit.messageHandlers.setRefresh.postMessage(minutes);
   }
 }
 

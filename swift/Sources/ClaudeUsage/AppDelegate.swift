@@ -10,7 +10,7 @@ import WebKit
 final class AppDelegate: NSObject, NSApplicationDelegate, NSPopoverDelegate {
     static let popoverWidth: CGFloat = 360
     static let popoverMinHeight: CGFloat = 296   // main view; fixed
-    static let popoverMaxHeight: CGFloat = 420   // settings view may grow up to this
+    static let popoverMaxHeight: CGFloat = 520   // settings view may grow up to this (fits a 13" screen)
 
     let isDev = Bundle.main.bundleIdentifier?.hasSuffix(".dev") ?? true
     lazy var paths = Paths(isDev: isDev)
@@ -175,7 +175,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSPopoverDelegate {
         checkAccountSwitch()
         maybeCheckUpdates()
         maybeCheckServiceStatus()
-        if !limitsAreFresh(loadJSONObject(paths.limits), now: Date()) {
+        if !limitsAreFresh(loadJSONObject(paths.limits), now: Date(), maxAgeMinutes: refreshMinutes(settings)) {
             startFetch()
         } else if popover.isShown {
             pushData()
@@ -195,7 +195,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSPopoverDelegate {
         let config = WKWebViewConfiguration()
         let handler = ScriptHandler(owner: self)
         for name in ["refresh", "close", "quit", "uninstall", "setNotifications", "startUpdate",
-                     "setMenubarStyle", "setAppearance", "openStatusPage", "openResetsPage", "resize"] {
+                     "setMenubarStyle", "setAppearance", "setRefresh", "openStatusPage", "openResetsPage", "resize"] {
             config.userContentController.add(handler, name: name)
         }
         webView = WKWebView(frame: NSRect(x: 0, y: 0, width: Self.popoverWidth,
@@ -221,7 +221,9 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSPopoverDelegate {
             maybeCheckUpdates()
             pushData(animated: true)
             // Never show stale numbers on open (e.g. right after waking from sleep).
-            if !limitsAreFresh(loadJSONObject(paths.limits), now: Date()) { startFetch() }
+            if !limitsAreFresh(loadJSONObject(paths.limits), now: Date(), maxAgeMinutes: refreshMinutes(settings)) {
+                startFetch()
+            }
         }
     }
 
@@ -294,6 +296,12 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSPopoverDelegate {
             guard let appearance = body as? String, appearanceStyles.contains(appearance) else { return }
             updateSetting("appearance", appearance)
             applyAppearance()
+            pushData()
+        case "setRefresh":
+            guard let n = (body as? NSNumber)?.intValue, refreshChoices.contains(n) else { return }
+            updateSetting("refresh_minutes", n)
+            // Shorter than the data's age: fetch now instead of at the next tick.
+            if !limitsAreFresh(loadJSONObject(paths.limits), now: Date(), maxAgeMinutes: n) { startFetch() }
             pushData()
         case "startUpdate":
             startUpdate()

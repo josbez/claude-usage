@@ -48,3 +48,20 @@ final class PathsTests: XCTestCase {
         }
     }
 }
+
+/// Taak 51: refresh interval setting (load_settings parity lives in the fixtures).
+final class RefreshSettingTests: XCTestCase {
+    func testRefreshMinutes() {
+        XCTAssertEqual(refreshMinutes(normalizeSettings(nil)), 5)
+        XCTAssertEqual(refreshMinutes(normalizeSettings(["refresh_minutes": 1])), 1)
+        XCTAssertEqual(refreshMinutes(normalizeSettings(["refresh_minutes": 15])), 15)
+        XCTAssertEqual(refreshMinutes(normalizeSettings(["refresh_minutes": 10])), 5)
+        XCTAssertEqual(refreshMinutes(normalizeSettings(["refresh_minutes": true])), 5)
+    }
+
+    func testStaleThresholdGrowsWithInterval() {
+        XCTAssertEqual(staleAfterMinutes(refresh: 1), 15)
+        XCTAssertEqual(staleAfterMinutes(refresh: 5), 15)
+        XCTAssertEqual(staleAfterMinutes(refresh: 15), 45)
+    }
+}

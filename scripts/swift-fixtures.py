@@ -122,6 +122,12 @@ SETTINGS_CASES = [
     {"menubar_style": "bogus", "appearance": "neon", "extra": 1},
     {"update_check": False},
     [],
+    {"refresh_minutes": 1},
+    {"refresh_minutes": 15},
+    {"refresh_minutes": 10},
+    {"refresh_minutes": True},
+    {"refresh_minutes": "5"},
+    {"refresh_minutes": 5.0},
 ]
 
 SERVICE_CASES = [None, {}, {"level": "ok"}, {"level": "minor"}, {"level": "major"},

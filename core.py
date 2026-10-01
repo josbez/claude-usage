@@ -137,6 +137,8 @@ STRINGS = {
         "style_session": "Sessie",
         "style_emoji": "Emoji",
         "set_appearance": "Weergave",
+        "set_refresh": "Verversen",
+        "refresh_choice": "{n} min",
         "appearance_system": "Systeem",
         "appearance_light": "Licht",
         "appearance_dark": "Donker",
@@ -243,6 +245,8 @@ STRINGS = {
         "style_session": "Session",
         "style_emoji": "Emoji",
         "set_appearance": "Appearance",
+        "set_refresh": "Refresh",
+        "refresh_choice": "{n} min",
         "appearance_system": "System",
         "appearance_light": "Light",
         "appearance_dark": "Dark",
@@ -506,6 +510,7 @@ def color_for_pct(pct: float) -> tuple:
 
 MENUBAR_STYLES = ("full", "session", "emoji")
 APPEARANCE_STYLES = ("system", "light", "dark")
+REFRESH_CHOICES = (1, 5, 15)   # minutes between fetches (taak 51; used by the Swift app)
 
 
 def status_title(session_pct: int, weekly_pct: int, session_reset_compact: str,
@@ -1079,7 +1084,8 @@ def save_block_log_state(state: dict, path: str = BLOCK_LOG_STATE_FILE):
 # ---------------------------------------------------------------------------
 
 SETTINGS_FILE = os.path.expanduser("~/.claude/usage-tracker-settings.json")
-DEFAULT_SETTINGS = {"notifications": True, "update_check": True, "menubar_style": "full", "appearance": "system"}
+DEFAULT_SETTINGS = {"notifications": True, "update_check": True, "menubar_style": "full", "appearance": "system",
+                    "refresh_minutes": 5}
 
 
 def load_settings(path: str = SETTINGS_FILE) -> dict:
@@ -1090,6 +1096,9 @@ def load_settings(path: str = SETTINGS_FILE) -> dict:
         settings["menubar_style"] = DEFAULT_SETTINGS["menubar_style"]
     if settings["appearance"] not in APPEARANCE_STYLES:
         settings["appearance"] = DEFAULT_SETTINGS["appearance"]
+    r = settings["refresh_minutes"]
+    if isinstance(r, bool) or not isinstance(r, int) or r not in REFRESH_CHOICES:
+        settings["refresh_minutes"] = DEFAULT_SETTINGS["refresh_minutes"]
     return settings
 
 

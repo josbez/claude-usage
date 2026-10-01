@@ -291,6 +291,15 @@ def test_settings_ignore_unknown_and_corrupt(tmp_path):
     assert core.load_settings(str(path)) == core.DEFAULT_SETTINGS
 
 
+@pytest.mark.parametrize("stored,expected", [
+    (1, 1), (5, 5), (15, 15), (10, 5), (True, 5), ("5", 5), (5.0, 5), (None, 5),
+])
+def test_settings_refresh_minutes_only_known_choices(tmp_path, stored, expected):
+    path = tmp_path / "s.json"
+    path.write_text(json.dumps({"refresh_minutes": stored}))
+    assert core.load_settings(str(path))["refresh_minutes"] == expected
+
+
 @pytest.mark.parametrize("pct,rgb", [
     (0, (47, 168, 74)), (50, (255, 149, 0)), (100, (255, 59, 48)),
     (25, (151, 159, 37)), (75, (255, 104, 24)), (-5, (47, 168, 74)), (140, (255, 59, 48)),

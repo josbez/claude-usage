@@ -2970,6 +2970,7 @@
           "appearance": "system",
           "menubar_style": "full",
           "notifications": true,
+          "refresh_minutes": 5,
           "update_check": true
         },
         "stored": {}
@@ -2979,6 +2980,7 @@
           "appearance": "dark",
           "menubar_style": "emoji",
           "notifications": false,
+          "refresh_minutes": 5,
           "update_check": true
         },
         "stored": {
@@ -2992,6 +2994,7 @@
           "appearance": "system",
           "menubar_style": "full",
           "notifications": true,
+          "refresh_minutes": 5,
           "update_check": true
         },
         "stored": {
@@ -3005,6 +3008,7 @@
           "appearance": "system",
           "menubar_style": "full",
           "notifications": true,
+          "refresh_minutes": 5,
           "update_check": false
         },
         "stored": {
@@ -3016,9 +3020,82 @@
           "appearance": "system",
           "menubar_style": "full",
           "notifications": true,
+          "refresh_minutes": 5,
           "update_check": true
         },
         "stored": []
+      },
+      {
+        "out": {
+          "appearance": "system",
+          "menubar_style": "full",
+          "notifications": true,
+          "refresh_minutes": 1,
+          "update_check": true
+        },
+        "stored": {
+          "refresh_minutes": 1
+        }
+      },
+      {
+        "out": {
+          "appearance": "system",
+          "menubar_style": "full",
+          "notifications": true,
+          "refresh_minutes": 15,
+          "update_check": true
+        },
+        "stored": {
+          "refresh_minutes": 15
+        }
+      },
+      {
+        "out": {
+          "appearance": "system",
+          "menubar_style": "full",
+          "notifications": true,
+          "refresh_minutes": 5,
+          "update_check": true
+        },
+        "stored": {
+          "refresh_minutes": 10
+        }
+      },
+      {
+        "out": {
+          "appearance": "system",
+          "menubar_style": "full",
+          "notifications": true,
+          "refresh_minutes": 5,
+          "update_check": true
+        },
+        "stored": {
+          "refresh_minutes": true
+        }
+      },
+      {
+        "out": {
+          "appearance": "system",
+          "menubar_style": "full",
+          "notifications": true,
+          "refresh_minutes": 5,
+          "update_check": true
+        },
+        "stored": {
+          "refresh_minutes": "5"
+        }
+      },
+      {
+        "out": {
+          "appearance": "system",
+          "menubar_style": "full",
+          "notifications": true,
+          "refresh_minutes": 5,
+          "update_check": true
+        },
+        "stored": {
+          "refresh_minutes": 5.0
+        }
       }
     ],
     "new_block_log_entries": [

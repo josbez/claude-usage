@@ -48,7 +48,20 @@ public struct Paths {
 
 public let defaultSettings: JSONObject = [
     "notifications": true, "update_check": true, "menubar_style": "full", "appearance": "system",
+    "refresh_minutes": 5,
 ]
+
+/// Minutes between fetches the user can pick (core.REFRESH_CHOICES, taak 51).
+public let refreshChoices = [1, 5, 15]
+
+/// The fetch interval from (normalized) settings.
+public func refreshMinutes(_ settings: JSONObject) -> Int {
+    jsonInt(settings["refresh_minutes"]).flatMap { refreshChoices.contains($0) ? $0 : nil } ?? 5
+}
+
+/// Data counts as stale ("verouderd") after missing about three fetches,
+/// never sooner than the 15 minutes it always was.
+public func staleAfterMinutes(refresh: Int) -> Int { max(15, 3 * refresh) }
 
 /// core.load_settings(): defaults, overlaid with known stored keys; invalid
 /// style/appearance values fall back to the default.
@@ -62,6 +75,9 @@ public func normalizeSettings(_ stored: Any?) -> JSONObject {
     }
     if !appearanceStyles.contains(settings["appearance"] as? String ?? "") {
         settings["appearance"] = defaultSettings["appearance"]
+    }
+    if jsonInt(settings["refresh_minutes"]).map({ !refreshChoices.contains($0) }) ?? true {
+        settings["refresh_minutes"] = defaultSettings["refresh_minutes"]
     }
     return settings
 }

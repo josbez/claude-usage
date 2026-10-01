@@ -996,3 +996,17 @@ def test_history_keeps_stable_cedar_ember_only():
     g = rec["cedar_ember"]["grants"][0]
     assert g["resets_left"] == 1 and "percent_used" not in g and "event_props" not in rec["cedar_ember"]
     assert "cedar_ember" not in core.history_record({"fetched_at": "2026-10-01T09:00:00+00:00"})
+
+
+# ---------------------------------------------------------------------------
+# Swift migration (taak 35): shared strings stay in sync with core.STRINGS
+# ---------------------------------------------------------------------------
+
+def test_swift_strings_json_matches_core():
+    root = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+    path = os.path.join(root, "swift", "Resources", "strings.json")
+    with open(path, encoding="utf-8") as f:
+        shared = json.load(f)
+    assert shared == {"strings": core.STRINGS, "days": core.DAYS, "months": core.MONTHS,
+                      "default_lang": core.DEFAULT_LANG}, \
+        "run /usr/bin/python3 scripts/swift-fixtures.py"

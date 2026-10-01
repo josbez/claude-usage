@@ -1,0 +1,1952 @@
+{
+  "cases": {
+    "account_label": [
+      {
+        "limits": {
+          "account_email": "user@example.com"
+        },
+        "out": {
+          "email": "user@example.com",
+          "name": "user@example.com",
+          "plan": ""
+        }
+      },
+      {
+        "limits": {
+          "account_email": "user@example.com",
+          "account_name": "  Sam  ",
+          "account_plan": " Pro "
+        },
+        "out": {
+          "email": "user@example.com",
+          "name": "Sam",
+          "plan": "Pro"
+        }
+      },
+      {
+        "limits": {
+          "account_email": null,
+          "account_name": null,
+          "account_plan": null
+        },
+        "out": {
+          "email": "",
+          "name": "",
+          "plan": ""
+        }
+      }
+    ],
+    "face_icon": [
+      {
+        "in": 0,
+        "out": "🚀"
+      },
+      {
+        "in": 19,
+        "out": "🚀"
+      },
+      {
+        "in": 20,
+        "out": "🙂"
+      },
+      {
+        "in": 39,
+        "out": "🙂"
+      },
+      {
+        "in": 40,
+        "out": "😅"
+      },
+      {
+        "in": 59,
+        "out": "😅"
+      },
+      {
+        "in": 60,
+        "out": "😨"
+      },
+      {
+        "in": 74,
+        "out": "😨"
+      },
+      {
+        "in": 75,
+        "out": "😰"
+      },
+      {
+        "in": 89,
+        "out": "😰"
+      },
+      {
+        "in": 90,
+        "out": "😱"
+      },
+      {
+        "in": 99,
+        "out": "😱"
+      },
+      {
+        "in": 100,
+        "out": "💀"
+      },
+      {
+        "in": 140,
+        "out": "💀"
+      }
+    ],
+    "format_reset_compact": [
+      {
+        "in": "",
+        "lang": "nl",
+        "out": "—"
+      },
+      {
+        "in": "",
+        "lang": "en",
+        "out": "—"
+      },
+      {
+        "in": "",
+        "lang": "fr",
+        "out": "—"
+      },
+      {
+        "in": "garbage",
+        "lang": "nl",
+        "out": "—"
+      },
+      {
+        "in": "garbage",
+        "lang": "en",
+        "out": "—"
+      },
+      {
+        "in": "garbage",
+        "lang": "fr",
+        "out": "—"
+      },
+      {
+        "in": "2026-10-01T12:30:00Z",
+        "lang": "nl",
+        "out": "2u30m"
+      },
+      {
+        "in": "2026-10-01T12:30:00Z",
+        "lang": "en",
+        "out": "2h30m"
+      },
+      {
+        "in": "2026-10-01T12:30:00Z",
+        "lang": "fr",
+        "out": "2h30m"
+      },
+      {
+        "in": "2026-10-01T10:45:30Z",
+        "lang": "nl",
+        "out": "45m"
+      },
+      {
+        "in": "2026-10-01T10:45:30Z",
+        "lang": "en",
+        "out": "45m"
+      },
+      {
+        "in": "2026-10-01T10:45:30Z",
+        "lang": "fr",
+        "out": "45m"
+      },
+      {
+        "in": "2026-10-01T10:00:20Z",
+        "lang": "nl",
+        "out": "0m"
+      },
+      {
+        "in": "2026-10-01T10:00:20Z",
+        "lang": "en",
+        "out": "0m"
+      },
+      {
+        "in": "2026-10-01T10:00:20Z",
+        "lang": "fr",
+        "out": "0m"
+      },
+      {
+        "in": "2026-10-01T14:59:59.871234+00:00",
+        "lang": "nl",
+        "out": "4u59m"
+      },
+      {
+        "in": "2026-10-01T14:59:59.871234+00:00",
+        "lang": "en",
+        "out": "4h59m"
+      },
+      {
+        "in": "2026-10-01T14:59:59.871234+00:00",
+        "lang": "fr",
+        "out": "4h59m"
+      },
+      {
+        "in": "2026-10-02T09:59:00+00:00",
+        "lang": "nl",
+        "out": "23u59m"
+      },
+      {
+        "in": "2026-10-02T09:59:00+00:00",
+        "lang": "en",
+        "out": "23h59m"
+      },
+      {
+        "in": "2026-10-02T09:59:00+00:00",
+        "lang": "fr",
+        "out": "23h59m"
+      },
+      {
+        "in": "2026-10-03T08:00:00Z",
+        "lang": "nl",
+        "out": "46u00m"
+      },
+      {
+        "in": "2026-10-03T08:00:00Z",
+        "lang": "en",
+        "out": "46h00m"
+      },
+      {
+        "in": "2026-10-03T08:00:00Z",
+        "lang": "fr",
+        "out": "46h00m"
+      },
+      {
+        "in": "2026-09-30T08:00:00Z",
+        "lang": "nl",
+        "out": "—"
+      },
+      {
+        "in": "2026-09-30T08:00:00Z",
+        "lang": "en",
+        "out": "—"
+      },
+      {
+        "in": "2026-09-30T08:00:00Z",
+        "lang": "fr",
+        "out": "—"
+      },
+      {
+        "in": "2026-10-01T10:00:00Z",
+        "lang": "nl",
+        "out": "—"
+      },
+      {
+        "in": "2026-10-01T10:00:00Z",
+        "lang": "en",
+        "out": "—"
+      },
+      {
+        "in": "2026-10-01T10:00:00Z",
+        "lang": "fr",
+        "out": "—"
+      }
+    ],
+    "format_reset_time": [
+      {
+        "in": "",
+        "lang": "nl",
+        "out": "—"
+      },
+      {
+        "in": "",
+        "lang": "en",
+        "out": "—"
+      },
+      {
+        "in": "",
+        "lang": "fr",
+        "out": "—"
+      },
+      {
+        "in": "garbage",
+        "lang": "nl",
+        "out": "—"
+      },
+      {
+        "in": "garbage",
+        "lang": "en",
+        "out": "—"
+      },
+      {
+        "in": "garbage",
+        "lang": "fr",
+        "out": "—"
+      },
+      {
+        "in": "2026-10-01T12:30:00Z",
+        "lang": "nl",
+        "out": "over 2u 30m"
+      },
+      {
+        "in": "2026-10-01T12:30:00Z",
+        "lang": "en",
+        "out": "in 2h 30m"
+      },
+      {
+        "in": "2026-10-01T12:30:00Z",
+        "lang": "fr",
+        "out": "in 2h 30m"
+      },
+      {
+        "in": "2026-10-01T10:45:30Z",
+        "lang": "nl",
+        "out": "over 45m"
+      },
+      {
+        "in": "2026-10-01T10:45:30Z",
+        "lang": "en",
+        "out": "in 45m"
+      },
+      {
+        "in": "2026-10-01T10:45:30Z",
+        "lang": "fr",
+        "out": "in 45m"
+      },
+      {
+        "in": "2026-10-01T10:00:20Z",
+        "lang": "nl",
+        "out": "over 0m"
+      },
+      {
+        "in": "2026-10-01T10:00:20Z",
+        "lang": "en",
+        "out": "in 0m"
+      },
+      {
+        "in": "2026-10-01T10:00:20Z",
+        "lang": "fr",
+        "out": "in 0m"
+      },
+      {
+        "in": "2026-10-01T14:59:59.871234+00:00",
+        "lang": "nl",
+        "out": "over 4u 59m"
+      },
+      {
+        "in": "2026-10-01T14:59:59.871234+00:00",
+        "lang": "en",
+        "out": "in 4h 59m"
+      },
+      {
+        "in": "2026-10-01T14:59:59.871234+00:00",
+        "lang": "fr",
+        "out": "in 4h 59m"
+      },
+      {
+        "in": "2026-10-02T09:59:00+00:00",
+        "lang": "nl",
+        "out": "over 23u 59m"
+      },
+      {
+        "in": "2026-10-02T09:59:00+00:00",
+        "lang": "en",
+        "out": "in 23h 59m"
+      },
+      {
+        "in": "2026-10-02T09:59:00+00:00",
+        "lang": "fr",
+        "out": "in 23h 59m"
+      },
+      {
+        "in": "2026-10-03T08:00:00Z",
+        "lang": "nl",
+        "out": "za 10:00"
+      },
+      {
+        "in": "2026-10-03T08:00:00Z",
+        "lang": "en",
+        "out": "Sat 10:00"
+      },
+      {
+        "in": "2026-10-03T08:00:00Z",
+        "lang": "fr",
+        "out": "Sat 10:00"
+      },
+      {
+        "in": "2026-09-30T08:00:00Z",
+        "lang": "nl",
+        "out": "wo 10:00"
+      },
+      {
+        "in": "2026-09-30T08:00:00Z",
+        "lang": "en",
+        "out": "Wed 10:00"
+      },
+      {
+        "in": "2026-09-30T08:00:00Z",
+        "lang": "fr",
+        "out": "Wed 10:00"
+      },
+      {
+        "in": "2026-10-01T10:00:00Z",
+        "lang": "nl",
+        "out": "do 12:00"
+      },
+      {
+        "in": "2026-10-01T10:00:00Z",
+        "lang": "en",
+        "out": "Thu 12:00"
+      },
+      {
+        "in": "2026-10-01T10:00:00Z",
+        "lang": "fr",
+        "out": "Thu 12:00"
+      }
+    ],
+    "format_short_date": [
+      {
+        "in": "",
+        "lang": "nl",
+        "out": ""
+      },
+      {
+        "in": "",
+        "lang": "en",
+        "out": ""
+      },
+      {
+        "in": "",
+        "lang": "fr",
+        "out": ""
+      },
+      {
+        "in": "garbage",
+        "lang": "nl",
+        "out": ""
+      },
+      {
+        "in": "garbage",
+        "lang": "en",
+        "out": ""
+      },
+      {
+        "in": "garbage",
+        "lang": "fr",
+        "out": ""
+      },
+      {
+        "in": "2026-10-01T12:30:00Z",
+        "lang": "nl",
+        "out": "do 1 okt"
+      },
+      {
+        "in": "2026-10-01T12:30:00Z",
+        "lang": "en",
+        "out": "Thu Oct 1"
+      },
+      {
+        "in": "2026-10-01T12:30:00Z",
+        "lang": "fr",
+        "out": "Thu Oct 1"
+      },
+      {
+        "in": "2026-10-01T10:45:30Z",
+        "lang": "nl",
+        "out": "do 1 okt"
+      },
+      {
+        "in": "2026-10-01T10:45:30Z",
+        "lang": "en",
+        "out": "Thu Oct 1"
+      },
+      {
+        "in": "2026-10-01T10:45:30Z",
+        "lang": "fr",
+        "out": "Thu Oct 1"
+      },
+      {
+        "in": "2026-10-01T10:00:20Z",
+        "lang": "nl",
+        "out": "do 1 okt"
+      },
+      {
+        "in": "2026-10-01T10:00:20Z",
+        "lang": "en",
+        "out": "Thu Oct 1"
+      },
+      {
+        "in": "2026-10-01T10:00:20Z",
+        "lang": "fr",
+        "out": "Thu Oct 1"
+      },
+      {
+        "in": "2026-10-01T14:59:59.871234+00:00",
+        "lang": "nl",
+        "out": "do 1 okt"
+      },
+      {
+        "in": "2026-10-01T14:59:59.871234+00:00",
+        "lang": "en",
+        "out": "Thu Oct 1"
+      },
+      {
+        "in": "2026-10-01T14:59:59.871234+00:00",
+        "lang": "fr",
+        "out": "Thu Oct 1"
+      },
+      {
+        "in": "2026-10-02T09:59:00+00:00",
+        "lang": "nl",
+        "out": "vr 2 okt"
+      },
+      {
+        "in": "2026-10-02T09:59:00+00:00",
+        "lang": "en",
+        "out": "Fri Oct 2"
+      },
+      {
+        "in": "2026-10-02T09:59:00+00:00",
+        "lang": "fr",
+        "out": "Fri Oct 2"
+      },
+      {
+        "in": "2026-10-03T08:00:00Z",
+        "lang": "nl",
+        "out": "za 3 okt"
+      },
+      {
+        "in": "2026-10-03T08:00:00Z",
+        "lang": "en",
+        "out": "Sat Oct 3"
+      },
+      {
+        "in": "2026-10-03T08:00:00Z",
+        "lang": "fr",
+        "out": "Sat Oct 3"
+      },
+      {
+        "in": "2026-09-30T08:00:00Z",
+        "lang": "nl",
+        "out": "wo 30 sep"
+      },
+      {
+        "in": "2026-09-30T08:00:00Z",
+        "lang": "en",
+        "out": "Wed Sep 30"
+      },
+      {
+        "in": "2026-09-30T08:00:00Z",
+        "lang": "fr",
+        "out": "Wed Sep 30"
+      },
+      {
+        "in": "2026-10-01T10:00:00Z",
+        "lang": "nl",
+        "out": "do 1 okt"
+      },
+      {
+        "in": "2026-10-01T10:00:00Z",
+        "lang": "en",
+        "out": "Thu Oct 1"
+      },
+      {
+        "in": "2026-10-01T10:00:00Z",
+        "lang": "fr",
+        "out": "Thu Oct 1"
+      }
+    ],
+    "limit_resets_view": [
+      {
+        "lang": "nl",
+        "limits": {},
+        "out": null
+      },
+      {
+        "lang": "en",
+        "limits": {},
+        "out": null
+      },
+      {
+        "lang": "nl",
+        "limits": {
+          "cedar_ember": "weird"
+        },
+        "out": null
+      },
+      {
+        "lang": "en",
+        "limits": {
+          "cedar_ember": "weird"
+        },
+        "out": null
+      },
+      {
+        "lang": "nl",
+        "limits": {
+          "cedar_ember": {
+            "eligible": true,
+            "grants": "nope"
+          }
+        },
+        "out": null
+      },
+      {
+        "lang": "en",
+        "limits": {
+          "cedar_ember": {
+            "eligible": true,
+            "grants": "nope"
+          }
+        },
+        "out": null
+      },
+      {
+        "lang": "nl",
+        "limits": {
+          "cedar_ember": {
+            "eligible": false,
+            "grants": [
+              {
+                "ends_at": "2026-10-22T21:59:00Z",
+                "id": "g1",
+                "label": "Launch week",
+                "paused": false,
+                "resets_left": 2,
+                "resets_total": 2,
+                "starts_at": "2026-09-20T00:00:00Z",
+                "usable_now": true
+              }
+            ]
+          }
+        },
+        "out": null
+      },
+      {
+        "lang": "en",
+        "limits": {
+          "cedar_ember": {
+            "eligible": false,
+            "grants": [
+              {
+                "ends_at": "2026-10-22T21:59:00Z",
+                "id": "g1",
+                "label": "Launch week",
+                "paused": false,
+                "resets_left": 2,
+                "resets_total": 2,
+                "starts_at": "2026-09-20T00:00:00Z",
+                "usable_now": true
+              }
+            ]
+          }
+        },
+        "out": null
+      },
+      {
+        "lang": "nl",
+        "limits": {
+          "cedar_ember": {
+            "eligible": true,
+            "grants": [
+              {
+                "ends_at": "2026-10-22T21:59:00Z",
+                "id": "g1",
+                "label": "Launch week",
+                "paused": false,
+                "resets_left": 2,
+                "resets_total": 2,
+                "starts_at": "2026-09-20T00:00:00Z",
+                "usable_now": true
+              }
+            ]
+          }
+        },
+        "out": {
+          "text": "2 resets beschikbaar · tot do 22 okt",
+          "tip": "Launch week — Openen op claude.ai",
+          "url": "https://claude.ai/settings/usage"
+        }
+      },
+      {
+        "lang": "en",
+        "limits": {
+          "cedar_ember": {
+            "eligible": true,
+            "grants": [
+              {
+                "ends_at": "2026-10-22T21:59:00Z",
+                "id": "g1",
+                "label": "Launch week",
+                "paused": false,
+                "resets_left": 2,
+                "resets_total": 2,
+                "starts_at": "2026-09-20T00:00:00Z",
+                "usable_now": true
+              }
+            ]
+          }
+        },
+        "out": {
+          "text": "2 resets available · until Thu Oct 22",
+          "tip": "Launch week — Open on claude.ai",
+          "url": "https://claude.ai/settings/usage"
+        }
+      },
+      {
+        "lang": "nl",
+        "limits": {
+          "cedar_ember": {
+            "eligible": true,
+            "grants": [
+              {
+                "ends_at": "2026-10-22T21:59:00Z",
+                "id": "g1",
+                "label": "",
+                "paused": false,
+                "resets_left": 1,
+                "resets_total": 2,
+                "starts_at": "2026-09-20T00:00:00Z",
+                "usable_now": true
+              }
+            ]
+          }
+        },
+        "out": {
+          "text": "1 reset beschikbaar · tot do 22 okt",
+          "tip": "Openen op claude.ai",
+          "url": "https://claude.ai/settings/usage"
+        }
+      },
+      {
+        "lang": "en",
+        "limits": {
+          "cedar_ember": {
+            "eligible": true,
+            "grants": [
+              {
+                "ends_at": "2026-10-22T21:59:00Z",
+                "id": "g1",
+                "label": "",
+                "paused": false,
+                "resets_left": 1,
+                "resets_total": 2,
+                "starts_at": "2026-09-20T00:00:00Z",
+                "usable_now": true
+              }
+            ]
+          }
+        },
+        "out": {
+          "text": "1 reset available · until Thu Oct 22",
+          "tip": "Open on claude.ai",
+          "url": "https://claude.ai/settings/usage"
+        }
+      },
+      {
+        "lang": "nl",
+        "limits": {
+          "cedar_ember": {
+            "eligible": true,
+            "grants": [
+              {
+                "ends_at": "2026-10-22T21:59:00Z",
+                "id": "g1",
+                "label": "Launch week",
+                "paused": true,
+                "resets_left": 2,
+                "resets_total": 2,
+                "starts_at": "2026-09-20T00:00:00Z",
+                "usable_now": true
+              }
+            ]
+          }
+        },
+        "out": null
+      },
+      {
+        "lang": "en",
+        "limits": {
+          "cedar_ember": {
+            "eligible": true,
+            "grants": [
+              {
+                "ends_at": "2026-10-22T21:59:00Z",
+                "id": "g1",
+                "label": "Launch week",
+                "paused": true,
+                "resets_left": 2,
+                "resets_total": 2,
+                "starts_at": "2026-09-20T00:00:00Z",
+                "usable_now": true
+              }
+            ]
+          }
+        },
+        "out": null
+      },
+      {
+        "lang": "nl",
+        "limits": {
+          "cedar_ember": {
+            "eligible": true,
+            "grants": [
+              {
+                "ends_at": "2026-10-22T21:59:00Z",
+                "id": "g1",
+                "label": "Launch week",
+                "paused": false,
+                "resets_left": 2,
+                "resets_total": 2,
+                "starts_at": "2026-10-10T00:00:00Z",
+                "usable_now": true
+              }
+            ]
+          }
+        },
+        "out": null
+      },
+      {
+        "lang": "en",
+        "limits": {
+          "cedar_ember": {
+            "eligible": true,
+            "grants": [
+              {
+                "ends_at": "2026-10-22T21:59:00Z",
+                "id": "g1",
+                "label": "Launch week",
+                "paused": false,
+                "resets_left": 2,
+                "resets_total": 2,
+                "starts_at": "2026-10-10T00:00:00Z",
+                "usable_now": true
+              }
+            ]
+          }
+        },
+        "out": null
+      },
+      {
+        "lang": "nl",
+        "limits": {
+          "cedar_ember": {
+            "eligible": true,
+            "grants": [
+              {
+                "ends_at": "2026-09-30T00:00:00Z",
+                "id": "g1",
+                "label": "Launch week",
+                "paused": false,
+                "resets_left": 2,
+                "resets_total": 2,
+                "starts_at": "2026-09-20T00:00:00Z",
+                "usable_now": true
+              }
+            ]
+          }
+        },
+        "out": null
+      },
+      {
+        "lang": "en",
+        "limits": {
+          "cedar_ember": {
+            "eligible": true,
+            "grants": [
+              {
+                "ends_at": "2026-09-30T00:00:00Z",
+                "id": "g1",
+                "label": "Launch week",
+                "paused": false,
+                "resets_left": 2,
+                "resets_total": 2,
+                "starts_at": "2026-09-20T00:00:00Z",
+                "usable_now": true
+              }
+            ]
+          }
+        },
+        "out": null
+      },
+      {
+        "lang": "nl",
+        "limits": {
+          "cedar_ember": {
+            "eligible": true,
+            "grants": [
+              {
+                "ends_at": null,
+                "id": "g1",
+                "label": "Launch week",
+                "paused": false,
+                "resets_left": 2,
+                "resets_total": 2,
+                "starts_at": "2026-09-20T00:00:00Z",
+                "usable_now": true
+              },
+              {
+                "ends_at": "2026-10-15T10:00:00Z",
+                "id": "g2",
+                "label": "Bonus",
+                "paused": false,
+                "resets_left": 3,
+                "resets_total": 2,
+                "starts_at": "2026-09-20T00:00:00Z",
+                "usable_now": true
+              }
+            ]
+          }
+        },
+        "out": {
+          "text": "5 resets beschikbaar · tot do 15 okt",
+          "tip": "Launch week · Bonus — Openen op claude.ai",
+          "url": "https://claude.ai/settings/usage"
+        }
+      },
+      {
+        "lang": "en",
+        "limits": {
+          "cedar_ember": {
+            "eligible": true,
+            "grants": [
+              {
+                "ends_at": null,
+                "id": "g1",
+                "label": "Launch week",
+                "paused": false,
+                "resets_left": 2,
+                "resets_total": 2,
+                "starts_at": "2026-09-20T00:00:00Z",
+                "usable_now": true
+              },
+              {
+                "ends_at": "2026-10-15T10:00:00Z",
+                "id": "g2",
+                "label": "Bonus",
+                "paused": false,
+                "resets_left": 3,
+                "resets_total": 2,
+                "starts_at": "2026-09-20T00:00:00Z",
+                "usable_now": true
+              }
+            ]
+          }
+        },
+        "out": {
+          "text": "5 resets available · until Thu Oct 15",
+          "tip": "Launch week · Bonus — Open on claude.ai",
+          "url": "https://claude.ai/settings/usage"
+        }
+      },
+      {
+        "lang": "nl",
+        "limits": {
+          "cedar_ember": {
+            "eligible": true,
+            "grants": [
+              {
+                "ends_at": "2026-10-22T21:59:00Z",
+                "id": "g1",
+                "label": "Launch week",
+                "paused": false,
+                "resets_left": true,
+                "resets_total": 2,
+                "starts_at": "2026-09-20T00:00:00Z",
+                "usable_now": true
+              }
+            ]
+          }
+        },
+        "out": null
+      },
+      {
+        "lang": "en",
+        "limits": {
+          "cedar_ember": {
+            "eligible": true,
+            "grants": [
+              {
+                "ends_at": "2026-10-22T21:59:00Z",
+                "id": "g1",
+                "label": "Launch week",
+                "paused": false,
+                "resets_left": true,
+                "resets_total": 2,
+                "starts_at": "2026-09-20T00:00:00Z",
+                "usable_now": true
+              }
+            ]
+          }
+        },
+        "out": null
+      },
+      {
+        "lang": "nl",
+        "limits": {
+          "cedar_ember": {
+            "eligible": true,
+            "grants": [
+              {
+                "ends_at": "2026-10-22T21:59:00Z",
+                "id": "g1",
+                "label": "Launch week",
+                "paused": false,
+                "resets_left": 1.0,
+                "resets_total": 2,
+                "starts_at": "2026-09-20T00:00:00Z",
+                "usable_now": true
+              }
+            ]
+          }
+        },
+        "out": null
+      },
+      {
+        "lang": "en",
+        "limits": {
+          "cedar_ember": {
+            "eligible": true,
+            "grants": [
+              {
+                "ends_at": "2026-10-22T21:59:00Z",
+                "id": "g1",
+                "label": "Launch week",
+                "paused": false,
+                "resets_left": 1.0,
+                "resets_total": 2,
+                "starts_at": "2026-09-20T00:00:00Z",
+                "usable_now": true
+              }
+            ]
+          }
+        },
+        "out": null
+      },
+      {
+        "lang": "nl",
+        "limits": {
+          "cedar_ember": {
+            "eligible": true,
+            "grants": [
+              {
+                "ends_at": "bad",
+                "id": "g1",
+                "label": "Launch week",
+                "paused": false,
+                "resets_left": 2,
+                "resets_total": 2,
+                "starts_at": "2026-09-20T00:00:00Z",
+                "usable_now": true
+              }
+            ]
+          }
+        },
+        "out": null
+      },
+      {
+        "lang": "en",
+        "limits": {
+          "cedar_ember": {
+            "eligible": true,
+            "grants": [
+              {
+                "ends_at": "bad",
+                "id": "g1",
+                "label": "Launch week",
+                "paused": false,
+                "resets_left": 2,
+                "resets_total": 2,
+                "starts_at": "2026-09-20T00:00:00Z",
+                "usable_now": true
+              }
+            ]
+          }
+        },
+        "out": null
+      },
+      {
+        "lang": "nl",
+        "limits": {
+          "cedar_ember": {
+            "grants": [
+              {
+                "ends_at": null,
+                "id": "g1",
+                "label": "  ",
+                "paused": false,
+                "resets_left": 2,
+                "resets_total": 2,
+                "starts_at": "2026-09-20T00:00:00Z",
+                "usable_now": true
+              }
+            ]
+          }
+        },
+        "out": {
+          "text": "2 resets beschikbaar",
+          "tip": "Openen op claude.ai",
+          "url": "https://claude.ai/settings/usage"
+        }
+      },
+      {
+        "lang": "en",
+        "limits": {
+          "cedar_ember": {
+            "grants": [
+              {
+                "ends_at": null,
+                "id": "g1",
+                "label": "  ",
+                "paused": false,
+                "resets_left": 2,
+                "resets_total": 2,
+                "starts_at": "2026-09-20T00:00:00Z",
+                "usable_now": true
+              }
+            ]
+          }
+        },
+        "out": {
+          "text": "2 resets available",
+          "tip": "Open on claude.ai",
+          "url": "https://claude.ai/settings/usage"
+        }
+      }
+    ],
+    "limits_are_fresh": [
+      {
+        "limits": {},
+        "out": false
+      },
+      {
+        "limits": {
+          "five_hour": {
+            "resets_at": "2026-10-01T12:10:00Z",
+            "utilization": 45.7
+          },
+          "seven_day": {
+            "resets_at": "2026-10-05T07:00:00Z",
+            "utilization": 82.0
+          }
+        },
+        "out": false
+      },
+      {
+        "limits": {
+          "five_hour": null,
+          "seven_day": {
+            "resets_at": null,
+            "utilization": null
+          }
+        },
+        "out": false
+      },
+      {
+        "limits": {
+          "seven_day": {
+            "resets_at": "2026-10-05T07:00:00Z",
+            "utilization": 10
+          },
+          "seven_day_breakdown": {
+            "window_started_at": "2026-09-28T07:00:00Z"
+          }
+        },
+        "out": false
+      },
+      {
+        "limits": {
+          "seven_day": {
+            "resets_at": "2026-10-05T07:00:00Z",
+            "utilization": 10
+          },
+          "seven_day_breakdown": {
+            "window_started_at": "2026-09-29T07:00:00Z"
+          }
+        },
+        "out": false
+      },
+      {
+        "limits": {
+          "seven_day": {
+            "resets_at": "2026-10-05T07:00:00Z",
+            "utilization": 10
+          },
+          "seven_day_breakdown": {
+            "window_started_at": "2026-10-06T07:00:00Z"
+          }
+        },
+        "out": false
+      },
+      {
+        "limits": {
+          "seven_day": {
+            "resets_at": "not a date",
+            "utilization": 10
+          }
+        },
+        "out": false
+      },
+      {
+        "limits": {
+          "seven_day": {
+            "resets_at": "2026-10-01T10:00:00Z",
+            "utilization": 10
+          }
+        },
+        "out": false
+      },
+      {
+        "limits": {
+          "seven_day": {
+            "resets_at": "2026-10-08T10:00:00Z",
+            "utilization": 10
+          }
+        },
+        "out": false
+      },
+      {
+        "limits": {
+          "account_email": "user@example.com"
+        },
+        "out": false
+      },
+      {
+        "limits": {
+          "account_email": "user@example.com",
+          "account_name": "  Sam  ",
+          "account_plan": " Pro "
+        },
+        "out": false
+      },
+      {
+        "limits": {
+          "account_email": null,
+          "account_name": null,
+          "account_plan": null
+        },
+        "out": false
+      },
+      {
+        "limits": {
+          "fetched_at": "2026-10-01T09:57:00+00:00"
+        },
+        "out": true
+      },
+      {
+        "limits": {
+          "fetched_at": "2026-10-01T09:50:00+00:00"
+        },
+        "out": false
+      },
+      {
+        "limits": {
+          "fetched_at": "nonsense"
+        },
+        "out": false
+      }
+    ],
+    "load_settings": [
+      {
+        "out": {
+          "appearance": "system",
+          "menubar_style": "full",
+          "notifications": true,
+          "update_check": true
+        },
+        "stored": {}
+      },
+      {
+        "out": {
+          "appearance": "dark",
+          "menubar_style": "emoji",
+          "notifications": false,
+          "update_check": true
+        },
+        "stored": {
+          "appearance": "dark",
+          "menubar_style": "emoji",
+          "notifications": false
+        }
+      },
+      {
+        "out": {
+          "appearance": "system",
+          "menubar_style": "full",
+          "notifications": true,
+          "update_check": true
+        },
+        "stored": {
+          "appearance": "neon",
+          "extra": 1,
+          "menubar_style": "bogus"
+        }
+      },
+      {
+        "out": {
+          "appearance": "system",
+          "menubar_style": "full",
+          "notifications": true,
+          "update_check": false
+        },
+        "stored": {
+          "update_check": false
+        }
+      },
+      {
+        "out": {
+          "appearance": "system",
+          "menubar_style": "full",
+          "notifications": true,
+          "update_check": true
+        },
+        "stored": []
+      }
+    ],
+    "status_badge_class": [
+      {
+        "in": null,
+        "out": ""
+      },
+      {
+        "in": {},
+        "out": ""
+      },
+      {
+        "in": {
+          "level": "ok"
+        },
+        "out": ""
+      },
+      {
+        "in": {
+          "level": "minor"
+        },
+        "out": "stale"
+      },
+      {
+        "in": {
+          "level": "major"
+        },
+        "out": "disconnected"
+      },
+      {
+        "in": {
+          "level": "critical"
+        },
+        "out": "disconnected"
+      },
+      {
+        "in": {
+          "level": "unknown"
+        },
+        "out": ""
+      }
+    ],
+    "status_title": [
+      {
+        "compact": "2u10m",
+        "out": "😅 45% / 82% · 2u10m",
+        "session": 45,
+        "style": "full",
+        "weekly": 82
+      },
+      {
+        "compact": "2u10m",
+        "out": "😅 45%",
+        "session": 45,
+        "style": "session",
+        "weekly": 82
+      },
+      {
+        "compact": "2u10m",
+        "out": "😅",
+        "session": 45,
+        "style": "emoji",
+        "weekly": 82
+      },
+      {
+        "compact": "2u10m",
+        "out": "😅 45% / 82% · 2u10m",
+        "session": 45,
+        "style": "unknown",
+        "weekly": 82
+      },
+      {
+        "compact": "—",
+        "out": "🚀 0% / 0% · —",
+        "session": 0,
+        "style": "full",
+        "weekly": 0
+      },
+      {
+        "compact": "—",
+        "out": "🚀 0%",
+        "session": 0,
+        "style": "session",
+        "weekly": 0
+      },
+      {
+        "compact": "—",
+        "out": "🚀",
+        "session": 0,
+        "style": "emoji",
+        "weekly": 0
+      },
+      {
+        "compact": "—",
+        "out": "🚀 0% / 0% · —",
+        "session": 0,
+        "style": "unknown",
+        "weekly": 0
+      },
+      {
+        "compact": "5m",
+        "out": "💀 100% / 100% · 5m",
+        "session": 100,
+        "style": "full",
+        "weekly": 100
+      },
+      {
+        "compact": "5m",
+        "out": "💀 100%",
+        "session": 100,
+        "style": "session",
+        "weekly": 100
+      },
+      {
+        "compact": "5m",
+        "out": "💀",
+        "session": 100,
+        "style": "emoji",
+        "weekly": 100
+      },
+      {
+        "compact": "5m",
+        "out": "💀 100% / 100% · 5m",
+        "session": 100,
+        "style": "unknown",
+        "weekly": 100
+      }
+    ],
+    "t": [
+      {
+        "key": "app_title",
+        "kw": {},
+        "lang": "nl",
+        "out": "Claude Stats"
+      },
+      {
+        "key": "app_title",
+        "kw": {},
+        "lang": "en",
+        "out": "Claude Stats"
+      },
+      {
+        "key": "app_title",
+        "kw": {},
+        "lang": "fr",
+        "out": "Claude Stats"
+      },
+      {
+        "key": "ago_min",
+        "kw": {
+          "n": 7
+        },
+        "lang": "nl",
+        "out": "7 min geleden"
+      },
+      {
+        "key": "ago_min",
+        "kw": {
+          "n": 7
+        },
+        "lang": "en",
+        "out": "7 min ago"
+      },
+      {
+        "key": "ago_min",
+        "kw": {
+          "n": 7
+        },
+        "lang": "fr",
+        "out": "7 min ago"
+      },
+      {
+        "key": "in_hm",
+        "kw": {
+          "h": 2,
+          "m": 5
+        },
+        "lang": "nl",
+        "out": "over 2u 5m"
+      },
+      {
+        "key": "in_hm",
+        "kw": {
+          "h": 2,
+          "m": 5
+        },
+        "lang": "en",
+        "out": "in 2h 5m"
+      },
+      {
+        "key": "in_hm",
+        "kw": {
+          "h": 2,
+          "m": 5
+        },
+        "lang": "fr",
+        "out": "in 2h 5m"
+      },
+      {
+        "key": "compact_hm",
+        "kw": {
+          "h": 2,
+          "m": 5
+        },
+        "lang": "nl",
+        "out": "2u05m"
+      },
+      {
+        "key": "compact_hm",
+        "kw": {
+          "h": 2,
+          "m": 5
+        },
+        "lang": "en",
+        "out": "2h05m"
+      },
+      {
+        "key": "compact_hm",
+        "kw": {
+          "h": 2,
+          "m": 5
+        },
+        "lang": "fr",
+        "out": "2h05m"
+      },
+      {
+        "key": "compact_hm",
+        "kw": {
+          "h": 12,
+          "m": 45
+        },
+        "lang": "nl",
+        "out": "12u45m"
+      },
+      {
+        "key": "compact_hm",
+        "kw": {
+          "h": 12,
+          "m": 45
+        },
+        "lang": "en",
+        "out": "12h45m"
+      },
+      {
+        "key": "compact_hm",
+        "kw": {
+          "h": 12,
+          "m": 45
+        },
+        "lang": "fr",
+        "out": "12h45m"
+      },
+      {
+        "key": "resets_until",
+        "kw": {
+          "date": "do 22 okt"
+        },
+        "lang": "nl",
+        "out": " · tot do 22 okt"
+      },
+      {
+        "key": "resets_until",
+        "kw": {
+          "date": "do 22 okt"
+        },
+        "lang": "en",
+        "out": " · until do 22 okt"
+      },
+      {
+        "key": "resets_until",
+        "kw": {
+          "date": "do 22 okt"
+        },
+        "lang": "fr",
+        "out": " · until do 22 okt"
+      },
+      {
+        "key": "does_not_exist",
+        "kw": {},
+        "lang": "nl",
+        "out": "does_not_exist"
+      },
+      {
+        "key": "does_not_exist",
+        "kw": {},
+        "lang": "en",
+        "out": "does_not_exist"
+      },
+      {
+        "key": "does_not_exist",
+        "kw": {},
+        "lang": "fr",
+        "out": "does_not_exist"
+      }
+    ],
+    "title_from_limits": [
+      {
+        "lang": "nl",
+        "limits": {},
+        "out": "🚀 0% / 0% · —",
+        "style": "full"
+      },
+      {
+        "lang": "en",
+        "limits": {},
+        "out": "🚀 0% / 0% · —",
+        "style": "full"
+      },
+      {
+        "lang": "nl",
+        "limits": {},
+        "out": "🚀 0%",
+        "style": "session"
+      },
+      {
+        "lang": "en",
+        "limits": {},
+        "out": "🚀 0%",
+        "style": "session"
+      },
+      {
+        "lang": "nl",
+        "limits": {},
+        "out": "🚀",
+        "style": "emoji"
+      },
+      {
+        "lang": "en",
+        "limits": {},
+        "out": "🚀",
+        "style": "emoji"
+      },
+      {
+        "lang": "nl",
+        "limits": {
+          "five_hour": {
+            "resets_at": "2026-10-01T12:10:00Z",
+            "utilization": 45.7
+          },
+          "seven_day": {
+            "resets_at": "2026-10-05T07:00:00Z",
+            "utilization": 82.0
+          }
+        },
+        "out": "😅 45% / 82% · 2u10m",
+        "style": "full"
+      },
+      {
+        "lang": "en",
+        "limits": {
+          "five_hour": {
+            "resets_at": "2026-10-01T12:10:00Z",
+            "utilization": 45.7
+          },
+          "seven_day": {
+            "resets_at": "2026-10-05T07:00:00Z",
+            "utilization": 82.0
+          }
+        },
+        "out": "😅 45% / 82% · 2h10m",
+        "style": "full"
+      },
+      {
+        "lang": "nl",
+        "limits": {
+          "five_hour": {
+            "resets_at": "2026-10-01T12:10:00Z",
+            "utilization": 45.7
+          },
+          "seven_day": {
+            "resets_at": "2026-10-05T07:00:00Z",
+            "utilization": 82.0
+          }
+        },
+        "out": "😅 45%",
+        "style": "session"
+      },
+      {
+        "lang": "en",
+        "limits": {
+          "five_hour": {
+            "resets_at": "2026-10-01T12:10:00Z",
+            "utilization": 45.7
+          },
+          "seven_day": {
+            "resets_at": "2026-10-05T07:00:00Z",
+            "utilization": 82.0
+          }
+        },
+        "out": "😅 45%",
+        "style": "session"
+      },
+      {
+        "lang": "nl",
+        "limits": {
+          "five_hour": {
+            "resets_at": "2026-10-01T12:10:00Z",
+            "utilization": 45.7
+          },
+          "seven_day": {
+            "resets_at": "2026-10-05T07:00:00Z",
+            "utilization": 82.0
+          }
+        },
+        "out": "😅",
+        "style": "emoji"
+      },
+      {
+        "lang": "en",
+        "limits": {
+          "five_hour": {
+            "resets_at": "2026-10-01T12:10:00Z",
+            "utilization": 45.7
+          },
+          "seven_day": {
+            "resets_at": "2026-10-05T07:00:00Z",
+            "utilization": 82.0
+          }
+        },
+        "out": "😅",
+        "style": "emoji"
+      },
+      {
+        "lang": "nl",
+        "limits": {
+          "five_hour": null,
+          "seven_day": {
+            "resets_at": null,
+            "utilization": null
+          }
+        },
+        "out": "🚀 0% / 0% · —",
+        "style": "full"
+      },
+      {
+        "lang": "en",
+        "limits": {
+          "five_hour": null,
+          "seven_day": {
+            "resets_at": null,
+            "utilization": null
+          }
+        },
+        "out": "🚀 0% / 0% · —",
+        "style": "full"
+      },
+      {
+        "lang": "nl",
+        "limits": {
+          "five_hour": null,
+          "seven_day": {
+            "resets_at": null,
+            "utilization": null
+          }
+        },
+        "out": "🚀 0%",
+        "style": "session"
+      },
+      {
+        "lang": "en",
+        "limits": {
+          "five_hour": null,
+          "seven_day": {
+            "resets_at": null,
+            "utilization": null
+          }
+        },
+        "out": "🚀 0%",
+        "style": "session"
+      },
+      {
+        "lang": "nl",
+        "limits": {
+          "five_hour": null,
+          "seven_day": {
+            "resets_at": null,
+            "utilization": null
+          }
+        },
+        "out": "🚀",
+        "style": "emoji"
+      },
+      {
+        "lang": "en",
+        "limits": {
+          "five_hour": null,
+          "seven_day": {
+            "resets_at": null,
+            "utilization": null
+          }
+        },
+        "out": "🚀",
+        "style": "emoji"
+      }
+    ],
+    "week_progress": [
+      {
+        "limits": {},
+        "out": null
+      },
+      {
+        "limits": {
+          "five_hour": {
+            "resets_at": "2026-10-01T12:10:00Z",
+            "utilization": 45.7
+          },
+          "seven_day": {
+            "resets_at": "2026-10-05T07:00:00Z",
+            "utilization": 82.0
+          }
+        },
+        "out": {
+          "day": 4,
+          "days": 7,
+          "elapsed_pct": 44.6
+        }
+      },
+      {
+        "limits": {
+          "five_hour": null,
+          "seven_day": {
+            "resets_at": null,
+            "utilization": null
+          }
+        },
+        "out": null
+      },
+      {
+        "limits": {
+          "seven_day": {
+            "resets_at": "2026-10-05T07:00:00Z",
+            "utilization": 10
+          },
+          "seven_day_breakdown": {
+            "window_started_at": "2026-09-28T07:00:00Z"
+          }
+        },
+        "out": {
+          "day": 4,
+          "days": 7,
+          "elapsed_pct": 44.6
+        }
+      },
+      {
+        "limits": {
+          "seven_day": {
+            "resets_at": "2026-10-05T07:00:00Z",
+            "utilization": 10
+          },
+          "seven_day_breakdown": {
+            "window_started_at": "2026-09-29T07:00:00Z"
+          }
+        },
+        "out": {
+          "day": 3,
+          "days": 6,
+          "elapsed_pct": 35.4
+        }
+      },
+      {
+        "limits": {
+          "seven_day": {
+            "resets_at": "2026-10-05T07:00:00Z",
+            "utilization": 10
+          },
+          "seven_day_breakdown": {
+            "window_started_at": "2026-10-06T07:00:00Z"
+          }
+        },
+        "out": {
+          "day": 4,
+          "days": 7,
+          "elapsed_pct": 44.6
+        }
+      },
+      {
+        "limits": {
+          "seven_day": {
+            "resets_at": "not a date",
+            "utilization": 10
+          }
+        },
+        "out": null
+      },
+      {
+        "limits": {
+          "seven_day": {
+            "resets_at": "2026-10-01T10:00:00Z",
+            "utilization": 10
+          }
+        },
+        "out": {
+          "day": 7,
+          "days": 7,
+          "elapsed_pct": 100.0
+        }
+      },
+      {
+        "limits": {
+          "seven_day": {
+            "resets_at": "2026-10-08T10:00:00Z",
+            "utilization": 10
+          }
+        },
+        "out": {
+          "day": 1,
+          "days": 7,
+          "elapsed_pct": 0.0
+        }
+      },
+      {
+        "limits": {
+          "account_email": "user@example.com"
+        },
+        "out": null
+      },
+      {
+        "limits": {
+          "account_email": "user@example.com",
+          "account_name": "  Sam  ",
+          "account_plan": " Pro "
+        },
+        "out": null
+      },
+      {
+        "limits": {
+          "account_email": null,
+          "account_name": null,
+          "account_plan": null
+        },
+        "out": null
+      },
+      {
+        "limits": {
+          "fetched_at": "2026-10-01T09:57:00+00:00"
+        },
+        "out": null
+      },
+      {
+        "limits": {
+          "fetched_at": "2026-10-01T09:50:00+00:00"
+        },
+        "out": null
+      },
+      {
+        "limits": {
+          "fetched_at": "nonsense"
+        },
+        "out": null
+      }
+    ]
+  },
+  "now": "2026-10-01T10:00:00+00:00",
+  "tz": "Europe/Amsterdam"
+}

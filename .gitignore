@@ -13,3 +13,7 @@ __pycache__/
 # Private notes: stay local, never public
 backlog.md
 CLAUDE.md
+
+# Swift (taak 35)
+swift/.build/
+dist-swift/

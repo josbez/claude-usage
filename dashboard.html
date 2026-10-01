@@ -11,11 +11,14 @@
     --bg: #F0F0F0;
     --card-bg: #ffffff;
     --text: #1A1A1A;
-    --muted: #8A8A8A;
+    --muted: #636366;          /* ≥4.5:1 on card, page and tinted session card */
     --track: #EAEAEA;
     --accent-blue: #4B7BEC;
     --time-fill: color-mix(in srgb, var(--accent-blue) 30%, var(--track));
-    --time-text: color-mix(in srgb, var(--accent-blue) 55%, var(--track));
+    /* Text colours checked against WCAG 2.2 AA (4.5:1) on the white card;
+       fills keep the lighter accent — their values are also given as text. */
+    --accent-text: #3366D6;    /* 5.23:1 */
+    --time-text: #4D6FB3;      /* 4.95:1, muted blue-grey of the time fill */
     --icon-color: #8A8A8A;
     --icon-hover-bg: rgba(0,0,0,0.07);
     --icon-hover-color: #1A1A1A;
@@ -28,11 +31,12 @@
       --bg: #1C1C1E;
       --card-bg: #2C2C2E;
       --text: #F2F2F2;
-      --muted: #9A9A9E;
+      --muted: #ABABB0;          /* ≥4.5:1 incl. orange-tinted session card */
       --track: #3A3A3C;
       --accent-blue: #6B93F5;
       --time-fill: color-mix(in srgb, var(--accent-blue) 30%, var(--track));
-      --time-text: color-mix(in srgb, var(--accent-blue) 60%, var(--track));
+      --accent-text: var(--accent-blue);  /* 4.72:1 on #2C2C2E */
+      --time-text: #9DB5F2;               /* 6.85:1 */
       --icon-color: #9A9A9E;
       --icon-hover-bg: rgba(255,255,255,0.08);
       --icon-hover-color: #F2F2F2;
@@ -244,7 +248,7 @@
     color: var(--text);
   }
   .weekly-pct-label span {
-    color: var(--accent-blue);
+    color: var(--accent-text);
   }
   .progress-bar-track {
     position: relative;

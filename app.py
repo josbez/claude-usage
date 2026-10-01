@@ -57,6 +57,7 @@ from core import (
     new_block_log_entries, load_block_log_state, save_block_log_state,
     load_settings, save_settings,
     service_status, is_status_url, status_badge_class, STATUS_CHECK_INTERVAL_SEC,
+    limit_resets_view, cedar_ember_unrecognised, cedar_ember_stable, RESETS_URL,
     UPDATE_STATE_FILE, load_json, save_json, is_newer, update_check_due,
 )
 import updater
@@ -88,6 +89,9 @@ class MessageHandler(NSObject):
         elif name == "startUpdate":
             if self.delegate:
                 self.delegate.start_update()
+        elif name == "openResetsPage":
+            if self.delegate:
+                self.delegate.open_resets_page()
         elif name == "openStatusPage":
             if self.delegate:
                 self.delegate.open_status_page(str(message.body()))
@@ -436,6 +440,37 @@ class AppDelegate(NSObject):
                 self._service = parsed
         self._push_data()
 
+    def open_resets_page(self):
+        # Fixed URL, no argument from the page: opening is all the app ever does here.
+        NSWorkspace.sharedWorkspace().openURL_(NSURL.URLWithString_(RESETS_URL))
+
+    def _log_cedar_ember(self, limits: dict):
+        """Log the real cedar_ember shape once per change, and any shape we don't know."""
+        try:
+            account = limits.get("account_email", "")
+            state = load_block_log_state()
+            if cedar_ember_unrecognised(limits):
+                key = f"{account}|cedar_ember_shape"
+                digest = hashlib.sha1(json.dumps(limits.get("cedar_ember"), sort_keys=True,
+                                                 default=str).encode("utf-8")).hexdigest()
+                if state.get(key) != digest:
+                    state[key] = digest
+                    log(f"cedar_ember: onbekende vorm: {str(limits.get('cedar_ember'))[:300]}")
+                    save_block_log_state(state)
+                return
+            stable = cedar_ember_stable(limits)
+            if stable is None:
+                return
+            key = f"{account}|cedar_ember"
+            raw = json.dumps(stable, sort_keys=True, ensure_ascii=False)
+            digest = hashlib.sha1(raw.encode("utf-8")).hexdigest()
+            if state.get(key) != digest:
+                state[key] = digest
+                log(f"cedar_ember: {raw}")
+                save_block_log_state(state)
+        except Exception as e:
+            log(f"cedar_ember loggen mislukt: {e}")
+
     def open_status_page(self, url: str):
         if not is_status_url(url):
             log(f"claude-status: link geweigerd: {url[:80]}")
@@ -618,6 +653,7 @@ class AppDelegate(NSObject):
         ucc.addScriptMessageHandler_name_(handler, "startUpdate")
         ucc.addScriptMessageHandler_name_(handler, "setMenubarStyle")
         ucc.addScriptMessageHandler_name_(handler, "openStatusPage")
+        ucc.addScriptMessageHandler_name_(handler, "openResetsPage")
 
         self.webView = WKWebView.alloc().initWithFrame_configuration_(
             NSMakeRect(0, 0, 360, 296), config
@@ -848,6 +884,7 @@ class AppDelegate(NSObject):
                 self._last_fetch_error = None
                 self._record_history(output)
                 self._log_block_reasons(parsed, output)
+                self._log_cedar_ember(output)
                 self._notify_limits(output)
             else:
                 error = parsed.get("error", "onbekende fout")
@@ -956,6 +993,7 @@ class AppDelegate(NSObject):
             "version": self._version,
             "build": self._build,
             "update": self._update_view(),
+            "limit_resets": limit_resets_view(limits, datetime.now(timezone.utc), lang),
             "service": self._service,
             "service_badge": status_badge_class(self._service),
             "menubar_style": load_settings()["menubar_style"],

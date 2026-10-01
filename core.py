@@ -45,7 +45,7 @@ fetch('/api/bootstrap', {credentials:'include', headers:{Accept:'application/jso
         const plan = {label: org.plan_display_label || org.plan_display_name || '',
                       capabilities: org.capabilities || [], tier: org.rate_limit_tier || ''};
         try {
-            const r = await fetch('/api/organizations/' + orgId + '/usage', {
+            const r = await fetch('/api/organizations/' + orgId + '/usage?cedar_ember=1', {
                 credentials: 'include',
                 headers: {Accept: 'application/json'}
             });
@@ -96,6 +96,10 @@ DEFAULT_LANG = "en"
 DAYS = {
     "nl": ["ma", "di", "wo", "do", "vr", "za", "zo"],
     "en": ["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"],
+}
+MONTHS = {
+    "nl": ["jan", "feb", "mrt", "apr", "mei", "jun", "jul", "aug", "sep", "okt", "nov", "dec"],
+    "en": ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"],
 }
 
 STRINGS = {
@@ -148,6 +152,10 @@ STRINGS = {
         "reason_not_fetched": "nog niet opgehaald",
         "reason_data_at": "data van {time}",
         "reason_stale": "data verouderd",
+        "resets_one": "1 reset beschikbaar",
+        "resets_many": "{n} resets beschikbaar",
+        "resets_until": " · tot {date}",
+        "resets_open": "Openen op claude.ai",
         "svc_ok": "Alle Claude-diensten werken",
         "svc_unknown": "Status onbekend",
         "svc_checking": "Claude-status ophalen…",
@@ -232,6 +240,10 @@ STRINGS = {
         "reason_not_fetched": "not fetched yet",
         "reason_data_at": "data from {time}",
         "reason_stale": "data out of date",
+        "resets_one": "1 reset available",
+        "resets_many": "{n} resets available",
+        "resets_until": " · until {date}",
+        "resets_open": "Open on claude.ai",
         "svc_ok": "All Claude services are working",
         "svc_unknown": "Status unknown",
         "svc_checking": "Checking Claude status…",
@@ -589,6 +601,9 @@ def history_record(limits: dict) -> dict:
     extra = limits.get("extra_usage")
     if isinstance(extra, dict) and extra.get("is_enabled"):
         rec["extra_usage"] = _pick(extra, ("used_credits", "monthly_limit", "currency"))
+    ce = cedar_ember_stable(limits)
+    if ce is not None:
+        rec["cedar_ember"] = ce
     return {k: v for k, v in rec.items() if v is not None}
 
 
@@ -815,6 +830,110 @@ def status_badge_class(service) -> str:
     if level in ("major", "critical"):
         return "disconnected"
     return ""
+
+
+
+# ---------------------------------------------------------------------------
+# Available limit resets (usage?cedar_ember=1) — read only, never used by the app
+# ---------------------------------------------------------------------------
+
+RESETS_URL = "https://claude.ai/settings/usage"
+# Shape observed 1-10-2026: {eligible, at_limit, exhausted, grants: [{id, label,
+# resets_total, resets_left, starts_at, ends_at, clears, paused, usable_now,
+# use_requires_limit, percent_used, blocking, arm}], next_grant_id,
+# cooldown_until, event_props}.
+
+
+def format_short_date(iso_str: str, lang: str = "nl") -> str:
+    """'do 22 okt' / 'Thu Oct 22' in local time; '' when unparseable."""
+    try:
+        dt = parse_dt(iso_str).astimezone()
+    except Exception:
+        return ""
+    day = DAYS.get(lang, DAYS[DEFAULT_LANG])[dt.weekday()]
+    mon = MONTHS.get(lang, MONTHS[DEFAULT_LANG])[dt.month - 1]
+    return f"{day} {dt.day} {mon}" if lang == "nl" else f"{day} {mon} {dt.day}"
+
+
+def _grants(limits: dict):
+    ce = limits.get("cedar_ember")
+    if not isinstance(ce, dict) or not isinstance(ce.get("grants"), list):
+        return None
+    return [g for g in ce["grants"] if isinstance(g, dict)]
+
+
+def cedar_ember_unrecognised(limits: dict) -> bool:
+    """True when cedar_ember is present but not in the shape we have seen —
+    the app logs that instead of guessing."""
+    ce = limits.get("cedar_ember")
+    return ce is not None and _grants(limits) is None
+
+
+def cedar_ember_stable(limits: dict):
+    """Compact, stable subset for the log and the history (no percent_used,
+    no event_props: those change every fetch or are not ours to store)."""
+    ce = limits.get("cedar_ember")
+    grants = _grants(limits)
+    if grants is None:
+        return None
+    return {"eligible": ce.get("eligible"), "at_limit": ce.get("at_limit"),
+            "grants": [_pick(g, ("id", "resets_left", "resets_total", "starts_at",
+                                 "ends_at", "paused", "usable_now")) for g in grants]}
+
+
+def limit_resets(limits: dict, now):
+    """Free limit resets the user can use on claude.ai, or None.
+
+    Counts resets_left over grants that are not paused, have started and have
+    not expired. {count, ends_at (earliest end of a counted grant, or None),
+    labels}. Unknown shape, eligible false or nothing usable gives None."""
+    ce = limits.get("cedar_ember")
+    grants = _grants(limits)
+    if grants is None or ce.get("eligible") is False:
+        return None
+    count, ends, labels = 0, [], []
+    for g in grants:
+        left = g.get("resets_left")
+        if isinstance(left, bool) or not isinstance(left, int) or left <= 0:
+            continue
+        if g.get("paused") is True:
+            continue
+        try:
+            if g.get("starts_at") and parse_dt(g["starts_at"]) > now:
+                continue
+            end = parse_dt(g["ends_at"]) if g.get("ends_at") else None
+        except Exception:
+            continue
+        if end is not None and end <= now:
+            continue
+        count += left
+        if end is not None:
+            ends.append(end)
+        if isinstance(g.get("label"), str) and g["label"].strip():
+            labels.append(g["label"].strip())
+    if count == 0:
+        return None
+    return {"count": count, "ends_at": min(ends).isoformat() if ends else None,
+            "labels": labels}
+
+
+def limit_resets_view(limits: dict, now, lang: str = "nl"):
+    """What the popover shows under the session ring, or None."""
+    info = limit_resets(limits, now)
+    if info is None:
+        return None
+    text = t("resets_one", lang) if info["count"] == 1 else t("resets_many", lang, n=info["count"])
+    if info["ends_at"]:
+        date = format_short_date(info["ends_at"], lang)
+        if date:
+            text += t("resets_until", lang, date=date)
+    tip = " · ".join(info["labels"])    # the API's own (English) label, as delivered
+    return {"text": text, "tip": (tip + " — " if tip else "") + t("resets_open", lang),
+            "url": RESETS_URL}
+
+
+def is_resets_url(url) -> bool:
+    return url == RESETS_URL
 
 
 

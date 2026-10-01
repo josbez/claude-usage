@@ -906,3 +906,87 @@ def test_status_badge_class():
     assert core.status_badge_class({"level": "unknown"}) == ""
     assert core.status_badge_class({"level": "minor"}) == "stale"
     assert core.status_badge_class({"level": "critical"}) == "disconnected"
+
+
+# --- available limit resets (taak 31) ------------------------------------
+
+_RNOW = core.parse_dt("2026-10-01T09:00:00+00:00")
+
+
+def _grant(**kw):
+    g = {"id": "g1", "label": "Launch reset", "resets_total": 1, "resets_left": 1,
+         "starts_at": "2026-09-22T16:00:00+00:00", "ends_at": "2026-10-22T16:00:00+00:00",
+         "paused": False, "usable_now": True}
+    g.update(kw)
+    return g
+
+
+def _ce(*grants, eligible=True):
+    return {"cedar_ember": {"eligible": eligible, "grants": list(grants)}}
+
+
+def test_limit_resets_no_field_or_null():
+    assert core.limit_resets({}, _RNOW) is None
+    assert core.limit_resets({"cedar_ember": None}, _RNOW) is None
+    assert not core.cedar_ember_unrecognised({"cedar_ember": None})
+
+
+def test_limit_resets_single_grant():
+    r = core.limit_resets(_ce(_grant()), _RNOW)
+    assert r == {"count": 1, "ends_at": "2026-10-22T16:00:00+00:00", "labels": ["Launch reset"]}
+
+
+def test_limit_resets_not_eligible():
+    assert core.limit_resets(_ce(_grant(), eligible=False), _RNOW) is None
+
+
+def test_limit_resets_expired_not_started_paused_or_empty_grants_are_ignored():
+    for g in (_grant(ends_at="2026-09-30T00:00:00+00:00"),
+              _grant(starts_at="2026-10-05T00:00:00+00:00"),
+              _grant(paused=True),
+              _grant(resets_left=0),
+              _grant(resets_left=True),
+              _grant(resets_left="1")):
+        assert core.limit_resets(_ce(g), _RNOW) is None
+
+
+def test_limit_resets_two_grants_sum_and_earliest_end():
+    r = core.limit_resets(_ce(
+        _grant(id="a", resets_left=2, ends_at="2026-11-01T00:00:00+00:00"),
+        _grant(id="b", ends_at="2026-10-15T00:00:00+00:00"),
+        _grant(id="c", paused=True)), _RNOW)
+    assert r["count"] == 3 and r["ends_at"] == "2026-10-15T00:00:00+00:00"
+
+
+def test_limit_resets_unknown_shape_is_none_and_flagged():
+    for bad in ("x", [], {"grants": "x"}, {"eligible": True}):
+        limits = {"cedar_ember": bad}
+        assert core.limit_resets(limits, _RNOW) is None
+        assert core.cedar_ember_unrecognised(limits)
+
+
+def test_limit_resets_view_texts():
+    v = core.limit_resets_view(_ce(_grant()), _RNOW, "nl")
+    assert v["text"].startswith("1 reset beschikbaar · tot ") and v["url"] == core.RESETS_URL
+    assert "Launch reset" in v["tip"]
+    v = core.limit_resets_view(_ce(_grant(resets_left=2)), _RNOW, "en")
+    assert v["text"].startswith("2 resets available · until ")
+    assert core.limit_resets_view({}, _RNOW) is None
+
+
+def test_format_short_date_both_languages():
+    nl = core.format_short_date("2026-10-15T12:00:00+00:00", "nl")
+    en = core.format_short_date("2026-10-15T12:00:00+00:00", "en")
+    assert nl == "do 15 okt" and en == "Thu Oct 15"
+    assert core.format_short_date("garbage") == ""
+
+
+def test_history_keeps_stable_cedar_ember_only():
+    limits = {"fetched_at": "2026-10-01T09:00:00+00:00",
+              "cedar_ember": {"eligible": True, "at_limit": False,
+                              "event_props": {"tier": "x"},
+                              "grants": [dict(_grant(), percent_used={"five_hour": 70})]}}
+    rec = core.history_record(limits)
+    g = rec["cedar_ember"]["grants"][0]
+    assert g["resets_left"] == 1 and "percent_used" not in g and "event_props" not in rec["cedar_ember"]
+    assert "cedar_ember" not in core.history_record({"fetched_at": "2026-10-01T09:00:00+00:00"})

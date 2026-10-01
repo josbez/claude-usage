@@ -234,6 +234,17 @@
     color: var(--muted);
     margin-top: 4px;
   }
+  /* Free limit reset(s) available: sits beside the donut, so no extra height */
+  .resets-link {
+    display: block; max-width: 100%; margin-top: 4px;
+    border: none; background: none; padding: 0; font: inherit; font-size: 11px; font-weight: 600;
+    color: var(--text); cursor: pointer; text-align: left; text-decoration: underline;
+    text-underline-offset: 2px;
+    white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+  }
+  .resets-link[hidden] { display: none; }
+  .resets-link:hover { text-decoration-thickness: 2px; }
+  .resets-link:focus-visible { outline: 2px solid var(--accent-text); outline-offset: 1px; border-radius: 3px; }
 
   /* ---- Weekly card ---- */
   .weekly-header {
@@ -340,7 +351,6 @@
     color: var(--muted); cursor: pointer; text-align: left;
     display: flex; align-items: center; gap: 6px; min-width: 0; max-width: 100%;
   }
-  button.conn-link:disabled { color: var(--muted); }
   button.conn-link:hover span.txt { text-decoration: underline; }
   button.conn-link:focus-visible { outline: 2px solid var(--accent-text); outline-offset: 1px; border-radius: 3px; }
   .setting-row.conn { padding: 6px 0; }
@@ -401,6 +411,7 @@
         <div class="label-sm" data-i18n="session_label">Huidige sessie</div>
         <div style="font-size:13px; font-weight:600;" id="sessionPctText">—%</div>
         <div class="session-reset" id="sessionReset">—</div>
+        <button class="resets-link" id="resetsLink" hidden onclick="onOpenResets()"></button>
       </div>
     </div>
   </div>
@@ -614,7 +625,12 @@ function render(d) {
   face.classList.toggle('stressed', pct >= 100);
   document.getElementById('sessionPctText').textContent = pct + '%';
   document.getElementById('sessionPctText').style.color = readableStressColor(color);
+  document.getElementById('resetsLink').style.color = readableStressColor(color);   // ≥4.6:1 on the tinted card
   document.getElementById('sessionReset').textContent = T('reset_prefix') + ' ' + (d.session_reset || '—');
+  const resets = document.getElementById('resetsLink');
+  resets.hidden = !d.limit_resets;
+  resets.textContent = d.limit_resets ? d.limit_resets.text : '';
+  resets.title = d.limit_resets ? d.limit_resets.tip : '';
 
   // Weekly
   const wpct = Math.max(0, Math.min(100, d.weekly_pct || 0));
@@ -688,7 +704,7 @@ function renderService(svc) {
   const text = document.getElementById('serviceText');
   const btn = document.getElementById('serviceBtn');
   let cls = 'neutral', label, tip = '';
-  _statusUrl = '';
+  _statusUrl = 'https://status.claude.com/';   // always linked, also when all is well
   if (!svc) {
     label = T('svc_checking');
   } else if (svc.level === 'unreachable') {
@@ -702,16 +718,20 @@ function renderService(svc) {
     label = svc.description || T('svc_unknown');
     if (uniq.length) label += ': ' + uniq.join(', ');
     tip = label;
-    _statusUrl = (svc.incidents && svc.incidents[0] && svc.incidents[0].url) || 'https://status.claude.com/';
+    if (svc.incidents && svc.incidents[0] && svc.incidents[0].url) _statusUrl = svc.incidents[0].url;
   }
   dot.className = 'status-dot' + (cls ? ' ' + cls : '');
   text.textContent = label;
-  btn.disabled = !_statusUrl;
-  btn.style.cursor = _statusUrl ? 'pointer' : 'default';
-  btn.title = _statusUrl ? (tip + ' — ' + T('svc_open')) : '';
+  btn.title = (tip ? tip + ' — ' : '') + T('svc_open');
 }
 
 // ---- Actions ----
+
+function onOpenResets() {
+  if (window.webkit && window.webkit.messageHandlers && window.webkit.messageHandlers.openResetsPage) {
+    window.webkit.messageHandlers.openResetsPage.postMessage(null);
+  }
+}
 
 function onOpenStatus() {
   if (!_statusUrl) return;

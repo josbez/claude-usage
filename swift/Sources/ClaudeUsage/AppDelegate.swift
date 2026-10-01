@@ -23,6 +23,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSPopoverDelegate {
     var webView: WKWebView!
     var pendingTitle: String?
     var timer: Timer?
+    var activity: NSObjectProtocol?
     var cachedSettings: JSONObject?
 
     // Fetching (Fetching.swift)
@@ -72,6 +73,12 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSPopoverDelegate {
         state.build = info["CFBundleVersion"] as? String ?? ""
         log("app gestart (versie \(state.version), taal \(lang)\(isDev ? ", dev" : ""))")
 
+        // No App Nap (deliberate, Jos 1-10-2026): the menu bar title must stay current
+        // at a glance, without opening the popover. With App Nap allowed, refreshes
+        // stretched to 9 minutes. Costs a few wake-ups, no memory.
+        activity = ProcessInfo.processInfo.beginActivity(
+            options: .userInitiatedAllowingIdleSystemSleep, reason: "periodieke Claude-usage-refresh")
+
         setupNotifications()
         setupStatusItem()
         setupPopover()
@@ -80,7 +87,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSPopoverDelegate {
         maybeCheckUpdates()
         maybeCheckServiceStatus()
         // Every minute, also while the popover is open (common run loop modes).
-        // Tolerance lets macOS batch wake-ups; App Nap stays allowed (taak 48).
+        // A little tolerance lets macOS batch wake-ups.
         let t = Timer(timeInterval: 60, repeats: true) { [weak self] _ in self?.tick() }
         t.tolerance = 10
         RunLoop.current.add(t, forMode: .common)
@@ -213,7 +220,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSPopoverDelegate {
             checkAccountSwitch()
             maybeCheckUpdates()
             pushData(animated: true)
-            // App Nap may stretch the minute timer: never show stale numbers on open.
+            // Never show stale numbers on open (e.g. right after waking from sleep).
             if !limitsAreFresh(loadJSONObject(paths.limits), now: Date()) { startFetch() }
         }
     }

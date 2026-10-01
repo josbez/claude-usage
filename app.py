@@ -53,6 +53,7 @@ from core import (
     due_notifications, load_notify_state, save_notify_state, color_for_pct, face_icon,
     account_label, week_window, week_progress, STRINGS, t, language_from,
     history_record, append_history,
+    new_block_log_entries, load_block_log_state, save_block_log_state,
     load_settings, save_settings,
     UPDATE_STATE_FILE, load_json, save_json, is_newer, update_check_due,
 )
@@ -299,6 +300,23 @@ class AppDelegate(NSObject):
             append_history(history_record(limits))
         except Exception as e:
             log(f"geschiedenis opslaan mislukt: {e}")
+
+    def _log_block_reasons(self, parsed: dict, limits: dict):
+        """Log any new block reasons (locked_reason and bootstrap fields).
+        Never let it break a fetch."""
+        try:
+            bootstrap_fields = parsed.get("bootstrap_fields") or {}
+            account = limits.get("account_email", "")
+            if not account:
+                return
+            seen = load_block_log_state()
+            entries, seen = new_block_log_entries(limits, bootstrap_fields, account, seen)
+            for entry in entries:
+                log(entry)
+            if entries:
+                save_block_log_state(seen)
+        except Exception as e:
+            log(f"blokkadevelden loggen mislukt: {e}")
 
     def _post_notification(self, ident: str, title: str, body: str):
         if self._notify_center is None or not load_settings()["notifications"]:
@@ -771,6 +789,7 @@ class AppDelegate(NSObject):
                     json.dump(output, f, indent=2)
                 self._last_fetch_error = None
                 self._record_history(output)
+                self._log_block_reasons(parsed, output)
                 self._notify_limits(output)
             else:
                 error = parsed.get("error", "onbekende fout")

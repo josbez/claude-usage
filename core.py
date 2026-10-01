@@ -59,9 +59,17 @@ fetch('/api/bootstrap', {credentials:'include', headers:{Accept:'application/jso
         } catch(e) { continue; }
     }
     if (best) {
+        // Block fields (taak 28): only logged when non-empty; location in bootstrap is unconfirmed, so check root and the chosen org
+        const bootstrapFields = {};
+        const bestOrg = ((memberships.find(m => (m.organization || {}).uuid === best.org_id)) || {}).organization || {};
+        ['access_block', 'billing_issue', 'subscription_pause', 'api_disabled_reason', 'api_disabled_until'].forEach(f => {
+            const v = bestOrg[f] || d[f];
+            if (v) bootstrapFields[f] = v;
+        });
         deliver(JSON.stringify({ok: true, org_id: best.org_id,
                                 account_email: best.account_email,
                                 account_name: name, account_plan: best.plan,
+                                bootstrap_fields: bootstrapFields,
                                 data: best.data}));
     } else {
         deliver(JSON.stringify({ok: false, error: 'no org with usage data'}));
@@ -709,6 +717,75 @@ def load_notify_state(path: str = NOTIFY_STATE_FILE) -> dict:
 
 
 def save_notify_state(state: dict, path: str = NOTIFY_STATE_FILE):
+    save_json(state, path)
+
+
+# ---------------------------------------------------------------------------
+# Block logging (locked_reason and bootstrap block fields)
+# ---------------------------------------------------------------------------
+
+BLOCK_LOG_STATE_FILE = os.path.expanduser("~/.claude/usage-tracker-blocks.json")
+
+
+def new_block_log_entries(limits: dict, bootstrap_fields: dict, account: str, seen: dict):
+    """Check for new block reasons to log.
+
+    limits: the full limits dict with five_hour and seven_day blocks
+    bootstrap_fields: dict of org-level block fields from bootstrap (may be empty)
+    account: account email
+    seen: dict tracking (account, field_name, value_str) combinations already logged
+
+    Returns: (log_entries, updated_seen)
+    - log_entries: list of Dutch log message strings
+    - updated_seen: updated seen dict with new (account, field, value) combinations
+
+    Only returns entries for non-empty field values, once per unique combination.
+    """
+    new_seen = dict(seen)
+    entries = []
+
+    # Collect all block fields to check: {field_name: value}
+    fields_to_check = {}
+
+    # From limit blocks (five_hour, seven_day may each have locked_reason)
+    for limit_key in ("five_hour", "seven_day"):
+        block = limits.get(limit_key)
+        if isinstance(block, dict):
+            locked_reason = block.get("locked_reason")
+            if locked_reason:
+                field = f"{limit_key}__locked_reason"
+                fields_to_check[field] = locked_reason
+
+    # From bootstrap fields (org-level blocks)
+    if isinstance(bootstrap_fields, dict):
+        for field_name in ("access_block", "billing_issue", "subscription_pause",
+                          "api_disabled_reason", "api_disabled_until"):
+            value = bootstrap_fields.get(field_name)
+            if value:
+                fields_to_check[field_name] = value
+
+    # Check each field for new values
+    for field_name, field_value in fields_to_check.items():
+        # Normalize value to string, skip empty
+        value_str = str(field_value).strip() if field_value else ""
+        if not value_str:
+            continue
+
+        # Check if we've seen this (account, field, value) before
+        seen_key = f"{account}|{field_name}|{value_str}"
+        if seen_key not in new_seen:
+            # Log in Dutch: "blokkering: <veldnaam>=<waarde>"
+            entries.append(f"blokkering: {field_name}={value_str}")
+            new_seen[seen_key] = True
+
+    return entries, new_seen
+
+
+def load_block_log_state(path: str = BLOCK_LOG_STATE_FILE) -> dict:
+    return load_json(path)
+
+
+def save_block_log_state(state: dict, path: str = BLOCK_LOG_STATE_FILE):
     save_json(state, path)
 
 

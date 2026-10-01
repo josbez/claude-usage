@@ -672,3 +672,99 @@ def test_append_history_creates_dir_and_appends_lines(tmp_path):
     assert len(lines) == 2
     assert json.loads(lines[0]) == rec
     assert json.loads(lines[1])["ts"] == "2026-10-01T07:35:00+00:00"
+
+
+# ---------------------------------------------------------------------------
+# Block logging (locked_reason and bootstrap block fields)
+# ---------------------------------------------------------------------------
+
+def test_new_block_log_entries_logs_locked_reason():
+    limits = {
+        "account_email": "user@test.nl",
+        "five_hour": {"utilization": 50, "locked_reason": "rate_limit_exceeded"},
+        "seven_day": {"utilization": 30},
+    }
+    entries, seen = core.new_block_log_entries(limits, {}, "user@test.nl", {})
+    assert len(entries) == 1
+    assert entries[0] == "blokkering: five_hour__locked_reason=rate_limit_exceeded"
+    assert "user@test.nl|five_hour__locked_reason|rate_limit_exceeded" in seen
+
+
+def test_new_block_log_entries_skips_empty_locked_reason():
+    limits = {
+        "account_email": "user@test.nl",
+        "five_hour": {"utilization": 50, "locked_reason": None},
+        "seven_day": {"utilization": 30, "locked_reason": ""},
+    }
+    entries, seen = core.new_block_log_entries(limits, {}, "user@test.nl", {})
+    assert entries == []
+    assert seen == {}
+
+
+def test_new_block_log_entries_logs_bootstrap_fields():
+    limits = {"account_email": "user@test.nl"}
+    bootstrap_fields = {"billing_issue": "unpaid_invoice", "access_block": None}
+    entries, seen = core.new_block_log_entries(limits, bootstrap_fields, "user@test.nl", {})
+    assert len(entries) == 1
+    assert entries[0] == "blokkering: billing_issue=unpaid_invoice"
+    assert "user@test.nl|billing_issue|unpaid_invoice" in seen
+
+
+def test_new_block_log_entries_skips_empty_bootstrap_fields():
+    limits = {"account_email": "user@test.nl"}
+    bootstrap_fields = {"access_block": "", "billing_issue": None, "subscription_pause": "  "}
+    entries, seen = core.new_block_log_entries(limits, bootstrap_fields, "user@test.nl", {})
+    assert entries == []
+
+
+def test_new_block_log_entries_repeats_different_value_only():
+    account = "user@test.nl"
+    limits1 = {"five_hour": {"locked_reason": "reason_a"}}
+    entries1, seen = core.new_block_log_entries(limits1, {}, account, {})
+    assert len(entries1) == 1
+
+    # Same field, same value: nothing new
+    entries2, seen = core.new_block_log_entries(limits1, {}, account, seen)
+    assert entries2 == []
+
+    # Same field, different value: new entry
+    limits2 = {"five_hour": {"locked_reason": "reason_b"}}
+    entries3, seen = core.new_block_log_entries(limits2, {}, account, seen)
+    assert len(entries3) == 1
+    assert entries3[0] == "blokkering: five_hour__locked_reason=reason_b"
+
+
+def test_new_block_log_entries_different_accounts_independent():
+    limits = {"five_hour": {"locked_reason": "blocked"}}
+    entries1, seen = core.new_block_log_entries(limits, {}, "user1@test.nl", {})
+    assert len(entries1) == 1
+
+    # Different account: new entry even for same field/value
+    entries2, seen = core.new_block_log_entries(limits, {}, "user2@test.nl", seen)
+    assert len(entries2) == 1
+    assert entries2[0] == "blokkering: five_hour__locked_reason=blocked"
+
+
+def test_new_block_log_entries_both_limits_and_bootstrap():
+    limits = {"seven_day": {"locked_reason": "usage_suspended"}}
+    bootstrap_fields = {"billing_issue": "payment_failed"}
+    entries, seen = core.new_block_log_entries(limits, bootstrap_fields, "user@test.nl", {})
+    assert len(entries) == 2
+    assert any("seven_day__locked_reason" in e for e in entries)
+    assert any("billing_issue" in e for e in entries)
+
+
+def test_new_block_log_entries_preserves_bootstrap_fields_dict():
+    limits = {}
+    bootstrap_fields = {"api_disabled_until": "2026-10-05T10:00:00Z", "subscription_pause": ""}
+    entries, seen = core.new_block_log_entries(limits, bootstrap_fields, "user@test.nl", {})
+    assert len(entries) == 1
+    assert "api_disabled_until=2026-10-05T10:00:00Z" in entries[0]
+
+
+def test_block_log_state_roundtrip(tmp_path):
+    path = str(tmp_path / "blocks.json")
+    assert core.load_block_log_state(path) == {}
+    state = {"user@test.nl|field|value": True, "other@test.nl|block|reason": True}
+    core.save_block_log_state(state, path)
+    assert core.load_block_log_state(path) == state

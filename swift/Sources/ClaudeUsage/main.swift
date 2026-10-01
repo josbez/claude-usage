@@ -15,6 +15,38 @@ if args.count == 4, args[1] == "--render-status-image", let pct = Int(args[2]) {
     }
 }
 
+// Render the menu bar ring at 4x on a light or dark menu bar background:
+//   ClaudeUsage --render-menubar-ring <pct> <light|dark> <out.png>
+if args.count == 5, args[1] == "--render-menubar-ring", let pct = Int(args[2]) {
+    let dark = args[3] == "dark"
+    let appearance = NSAppearance(named: dark ? .darkAqua : .aqua)!
+    let icon = menubarRingImage(menubarRing(sessionPct: pct), appearance: appearance)
+    let scale: CGFloat = 4, side = 24 * scale
+    let rep = NSBitmapImageRep(bitmapDataPlanes: nil, pixelsWide: Int(side), pixelsHigh: Int(side),
+                               bitsPerSample: 8, samplesPerPixel: 4, hasAlpha: true, isPlanar: false,
+                               colorSpaceName: .deviceRGB, bytesPerRow: 0, bitsPerPixel: 0)!
+    NSGraphicsContext.saveGraphicsState()
+    NSGraphicsContext.current = NSGraphicsContext(bitmapImageRep: rep)
+    (dark ? NSColor(white: 0.16, alpha: 1) : NSColor(white: 0.93, alpha: 1)).setFill()
+    NSRect(x: 0, y: 0, width: side, height: side).fill()
+    let r = NSRect(x: 4 * scale, y: 4 * scale, width: 16 * scale, height: 16 * scale)
+    if icon.isTemplate {
+        // What macOS does with a template image in the menu bar: tint with the label colour
+        let tinted = NSImage(size: icon.size, flipped: false) { rect in
+            icon.draw(in: rect)
+            (dark ? NSColor.white : NSColor.black).set()
+            rect.fill(using: .sourceAtop)
+            return true
+        }
+        tinted.draw(in: r)
+    } else {
+        icon.draw(in: r)
+    }
+    NSGraphicsContext.restoreGraphicsState()
+    try? rep.representation(using: .png, properties: [:])?.write(to: URL(fileURLWithPath: args[4]))
+    exit(0)
+}
+
 // Check a release file against its .sig with the release key:
 //   ClaudeUsage --verify-release <file> <file.sig>
 if args.count == 4, args[1] == "--verify-release",

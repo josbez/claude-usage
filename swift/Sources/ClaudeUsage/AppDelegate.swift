@@ -22,6 +22,9 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSPopoverDelegate {
     var popover: NSPopover!
     var webView: WKWebView!
     var pendingTitle: String?
+    var appliedTitle: String?
+    var menubarPct = 0
+    var appearanceObservation: NSKeyValueObservation?
     var timer: Timer?
     var activity: NSObjectProtocol?
     var cachedSettings: JSONObject?
@@ -80,6 +83,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSPopoverDelegate {
             options: .userInitiatedAllowingIdleSystemSleep, reason: "periodieke Claude-usage-refresh")
 
         setupNotifications()
+        migrateMenubarIcon()
         setupStatusItem()
         setupPopover()
         setupFetchWebView()
@@ -147,9 +151,10 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSPopoverDelegate {
 
     func setupStatusItem() {
         statusItem = NSStatusBar.system.statusItem(withLength: NSStatusItem.variableLength)
-        statusItem.button?.title = devMark + "🚀"
         statusItem.button?.target = self
         statusItem.button?.action = #selector(togglePopover(_:))
+        applyStatusTitle("🚀")
+        observeMenubarAppearance()
     }
 
     /// Tells the dev build apart from the released app in the menu bar.
@@ -162,12 +167,13 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSPopoverDelegate {
             pendingTitle = text
             return
         }
-        statusItem.button?.title = devMark + text
+        applyStatusTitle(text)
     }
 
     func showCachedTitle() {
         let limits = loadJSONObject(paths.limits)
         let style = settings["menubar_style"] as? String ?? "full"
+        menubarPct = sessionPct(limits)
         setStatusTitle(formatter.titleFromLimits(limits, style: style, lang: lang))
     }
 
@@ -195,7 +201,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSPopoverDelegate {
         let config = WKWebViewConfiguration()
         let handler = ScriptHandler(owner: self)
         for name in ["refresh", "close", "quit", "uninstall", "setNotifications", "startUpdate",
-                     "setMenubarStyle", "setAppearance", "setRefresh", "openStatusPage", "openResetsPage", "resize"] {
+                     "setMenubarStyle", "setMenubarIcon", "setAppearance", "setRefresh", "openStatusPage", "openResetsPage", "resize"] {
             config.userContentController.add(handler, name: name)
         }
         webView = WKWebView(frame: NSRect(x: 0, y: 0, width: Self.popoverWidth,
@@ -231,7 +237,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSPopoverDelegate {
         // The next open starts on the main view: back to its fixed height now.
         setPopoverHeight(Self.popoverMinHeight)
         if let title = pendingTitle {
-            statusItem.button?.title = devMark + title
+            applyStatusTitle(title)
             pendingTitle = nil
         }
     }
@@ -291,6 +297,11 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSPopoverDelegate {
             guard let style = body as? String, menubarStyles.contains(style) else { return }
             updateSetting("menubar_style", style)
             showCachedTitle()
+            pushData()
+        case "setMenubarIcon":
+            guard let icon = body as? String, menubarIcons.contains(icon) else { return }
+            updateSetting("menubar_icon", icon)
+            showCachedTitle()   // held until the popover closes (anchor)
             pushData()
         case "setAppearance":
             guard let appearance = body as? String, appearanceStyles.contains(appearance) else { return }

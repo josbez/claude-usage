@@ -291,6 +291,13 @@ def test_settings_ignore_unknown_and_corrupt(tmp_path):
     assert core.load_settings(str(path)) == core.DEFAULT_SETTINGS
 
 
+@pytest.mark.parametrize("stored,expected", [("emoji", "emoji"), ("ring", "ring"), ("x", "ring"), (None, "ring")])
+def test_settings_menubar_icon(tmp_path, stored, expected):
+    path = tmp_path / "s.json"
+    path.write_text(json.dumps({"menubar_icon": stored}))
+    assert core.load_settings(str(path))["menubar_icon"] == expected
+
+
 @pytest.mark.parametrize("stored,expected", [
     (1, 1), (5, 5), (15, 15), (10, 5), (True, 5), ("5", 5), (5.0, 5), (None, 5),
 ])

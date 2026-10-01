@@ -48,8 +48,38 @@ public struct Paths {
 
 public let defaultSettings: JSONObject = [
     "notifications": true, "update_check": true, "menubar_style": "full", "appearance": "system",
-    "refresh_minutes": 5,
+    "refresh_minutes": 5, "menubar_icon": "ring",
 ]
+
+/// Menu bar icon (taak 49): the face emoji, or a ring that fills with the session.
+public let menubarIcons = ["emoji", "ring"]
+
+/// The ring in the menu bar: monochrome (template, like the other menu bar
+/// icons) below 75%, the popover's stress colour from 75% on — the same
+/// threshold as elsewhere (docs/drempels.md).
+public struct MenubarRing: Equatable {
+    public let fraction: Double          // 0...1 of the circle filled
+    public let rgb: (Int, Int, Int)?     // nil = template (monochrome)
+    public static func == (a: Self, b: Self) -> Bool {
+        a.fraction == b.fraction && a.rgb.map { [$0.0, $0.1, $0.2] } == b.rgb.map { [$0.0, $0.1, $0.2] }
+    }
+}
+
+public func menubarRing(sessionPct: Int) -> MenubarRing {
+    let p = max(0, min(100, sessionPct))
+    return MenubarRing(fraction: Double(p) / 100, rgb: p >= 75 ? colorForPct(Double(p)) : nil)
+}
+
+/// Session percentage as the menu bar shows it.
+public func sessionPct(_ limits: JSONObject) -> Int {
+    pyInt(jsonNumber(block(limits, "five_hour")["utilization"]) ?? 0)
+}
+
+/// The text next to the ring: the status title without its leading face.
+public func titleWithoutFace(_ title: String) -> String {
+    let parts = title.split(separator: " ", maxSplits: 1)
+    return parts.count > 1 ? String(parts[1]) : ""
+}
 
 /// Minutes between fetches the user can pick (core.REFRESH_CHOICES, taak 51).
 public let refreshChoices = [1, 5, 15]
@@ -75,6 +105,9 @@ public func normalizeSettings(_ stored: Any?) -> JSONObject {
     }
     if !appearanceStyles.contains(settings["appearance"] as? String ?? "") {
         settings["appearance"] = defaultSettings["appearance"]
+    }
+    if !menubarIcons.contains(settings["menubar_icon"] as? String ?? "") {
+        settings["menubar_icon"] = defaultSettings["menubar_icon"]
     }
     if jsonInt(settings["refresh_minutes"]).map({ !refreshChoices.contains($0) }) ?? true {
         settings["refresh_minutes"] = defaultSettings["refresh_minutes"]

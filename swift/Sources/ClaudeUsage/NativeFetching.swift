@@ -65,7 +65,7 @@ extension AppDelegate {
                 self.onFetchParsed(["ok": false, "error": "bootstrap: \(why)"], mayRetry: true)
             case .failed(let why):
                 self.onFetchParsed(["ok": false, "error": why], mayRetry: false)
-            case .json(let status, let body) where status != 200:
+            case .json(let status, _) where status != 200:
                 self.onFetchParsed(["ok": false, "error": "bootstrap: HTTP \(status)"], mayRetry: false)
             case .json(_, let bootstrap):
                 let orgs = fetchOrgs(bootstrap: bootstrap)

@@ -138,8 +138,7 @@ extension AppDelegate {
             refreshSessionCookie()
         }
         state.fetching = true
-        let current = (statusItem.button?.title ?? "").replacingOccurrences(of: devMark, with: "")
-        let icon = current.split(separator: " ").first.map(String.init) ?? "🚀"
+        let icon = faceIcon(menubarPct)
         // Emoji-only style stays emoji-only while fetching; others show "…"
         setStatusTitle(settings["menubar_style"] as? String == "emoji" ? icon : "\(icon) …")
         pushStatus("fetching")

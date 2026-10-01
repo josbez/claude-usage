@@ -2968,6 +2968,7 @@
       {
         "out": {
           "appearance": "system",
+          "menubar_icon": "ring",
           "menubar_style": "full",
           "notifications": true,
           "refresh_minutes": 5,
@@ -2978,6 +2979,7 @@
       {
         "out": {
           "appearance": "dark",
+          "menubar_icon": "ring",
           "menubar_style": "emoji",
           "notifications": false,
           "refresh_minutes": 5,
@@ -2992,6 +2994,7 @@
       {
         "out": {
           "appearance": "system",
+          "menubar_icon": "ring",
           "menubar_style": "full",
           "notifications": true,
           "refresh_minutes": 5,
@@ -3006,6 +3009,7 @@
       {
         "out": {
           "appearance": "system",
+          "menubar_icon": "ring",
           "menubar_style": "full",
           "notifications": true,
           "refresh_minutes": 5,
@@ -3018,6 +3022,7 @@
       {
         "out": {
           "appearance": "system",
+          "menubar_icon": "ring",
           "menubar_style": "full",
           "notifications": true,
           "refresh_minutes": 5,
@@ -3028,6 +3033,7 @@
       {
         "out": {
           "appearance": "system",
+          "menubar_icon": "ring",
           "menubar_style": "full",
           "notifications": true,
           "refresh_minutes": 1,
@@ -3040,6 +3046,7 @@
       {
         "out": {
           "appearance": "system",
+          "menubar_icon": "ring",
           "menubar_style": "full",
           "notifications": true,
           "refresh_minutes": 15,
@@ -3052,6 +3059,7 @@
       {
         "out": {
           "appearance": "system",
+          "menubar_icon": "ring",
           "menubar_style": "full",
           "notifications": true,
           "refresh_minutes": 5,
@@ -3064,6 +3072,7 @@
       {
         "out": {
           "appearance": "system",
+          "menubar_icon": "ring",
           "menubar_style": "full",
           "notifications": true,
           "refresh_minutes": 5,
@@ -3076,6 +3085,7 @@
       {
         "out": {
           "appearance": "system",
+          "menubar_icon": "ring",
           "menubar_style": "full",
           "notifications": true,
           "refresh_minutes": 5,
@@ -3088,6 +3098,7 @@
       {
         "out": {
           "appearance": "system",
+          "menubar_icon": "ring",
           "menubar_style": "full",
           "notifications": true,
           "refresh_minutes": 5,
@@ -3095,6 +3106,45 @@
         },
         "stored": {
           "refresh_minutes": 5.0
+        }
+      },
+      {
+        "out": {
+          "appearance": "system",
+          "menubar_icon": "emoji",
+          "menubar_style": "full",
+          "notifications": true,
+          "refresh_minutes": 5,
+          "update_check": true
+        },
+        "stored": {
+          "menubar_icon": "emoji"
+        }
+      },
+      {
+        "out": {
+          "appearance": "system",
+          "menubar_icon": "ring",
+          "menubar_style": "full",
+          "notifications": true,
+          "refresh_minutes": 5,
+          "update_check": true
+        },
+        "stored": {
+          "menubar_icon": "ring"
+        }
+      },
+      {
+        "out": {
+          "appearance": "system",
+          "menubar_icon": "ring",
+          "menubar_style": "full",
+          "notifications": true,
+          "refresh_minutes": 5,
+          "update_check": true
+        },
+        "stored": {
+          "menubar_icon": "sparkles"
         }
       }
     ],

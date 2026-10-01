@@ -128,6 +128,9 @@ SETTINGS_CASES = [
     {"refresh_minutes": True},
     {"refresh_minutes": "5"},
     {"refresh_minutes": 5.0},
+    {"menubar_icon": "emoji"},
+    {"menubar_icon": "ring"},
+    {"menubar_icon": "sparkles"},
 ]
 
 SERVICE_CASES = [None, {}, {"level": "ok"}, {"level": "minor"}, {"level": "major"},

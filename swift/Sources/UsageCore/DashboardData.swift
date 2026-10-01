@@ -52,9 +52,14 @@ extension UsageFormatter {
         }
 
         var previews: JSONObject = [:]
+        let ring = settings["menubar_icon"] as? String == "ring"
         for style in menubarStyles {
-            previews[style] = statusTitle(session: sessionPct, weekly: weeklyPct,
-                                          compact: sessionCompact, style: style)
+            let title = statusTitle(session: sessionPct, weekly: weeklyPct,
+                                    compact: sessionCompact, style: style)
+            // Text preview of the ring: a circle glyph filled to the nearest quarter
+            let glyph = ["○", "◔", "◑", "◕", "●"][min(4, (max(0, sessionPct) + 12) / 25)]
+            let rest = titleWithoutFace(title)
+            previews[style] = ring ? (rest.isEmpty ? glyph : "\(glyph) \(rest)") : title
         }
         return [
             "session_pct": sessionPct,
@@ -80,6 +85,7 @@ extension UsageFormatter {
             "menubar_style": settings["menubar_style"] ?? "full",
             "appearance": settings["appearance"] ?? "system",
             "refresh_minutes": refreshMinutes(settings),
+            "menubar_icon": settings["menubar_icon"] ?? "ring",
             "lang": lang,
             "i18n": strings.table[lang] ?? [:],
             "menubar_previews": previews,

@@ -491,6 +491,15 @@
       </div>
       <div class="setting-row">
         <div class="setting-text">
+          <div class="setting-title" data-i18n="set_icon">Pictogram</div>
+        </div>
+        <div class="segmented" role="radiogroup" id="menubarIcon">
+          <button role="radio" data-icon="ring" onclick="onMenubarIcon('ring')" data-i18n="icon_ring">Ring</button>
+          <button role="radio" data-icon="emoji" onclick="onMenubarIcon('emoji')" data-i18n="icon_emoji">Emoji</button>
+        </div>
+      </div>
+      <div class="setting-row">
+        <div class="setting-text">
           <div class="setting-title" data-i18n="set_appearance">Weergave</div>
         </div>
         <div class="segmented" role="radiogroup" id="appearanceStyle">
@@ -741,6 +750,7 @@ function render(d) {
   renderMenubarStyle(d.menubar_style || 'full', d.menubar_previews || {});
   renderAppearance(d.appearance || 'system');
   renderRefreshChoice(d.refresh_minutes || 5);
+  renderMenubarIcon(d.menubar_icon || 'ring');
 
   renderService(d.service);
 
@@ -923,6 +933,18 @@ function onAppearance(appearance) {
   renderAppearance(appearance);  // optimistic; Python pushes saved state back
   if (window.webkit && window.webkit.messageHandlers && window.webkit.messageHandlers.setAppearance) {
     window.webkit.messageHandlers.setAppearance.postMessage(appearance);
+  }
+}
+
+function renderMenubarIcon(icon) {
+  document.querySelectorAll('#menubarIcon button').forEach(b =>
+    b.setAttribute('aria-checked', b.dataset.icon === icon ? 'true' : 'false'));
+}
+
+function onMenubarIcon(icon) {
+  renderMenubarIcon(icon);  // optimistic; the app pushes saved state back (incl. previews)
+  if (window.webkit && window.webkit.messageHandlers && window.webkit.messageHandlers.setMenubarIcon) {
+    window.webkit.messageHandlers.setMenubarIcon.postMessage(icon);
   }
 }
 

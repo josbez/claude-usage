@@ -138,6 +138,9 @@ STRINGS = {
         "style_emoji": "Emoji",
         "set_appearance": "Weergave",
         "set_refresh": "Verversen",
+        "set_icon": "Pictogram",
+        "icon_emoji": "Emoji",
+        "icon_ring": "Ring",
         "refresh_choice": "{n} min",
         "appearance_system": "Systeem",
         "appearance_light": "Licht",
@@ -246,6 +249,9 @@ STRINGS = {
         "style_emoji": "Emoji",
         "set_appearance": "Appearance",
         "set_refresh": "Refresh",
+        "set_icon": "Icon",
+        "icon_emoji": "Emoji",
+        "icon_ring": "Ring",
         "refresh_choice": "{n} min",
         "appearance_system": "System",
         "appearance_light": "Light",
@@ -510,6 +516,7 @@ def color_for_pct(pct: float) -> tuple:
 
 MENUBAR_STYLES = ("full", "session", "emoji")
 APPEARANCE_STYLES = ("system", "light", "dark")
+MENUBAR_ICONS = ("emoji", "ring")   # taak 49; existing installs are migrated to "emoji" by the Swift app
 REFRESH_CHOICES = (1, 5, 15)   # minutes between fetches (taak 51; used by the Swift app)
 
 
@@ -1085,7 +1092,7 @@ def save_block_log_state(state: dict, path: str = BLOCK_LOG_STATE_FILE):
 
 SETTINGS_FILE = os.path.expanduser("~/.claude/usage-tracker-settings.json")
 DEFAULT_SETTINGS = {"notifications": True, "update_check": True, "menubar_style": "full", "appearance": "system",
-                    "refresh_minutes": 5}
+                    "refresh_minutes": 5, "menubar_icon": "ring"}
 
 
 def load_settings(path: str = SETTINGS_FILE) -> dict:
@@ -1096,6 +1103,8 @@ def load_settings(path: str = SETTINGS_FILE) -> dict:
         settings["menubar_style"] = DEFAULT_SETTINGS["menubar_style"]
     if settings["appearance"] not in APPEARANCE_STYLES:
         settings["appearance"] = DEFAULT_SETTINGS["appearance"]
+    if settings["menubar_icon"] not in MENUBAR_ICONS:
+        settings["menubar_icon"] = DEFAULT_SETTINGS["menubar_icon"]
     r = settings["refresh_minutes"]
     if isinstance(r, bool) or not isinstance(r, int) or r not in REFRESH_CHOICES:
         settings["refresh_minutes"] = DEFAULT_SETTINGS["refresh_minutes"]

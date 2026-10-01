@@ -65,3 +65,29 @@ final class RefreshSettingTests: XCTestCase {
         XCTAssertEqual(staleAfterMinutes(refresh: 15), 45)
     }
 }
+
+/// Taak 49: menu bar ring.
+final class MenubarRingTests: XCTestCase {
+    func testTemplateBelow75ColouredFrom75() {
+        XCTAssertNil(menubarRing(sessionPct: 0).rgb)
+        XCTAssertNil(menubarRing(sessionPct: 74).rgb)
+        XCTAssertNotNil(menubarRing(sessionPct: 75).rgb)
+        XCTAssertEqual(menubarRing(sessionPct: 100).rgb.map { [$0.0, $0.1, $0.2] }, [255, 59, 48])
+        XCTAssertEqual(menubarRing(sessionPct: 42).fraction, 0.42)
+        XCTAssertEqual(menubarRing(sessionPct: 140).fraction, 1)
+        XCTAssertEqual(menubarRing(sessionPct: -3).fraction, 0)
+    }
+
+    func testTitleWithoutFace() {
+        XCTAssertEqual(titleWithoutFace("😅 45% / 82% · 2u10m"), "45% / 82% · 2u10m")
+        XCTAssertEqual(titleWithoutFace("😅 45%"), "45%")
+        XCTAssertEqual(titleWithoutFace("😅"), "")
+        XCTAssertEqual(titleWithoutFace("🚀 …"), "…")
+    }
+
+    func testIconSettingDefaultsToRing() {
+        XCTAssertEqual(normalizeSettings(nil)["menubar_icon"] as? String, "ring")
+        XCTAssertEqual(normalizeSettings(["menubar_icon": "emoji"])["menubar_icon"] as? String, "emoji")
+        XCTAssertEqual(normalizeSettings(["menubar_icon": "x"])["menubar_icon"] as? String, "ring")
+    }
+}

@@ -597,7 +597,7 @@ def test_every_update_error_key_exists():
 
 
 def _dashboard():
-    path = os.path.join(os.path.dirname(core.__file__), "dashboard.html")
+    path = os.path.join(os.path.dirname(core.__file__), "dev", "dashboard.html")
     return open(path, encoding="utf-8").read()
 
 

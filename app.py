@@ -547,7 +547,10 @@ class AppDelegate(NSObject):
             NSMakeRect(0, 0, 360, 296), config
         )
 
+        # Bundle: Resources/dashboard.html (setup.py flattens it); source run: dev/.
         html_path = os.path.join(SCRIPT_DIR, "dashboard.html")
+        if not os.path.exists(html_path):
+            html_path = os.path.join(SCRIPT_DIR, "dev", "dashboard.html")
         url = NSURL.fileURLWithPath_(html_path)
         self.webView.loadFileURL_allowingReadAccessToURL_(
             url, NSURL.fileURLWithPath_(SCRIPT_DIR)

@@ -2,7 +2,7 @@
 # Herbouwt de app, rolt uit naar /Applications, herstart de LaunchAgent
 # en verifieert dat de nieuwe build echt draait én data ophaalt.
 set -euo pipefail
-cd "$(dirname "$0")"
+cd "$(dirname "$0")/.."
 
 APP=/Applications/ClaudeUsage.app
 BIN="$APP/Contents/MacOS/ClaudeUsage"
@@ -20,7 +20,7 @@ fail() {
     exit 1
 }
 
-./build.sh
+./scripts/build.sh
 
 [ -f "$PLIST" ] || { echo "✗ LaunchAgent ontbreekt — draai eerst ./install.sh" >&2; exit 1; }
 

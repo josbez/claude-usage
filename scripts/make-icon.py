@@ -2,7 +2,7 @@
 """Generate the app icon (icon/ClaudeUsage.icns): the popover's usage donut
 on a macOS-style rounded tile. Rerun after tweaking; needs Pillow + iconutil.
 
-    /usr/bin/python3 make-icon.py
+    /usr/bin/python3 scripts/make-icon.py
 """
 
 import colorsys
@@ -14,7 +14,7 @@ import tempfile
 
 from PIL import Image, ImageDraw, ImageFilter
 
-HERE = os.path.dirname(os.path.abspath(__file__))
+HERE = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 OUT = os.path.join(HERE, "icon", "ClaudeUsage.icns")
 
 SS = 4                      # supersampling factor for smooth edges

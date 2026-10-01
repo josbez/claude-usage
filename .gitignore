@@ -5,6 +5,9 @@ dist/
 __pycache__/
 .DS_Store
 .pytest_cache/
+.claude/
+.venv/
+.idea/
 *.dmg.sig
 
 # Private notes: stay local, never public

@@ -426,7 +426,7 @@ def face_icon(session_pct: int) -> str:
 
 def color_for_pct(pct: float) -> tuple:
     """Green -> orange -> red as usage fills up. Mirrors colorForPct() in
-    dashboard.html so notification images match the popover."""
+    dev/dashboard.html so notification images match the popover."""
     pct = max(0.0, min(100.0, float(pct)))
     if pct <= 50:
         (p0, *c0), (p1, *c1) = (0, 47, 168, 74), (50, 255, 149, 0)
@@ -801,7 +801,7 @@ def update_check_due(state: dict, now: datetime,
 
 
 def sign_release(data: bytes, private_key) -> str:
-    """Base64 Ed25519 signature over the whole file (used by sign-release.py)."""
+    """Base64 Ed25519 signature over the whole file (used by scripts/sign-release.py)."""
     from Crypto.Signature import eddsa
     return base64.b64encode(eddsa.new(private_key, "rfc8032").sign(data)).decode()
 

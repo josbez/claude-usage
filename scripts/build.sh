@@ -1,8 +1,8 @@
 #!/bin/bash
 # Bouwt dist/ClaudeUsage.app en faalt luid als er iets mis is.
-# Gebruikt door deploy.sh en make-dmg.sh.
+# Gebruikt door scripts/deploy.sh en scripts/make-dmg.sh.
 set -euo pipefail
-cd "$(dirname "$0")"
+cd "$(dirname "$0")/.."
 
 # Systeem-Python (3.9): daar staan py2app, pyobjc en pycryptodome. Een Homebrew-
 # 'python3' eerder in PATH heeft die niet en bouwt stilletjes niets.

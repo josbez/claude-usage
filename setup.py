@@ -1,7 +1,7 @@
 from setuptools import setup
 
 APP = ['app.py']
-DATA_FILES = [('', ['core.py', 'fetch_limits.py', 'dashboard.html'])]
+DATA_FILES = [('', ['core.py', 'fetch_limits.py', 'dev/dashboard.html'])]
 
 OPTIONS = {
     'argv_emulation': False,

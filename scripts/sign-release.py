@@ -1,8 +1,8 @@
 #!/usr/bin/env python3
 """Sign ClaudeUsage.dmg for in-app updates.
 
-    /usr/bin/python3 sign-release.py --init   # once: create the signing key
-    /usr/bin/python3 sign-release.py          # sign ClaudeUsage.dmg -> ClaudeUsage.dmg.sig
+    /usr/bin/python3 scripts/sign-release.py --init   # once: create the signing key
+    /usr/bin/python3 scripts/sign-release.py          # sign ClaudeUsage.dmg -> ClaudeUsage.dmg.sig
 
 The private key stays in ~/.config/claude-usage/ and must never be committed.
 Back it up (e.g. in a password manager): without it you cannot ship updates
@@ -13,7 +13,7 @@ UPDATE_PUBLIC_KEY_HEX in core.py.
 import os
 import sys
 
-HERE = os.path.dirname(os.path.abspath(__file__))
+HERE = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 sys.path.insert(0, HERE)
 import core  # noqa: E402
 
@@ -43,7 +43,7 @@ def init():
 
 def sign():
     if not os.path.exists(KEY_FILE):
-        sys.exit(f"✗ Geen signing key in {KEY_FILE}. Eenmalig: sign-release.py --init")
+        sys.exit(f"✗ Geen signing key in {KEY_FILE}. Eenmalig: scripts/sign-release.py --init")
     with open(KEY_FILE) as f:
         key = ECC.import_key(f.read())
     if public_hex(key) != core.UPDATE_PUBLIC_KEY_HEX:

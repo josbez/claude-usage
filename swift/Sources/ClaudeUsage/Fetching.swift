@@ -109,12 +109,29 @@ extension AppDelegate {
         }
     }
 
-    func startFetch(isRetry: Bool = false) {
+    func startFetch() {
         if state.fetching { return }
-        if !isRetry { fetchIsRetry = false }
+        attemptMode = devFetchPath == nil ? fetchMode : .webLight
+        beginFetch()
+    }
+
+    /// One attempt in `attemptMode`; a failed attempt may move on to the next mode.
+    func beginFetch() {
         fetchGeneration += 1
-        if fetchWebView == nil {
-            // Normal case since taak 48: a fresh webview per fetch
+        var nativeKey = ""
+        if attemptMode == .native {
+            guard let key = sessionKey() else { pushData(); return }
+            guard !key.isEmpty else {
+                log("geen sessionKey gevonden — is de Claude desktop-app ingelogd?")
+                state.loggedIn = false
+                pushData()
+                return
+            }
+            state.loggedIn = true
+            if lastSessionHash == nil { lastSessionHash = Self.sha256Hex(key) }
+            nativeKey = key
+        } else if fetchWebView == nil {
+            // A fresh webview per fetch (taak 48)
             setupFetchWebView()
             guard fetchWebView != nil else { pushData(); return }
         } else {
@@ -134,46 +151,45 @@ extension AppDelegate {
         }
         RunLoop.current.add(t, forMode: .common)
         watchdog = t
-        fetchWebView?.load(URLRequest(url: fetchPageURL))
+        if attemptMode == .native {
+            nativeFetch(key: nativeKey, generation: fetchGeneration)
+        } else {
+            fetchWebView?.load(URLRequest(url: fetchPageURL))
+        }
     }
 
-    /// The page the fetch JS runs on; it only needs the claude.ai origin. The full
-    /// app (`/`) peaks at ~400 MB in WebContent, `/robots.txt` at ~70 MB with the
-    /// same API results (measured 1-10-2026). If the light page ever fails
-    /// (e.g. a Cloudflare challenge), fall back to `/` for the rest of the session.
-    /// Dev build: `open "ClaudeUsage Dev.app" --args -fetchPath /` forces a page.
+    /// Webview fallback page; it only needs the claude.ai origin. The full app
+    /// (`/`) peaks at ~400 MB in WebContent, `/robots.txt` at ~70 MB with the
+    /// same API results (measured 1-10-2026).
+    /// Dev build: `open "ClaudeUsage Dev.app" --args -fetchPath /` forces the webview on that page.
     static let lightFetchPath = "/robots.txt"
-    var fetchPath: String {
-        if isDev, let p = UserDefaults.standard.string(forKey: "fetchPath") { return p }
-        return fetchOnFullPage ? "/" : Self.lightFetchPath
-    }
+    var devFetchPath: String? { isDev ? UserDefaults.standard.string(forKey: "fetchPath") : nil }
     var fetchPageURL: URL {
-        URL(string: "https://claude.ai" + fetchPath) ?? URL(string: "https://claude.ai/")!
+        let path = devFetchPath ?? (attemptMode == .webFull ? "/" : Self.lightFetchPath)
+        return URL(string: "https://claude.ai" + path) ?? URL(string: "https://claude.ai/")!
     }
 
-    /// A failed fetch on the light page is retried once right away on the full page.
-    /// Returns true when that retry was started (the caller then stops).
-    func retryOnFullPage(_ reason: String) -> Bool {
-        if fetchIsRetry {
-            // The full page failed too: the light page wasn't the problem.
-            fetchIsRetry = false
-            if fetchOnFullPage, !(isDev && UserDefaults.standard.string(forKey: "fetchPath") != nil) {
-                fetchOnFullPage = false
-                log("fetch: ook volledige pagina mislukt — volgende keer weer \(Self.lightFetchPath)")
+    /// After a failed attempt: try the next mode right away when the failure may
+    /// be the mode's fault (Cloudflare challenge, page problem). Returns true when
+    /// that retry was started (the caller then stops).
+    func retryNextFetchMode(_ reason: String) -> Bool {
+        guard let next = attemptMode.next, devFetchPath == nil else {
+            // Every mode failed: the mode wasn't the problem (offline, logged out).
+            if fetchMode != .native {
+                log("fetch: ook \(attemptMode.label) mislukt — volgende keer weer \(FetchMode.native.label)")
+                fetchMode = .native
             }
             return false
         }
-        guard fetchPath == Self.lightFetchPath else { return false }
-        log("fetch via \(Self.lightFetchPath) mislukt (\(reason)) — opnieuw via claude.ai/")
-        fetchOnFullPage = true
-        fetchIsRetry = true
+        log("fetch via \(attemptMode.label) mislukt (\(reason)) — opnieuw via \(next.label)")
+        attemptMode = next
         cancelWatchdog()
-        // Not from inside a WebKit callback: swap the webview once it has returned.
+        // Not from inside a WebKit or URLSession callback: start once it has returned.
         DispatchQueue.main.async { [weak self] in
             guard let self else { return }
             self.state.fetching = false
             self.teardownFetchWebView()
-            self.startFetch(isRetry: true)
+            self.beginFetch()
         }
         return true
     }
@@ -182,9 +198,10 @@ extension AppDelegate {
         watchdog = nil
         guard state.fetching else { return }
         log("fetch watchdog: geen resultaat binnen \(Int(Self.fetchTimeout))s, reset")
-        if retryOnFullPage("time-out") { return }
+        if retryNextFetchMode("time-out") { return }
         state.lastFetchError = "time-out"
         state.fetching = false
+        fetchGeneration += 1   // a native fetch still running must not land
         pushStatus("ready")
         showCachedTitle()
         teardownFetchWebView()
@@ -207,7 +224,7 @@ extension AppDelegate {
     }
 
     func onFetchFailed() {
-        if retryOnFullPage("navigatiefout") { return }
+        if retryNextFetchMode("navigatiefout") { return }
         cancelWatchdog()
         state.fetching = false
         log("fetch: pagina laden mislukt (navigatiefout)")
@@ -217,11 +234,22 @@ extension AppDelegate {
         teardownFetchWebViewSoon()
     }
 
+    /// Result from fetch.js in the webview.
     func onFetchResult(_ raw: String) {
+        let parsed = raw.data(using: .utf8).flatMap { try? JSONSerialization.jsonObject(with: $0) as? JSONObject }
+        onFetchParsed(parsed, mayRetry: true)
+    }
+
+    /// Result from either fetch path (same shape as fetch.js delivers).
+    /// `mayRetry`: whether a failure may be the mode's fault (see retryNextFetchMode).
+    func onFetchParsed(_ parsed: JSONObject?, mayRetry: Bool) {
         cancelWatchdog()
-        if let data = raw.data(using: .utf8),
-           let parsed = try? JSONSerialization.jsonObject(with: data) as? JSONObject {
+        if let parsed {
             if (parsed["ok"] as? Bool) == true {
+                if attemptMode != fetchMode, devFetchPath == nil {
+                    log("fetch werkt via \(attemptMode.label) — rest van de sessie zo")
+                    fetchMode = attemptMode
+                }
                 let output = limitsOutput(parsed, now: Date())
                 do {
                     try saveJSONObject(output, to: paths.limits)
@@ -236,13 +264,13 @@ extension AppDelegate {
                 notifyLimits(output)
             } else {
                 let error = parsed["error"] as? String ?? "onbekende fout"
-                log("fetch mislukt: \(error)")
-                if retryOnFullPage(error) { return }
+                log("fetch mislukt (\(attemptMode.label)): \(error)")
+                if mayRetry, retryNextFetchMode(error) { return }
                 state.lastFetchError = error
             }
         } else {
             log("fetch resultaat onleesbaar")
-            if retryOnFullPage("resultaat onleesbaar") { return }
+            if mayRetry, retryNextFetchMode("resultaat onleesbaar") { return }
             state.lastFetchError = "resultaat onleesbaar"
         }
         state.fetching = false

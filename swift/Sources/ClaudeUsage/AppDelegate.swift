@@ -30,8 +30,8 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSPopoverDelegate {
     var fetchWebView: WKWebView?
     var fetchNavDelegate: FetchNavDelegate?
     var fetchGeneration = 0   // a late callback from an earlier fetch must not touch this one
-    var fetchOnFullPage = false   // the light page failed this session: use claude.ai/ (taak 48)
-    var fetchIsRetry = false
+    var fetchMode = FetchMode.native   // first mode to try; sticks to what worked this session
+    var attemptMode = FetchMode.native
     var watchdog: Timer?
     var lastCookieMtime: Date?
     var lastSessionHash: String?

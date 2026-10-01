@@ -213,6 +213,8 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSPopoverDelegate {
             checkAccountSwitch()
             maybeCheckUpdates()
             pushData(animated: true)
+            // App Nap may stretch the minute timer: never show stale numbers on open.
+            if !limitsAreFresh(loadJSONObject(paths.limits), now: Date()) { startFetch() }
         }
     }
 

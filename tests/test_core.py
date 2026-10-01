@@ -768,3 +768,65 @@ def test_block_log_state_roundtrip(tmp_path):
     state = {"user@test.nl|field|value": True, "other@test.nl|block|reason": True}
     core.save_block_log_state(state, path)
     assert core.load_block_log_state(path) == state
+
+
+# --- reset notifications (taak 29) ---------------------------------------
+
+_NEXT_FIVE = "2026-09-30T20:50:00+00:00"
+_NOW = core.parse_dt("2026-09-30T15:55:00+00:00")
+
+
+def test_reset_after_warning_notifies():
+    _, state = core.due_notifications(_limits(five=85), {}, now=_NOW)
+    notes, state = core.due_notifications(
+        _limits(five=3, five_reset=_NEXT_FIVE), state, now=_NOW)
+    assert [(n["limit"], n.get("kind")) for n in notes] == [("five_hour", "reset")]
+    assert notes[0]["title"] == "Claude: 5-uurslimiet is gereset"
+    assert notes[0]["pct"] == 3
+    # Same new window on the next fetch: silent
+    notes, _ = core.due_notifications(_limits(five=4, five_reset=_NEXT_FIVE), state, now=_NOW)
+    assert notes == []
+
+
+def test_reset_without_earlier_warning_is_silent():
+    _, state = core.due_notifications(_limits(five=40), {}, now=_NOW)
+    notes, _ = core.due_notifications(
+        _limits(five=2, five_reset=_NEXT_FIVE), state, now=_NOW)
+    assert notes == []
+
+
+def test_weekly_reset_after_warning_notifies():
+    _, state = core.due_notifications(_limits(week=92), {}, now=_NOW)
+    notes, _ = core.due_notifications(
+        _limits(week=1, week_reset="2026-10-09T17:00:00+00:00"), state, now=_NOW)
+    assert [(n["limit"], n.get("kind")) for n in notes] == [("seven_day", "reset")]
+    assert notes[0]["title"] == "Claude: Weeklimiet is gereset"
+
+
+def test_reset_is_per_account():
+    _, state = core.due_notifications(_limits(five=85), {}, now=_NOW)
+    notes, _ = core.due_notifications(
+        _limits(five=2, five_reset=_NEXT_FIVE, account="other@x"), state, now=_NOW)
+    assert notes == []
+
+
+def test_reset_into_threshold_sends_only_the_threshold():
+    _, state = core.due_notifications(_limits(five=85), {}, now=_NOW)
+    notes, _ = core.due_notifications(
+        _limits(five=82, five_reset=_NEXT_FIVE), state, now=_NOW)
+    assert [(n["threshold"], n.get("kind")) for n in notes] == [(80, None)]
+
+
+def test_stale_reset_is_not_announced():
+    _, state = core.due_notifications(_limits(five=85), {}, now=_NOW)
+    later = core.parse_dt("2026-10-03T09:00:00+00:00")
+    notes, _ = core.due_notifications(
+        _limits(five=0, five_reset="2026-10-03T14:00:00+00:00"), state, now=later)
+    assert notes == []
+
+
+def test_reset_notification_in_english():
+    _, state = core.due_notifications(_limits(five=85), {}, now=_NOW)
+    notes, _ = core.due_notifications(
+        _limits(five=3, five_reset=_NEXT_FIVE), state, lang="en", now=_NOW)
+    assert notes[0]["title"] == "Claude: 5-hour limit has reset"

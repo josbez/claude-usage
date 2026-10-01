@@ -153,6 +153,8 @@ STRINGS = {
         "limit_seven_day": "Weeklimiet",
         "notif_limit_title": "Claude: {limit} op {pct}%",
         "notif_limit_body": "Reset {when}.",
+        "notif_reset_title": "Claude: {limit} is gereset",
+        "notif_reset_body": "Je kunt weer verder. Nu op {pct}%.",
         "notif_update_title": "ClaudeUsage {version} is beschikbaar",
         "notif_update_body": "Open de instellingen (tandwiel) in de popover om bij te werken.",
         # update dialogs
@@ -230,6 +232,8 @@ STRINGS = {
         "limit_seven_day": "Weekly limit",
         "notif_limit_title": "Claude: {limit} at {pct}%",
         "notif_limit_body": "Resets {when}.",
+        "notif_reset_title": "Claude: {limit} has reset",
+        "notif_reset_body": "You can carry on. Now at {pct}%.",
         "notif_update_title": "ClaudeUsage {version} is available",
         "notif_update_body": "Open settings (gear) in the popover to update.",
         "alert_install_title": "Install ClaudeUsage {version}?",
@@ -659,14 +663,31 @@ def window_key(resets_at: str) -> str:
     return dt.isoformat()
 
 
+# A reset is only announced if the old window ended recently: after days
+# with the app closed, "limit has reset" would just be noise.
+RESET_NOTIFY_MAX_AGE = timedelta(hours=12)
+
+
+def _reset_is_recent(old_window: str, now) -> bool:
+    try:
+        return now - parse_dt(old_window) <= RESET_NOTIFY_MAX_AGE
+    except Exception:
+        return False
+
+
 def due_notifications(limits: dict, state: dict,
                       five_hour_thresholds=FIVE_HOUR_THRESHOLDS,
-                      weekly_thresholds=WEEKLY_THRESHOLDS, lang: str = "nl"):
+                      weekly_thresholds=WEEKLY_THRESHOLDS, lang: str = "nl",
+                      now=None):
     """Return (notifications, new_state).
 
     One notification per limit per fetch at most: if several thresholds were
     crossed at once only the highest is announced, but all are marked sent.
-    State is keyed per account and per limit, and resets when the window changes."""
+    State is keyed per account and per limit, and resets when the window changes.
+    When the window changes after a warning was sent in the previous one, a
+    "limit has reset" notification follows (unless a new threshold is already
+    crossed, which is more relevant)."""
+    now = now or datetime.now(timezone.utc)
     account = limits.get("account_email", "")
     new_state = dict(state)
     notes = []
@@ -681,6 +702,18 @@ def due_notifications(limits: dict, state: dict,
         entry = state.get(key) or {}
         sent = list(entry.get("sent", [])) if entry.get("window") == wk else []
         crossed = [t for t in thresholds if pct >= t and t not in sent]
+        reset_from = entry.get("window") if (entry.get("sent") and entry.get("window")
+                                             and entry.get("window") < wk) else None
+        if not crossed and reset_from and _reset_is_recent(reset_from, now):
+            notes.append({
+                "id": f"{key}|{wk}|reset",
+                "title": t("notif_reset_title", lang, limit=t(f"limit_{limit}", lang)),
+                "body": t("notif_reset_body", lang, pct=pct),
+                "limit": limit,
+                "threshold": None,
+                "pct": pct,
+                "kind": "reset",
+            })
         if crossed:
             notes.append({
                 "id": f"{key}|{wk}|{max(crossed)}",

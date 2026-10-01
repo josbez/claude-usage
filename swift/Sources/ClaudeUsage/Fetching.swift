@@ -88,10 +88,33 @@ extension AppDelegate {
         lastSessionHash = hash
     }
 
-    func startFetch() {
+    /// Drop the hidden webview after every fetch, so its WebContent process
+    /// (the whole claude.ai app, ~50 MB) doesn't stay resident between fetches.
+    /// startFetch() builds a fresh one (taak 48).
+    func teardownFetchWebView() {
+        guard let wv = fetchWebView else { return }
+        fetchWebView = nil
+        fetchNavDelegate = nil
+        wv.navigationDelegate = nil
+        wv.stopLoading()
+        wv.configuration.userContentController.removeScriptMessageHandler(forName: "fetchResult")
+    }
+
+    /// Called from WebKit callbacks: release the webview after they return.
+    func teardownFetchWebViewSoon() {
+        let generation = fetchGeneration
+        DispatchQueue.main.async { [weak self] in
+            guard let self, self.fetchGeneration == generation, !self.state.fetching else { return }
+            self.teardownFetchWebView()
+        }
+    }
+
+    func startFetch(isRetry: Bool = false) {
         if state.fetching { return }
+        if !isRetry { fetchIsRetry = false }
+        fetchGeneration += 1
         if fetchWebView == nil {
-            // e.g. the cookie wasn't available at startup
+            // Normal case since taak 48: a fresh webview per fetch
             setupFetchWebView()
             guard fetchWebView != nil else { pushData(); return }
         } else {
@@ -111,17 +134,60 @@ extension AppDelegate {
         }
         RunLoop.current.add(t, forMode: .common)
         watchdog = t
-        fetchWebView?.load(URLRequest(url: URL(string: "https://claude.ai/")!))
+        fetchWebView?.load(URLRequest(url: fetchPageURL))
+    }
+
+    /// The page the fetch JS runs on; it only needs the claude.ai origin. The full
+    /// app (`/`) peaks at ~400 MB in WebContent, `/robots.txt` at ~70 MB with the
+    /// same API results (measured 1-10-2026). If the light page ever fails
+    /// (e.g. a Cloudflare challenge), fall back to `/` for the rest of the session.
+    /// Dev build: `open "ClaudeUsage Dev.app" --args -fetchPath /` forces a page.
+    static let lightFetchPath = "/robots.txt"
+    var fetchPath: String {
+        if isDev, let p = UserDefaults.standard.string(forKey: "fetchPath") { return p }
+        return fetchOnFullPage ? "/" : Self.lightFetchPath
+    }
+    var fetchPageURL: URL {
+        URL(string: "https://claude.ai" + fetchPath) ?? URL(string: "https://claude.ai/")!
+    }
+
+    /// A failed fetch on the light page is retried once right away on the full page.
+    /// Returns true when that retry was started (the caller then stops).
+    func retryOnFullPage(_ reason: String) -> Bool {
+        if fetchIsRetry {
+            // The full page failed too: the light page wasn't the problem.
+            fetchIsRetry = false
+            if fetchOnFullPage, !(isDev && UserDefaults.standard.string(forKey: "fetchPath") != nil) {
+                fetchOnFullPage = false
+                log("fetch: ook volledige pagina mislukt — volgende keer weer \(Self.lightFetchPath)")
+            }
+            return false
+        }
+        guard fetchPath == Self.lightFetchPath else { return false }
+        log("fetch via \(Self.lightFetchPath) mislukt (\(reason)) — opnieuw via claude.ai/")
+        fetchOnFullPage = true
+        fetchIsRetry = true
+        cancelWatchdog()
+        // Not from inside a WebKit callback: swap the webview once it has returned.
+        DispatchQueue.main.async { [weak self] in
+            guard let self else { return }
+            self.state.fetching = false
+            self.teardownFetchWebView()
+            self.startFetch(isRetry: true)
+        }
+        return true
     }
 
     func fetchWatchdogFired() {
         watchdog = nil
         guard state.fetching else { return }
         log("fetch watchdog: geen resultaat binnen \(Int(Self.fetchTimeout))s, reset")
+        if retryOnFullPage("time-out") { return }
         state.lastFetchError = "time-out"
         state.fetching = false
         pushStatus("ready")
         showCachedTitle()
+        teardownFetchWebView()
     }
 
     func cancelWatchdog() {
@@ -130,8 +196,10 @@ extension AppDelegate {
     }
 
     func onFetchPageLoaded() {
+        let generation = fetchGeneration
         let t = Timer(timeInterval: 1.5, repeats: false) { [weak self] _ in
-            guard let self, let wv = self.fetchWebView else { return }
+            guard let self, self.fetchGeneration == generation, self.state.fetching,
+                  let wv = self.fetchWebView else { return }
             wv.evaluateJavaScript(buildFetchJS(template: self.fetchJSTemplate,
                 deliver: "window.webkit.messageHandlers.fetchResult.postMessage(s);"))
         }
@@ -139,12 +207,14 @@ extension AppDelegate {
     }
 
     func onFetchFailed() {
+        if retryOnFullPage("navigatiefout") { return }
         cancelWatchdog()
         state.fetching = false
         log("fetch: pagina laden mislukt (navigatiefout)")
         state.lastFetchError = "pagina laden mislukt"
         pushStatus("ready")
         showCachedTitle()
+        teardownFetchWebViewSoon()
     }
 
     func onFetchResult(_ raw: String) {
@@ -167,15 +237,18 @@ extension AppDelegate {
             } else {
                 let error = parsed["error"] as? String ?? "onbekende fout"
                 log("fetch mislukt: \(error)")
+                if retryOnFullPage(error) { return }
                 state.lastFetchError = error
             }
         } else {
             log("fetch resultaat onleesbaar")
+            if retryOnFullPage("resultaat onleesbaar") { return }
             state.lastFetchError = "resultaat onleesbaar"
         }
         state.fetching = false
         showCachedTitle()
         pushData()
+        teardownFetchWebViewSoon()
     }
 
     func pushStatus(_ status: String) {

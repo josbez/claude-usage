@@ -23,12 +23,15 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSPopoverDelegate {
     var webView: WKWebView!
     var pendingTitle: String?
     var timer: Timer?
-    var activity: NSObjectProtocol?
+    var cachedSettings: JSONObject?
 
     // Fetching (Fetching.swift)
     var fetchJSTemplate = ""
     var fetchWebView: WKWebView?
     var fetchNavDelegate: FetchNavDelegate?
+    var fetchGeneration = 0   // a late callback from an earlier fetch must not touch this one
+    var fetchOnFullPage = false   // the light page failed this session: use claude.ai/ (taak 48)
+    var fetchIsRetry = false
     var watchdog: Timer?
     var lastCookieMtime: Date?
     var lastSessionHash: String?
@@ -69,10 +72,6 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSPopoverDelegate {
         state.build = info["CFBundleVersion"] as? String ?? ""
         log("app gestart (versie \(state.version), taal \(lang)\(isDev ? ", dev" : ""))")
 
-        // Keep the periodic timer firing while in the background (no App Nap).
-        activity = ProcessInfo.processInfo.beginActivity(
-            options: .userInitiatedAllowingIdleSystemSleep, reason: "periodieke Claude-usage-refresh")
-
         setupNotifications()
         setupStatusItem()
         setupPopover()
@@ -81,19 +80,33 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSPopoverDelegate {
         maybeCheckUpdates()
         maybeCheckServiceStatus()
         // Every minute, also while the popover is open (common run loop modes).
+        // Tolerance lets macOS batch wake-ups; App Nap stays allowed (taak 48).
         let t = Timer(timeInterval: 60, repeats: true) { [weak self] _ in self?.tick() }
+        t.tolerance = 10
         RunLoop.current.add(t, forMode: .common)
         timer = t
     }
 
     // MARK: - Files
 
-    func log(_ msg: String) {
+    static let logDateFormatter: DateFormatter = {
         let f = DateFormatter()
         f.dateFormat = "yyyy-MM-dd HH:mm:ss"
         f.locale = Locale(identifier: "en_US_POSIX")
-        let line = "\(f.string(from: Date())) \(msg)\n"
+        return f
+    }()
+    static let logMaxBytes = 1_000_000
+
+    func log(_ msg: String) {
+        let line = "\(Self.logDateFormatter.string(from: Date())) \(msg)\n"
         guard let data = line.data(using: .utf8) else { return }
+        // One older generation (.1) is enough to look back a while.
+        if let size = (try? FileManager.default.attributesOfItem(atPath: paths.log.path))?[.size] as? Int,
+           size > Self.logMaxBytes {
+            let old = paths.log.appendingPathExtension("1")
+            try? FileManager.default.removeItem(at: old)
+            try? FileManager.default.moveItem(at: paths.log, to: old)
+        }
         if let h = try? FileHandle(forWritingTo: paths.log) {
             h.seekToEndOfFile(); h.write(data); try? h.close()
         } else {
@@ -101,11 +114,18 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSPopoverDelegate {
         }
     }
 
-    var settings: JSONObject { loadSettings(paths.settings) }
+    /// Read once, then from memory; only updateSetting writes the file.
+    var settings: JSONObject {
+        if let s = cachedSettings { return s }
+        let s = loadSettings(paths.settings)
+        cachedSettings = s
+        return s
+    }
 
     func updateSetting(_ key: String, _ value: Any) {
         var s = settings
         s[key] = value
+        cachedSettings = nil
         do {
             try saveSettings(s, paths.settings)
             log("instelling \(key): \(value)")

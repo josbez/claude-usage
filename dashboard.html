@@ -528,6 +528,44 @@ function colorForPct(pct) {
   return `rgb(${r}, ${g}, ${b})`;
 }
 
+// ---- WCAG text contrast for the stress-coloured percentage ----
+// The session card is tinted with the stress colour (14% over the card), so
+// the same colour as text fails 4.5:1. Darken it (light theme) or lighten it
+// (dark theme) in small steps until it passes; the hue stays recognisable.
+
+function parseRgb(str) {
+  const m = str.match(/\d+/g);
+  return m ? m.slice(0, 3).map(Number) : [0, 0, 0];
+}
+function hexToRgb(hex) {
+  const h = hex.trim().replace('#', '');
+  return [0, 2, 4].map(i => parseInt(h.substr(i, 2), 16));
+}
+function luminance([r, g, b]) {
+  const ch = v => { v /= 255; return v <= 0.04045 ? v / 12.92 : Math.pow((v + 0.055) / 1.055, 2.4); };
+  return 0.2126 * ch(r) + 0.7152 * ch(g) + 0.0722 * ch(b);
+}
+function contrast(a, b) {
+  const [hi, lo] = [luminance(a), luminance(b)].sort((x, y) => y - x);
+  return (hi + 0.05) / (lo + 0.05);
+}
+function mixRgb(a, b, p) {  // p of a over b
+  return a.map((v, i) => Math.round(v * p + b[i] * (1 - p)));
+}
+function readableStressColor(stressCss) {
+  const stress = parseRgb(stressCss);
+  const card = hexToRgb(getComputedStyle(document.documentElement).getPropertyValue('--card-bg'));
+  const bg = mixRgb(stress, card, 0.14);              // same tint as .card-session
+  const dark = luminance(card) < 0.2;
+  const target = dark ? [255, 255, 255] : [0, 0, 0];
+  for (let step = 0; step <= 20; step++) {
+    const c = mixRgb(target, stress, step * 0.05);
+    // 4.6, not 4.5: margin for rounding in the browser's own color-mix tint
+    if (contrast(c, bg) >= 4.6) return `rgb(${c.join(', ')})`;
+  }
+  return dark ? '#FFFFFF' : '#000000';
+}
+
 function render(d) {
   // Session donut
   const pct = Math.max(0, Math.min(100, d.session_pct || 0));
@@ -542,7 +580,7 @@ function render(d) {
   face.textContent = faceForPct(pct);
   face.classList.toggle('stressed', pct >= 100);
   document.getElementById('sessionPctText').textContent = pct + '%';
-  document.getElementById('sessionPctText').style.color = color;
+  document.getElementById('sessionPctText').style.color = readableStressColor(color);
   document.getElementById('sessionReset').textContent = 'Reset ' + (d.session_reset || '—');
 
   // Weekly

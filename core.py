@@ -346,6 +346,47 @@ def limits_are_fresh(limits: dict, max_age_minutes: int = 5) -> bool:
 
 
 # ---------------------------------------------------------------------------
+# Weekly window progress (elapsed time, not usage)
+# ---------------------------------------------------------------------------
+
+WEEK = timedelta(days=7)
+
+
+def week_window(limits: dict):
+    """(start, end, deviates) of the weekly limit window, or None.
+    end = seven_day.resets_at; start = seven_day_breakdown.window_started_at
+    when present, else end - 7 days. `deviates` flags a start that isn't
+    exactly 7 days before end (never observed so far — worth logging)."""
+    try:
+        end = parse_dt((limits.get("seven_day") or {}).get("resets_at") or "")
+    except Exception:
+        return None
+    start = None
+    raw = (limits.get("seven_day_breakdown") or {}).get("window_started_at")
+    if raw:
+        try:
+            start = parse_dt(raw)
+        except Exception:
+            start = None
+    if start is None or start >= end:
+        return end - WEEK, end, False
+    return start, end, abs((end - start) - WEEK) > timedelta(minutes=1)
+
+
+def week_progress(limits: dict, now: datetime):
+    """How far the weekly window has run: {'elapsed_pct', 'day', 'days'} or None."""
+    win = week_window(limits)
+    if win is None:
+        return None
+    start, end, _ = win
+    total = (end - start).total_seconds()
+    done = min(max((now - start).total_seconds(), 0.0), total)
+    days = max(1, round(total / 86400))
+    day = min(days, int(done // 86400) + 1)
+    return {"elapsed_pct": round(done / total * 100, 1), "day": day, "days": days}
+
+
+# ---------------------------------------------------------------------------
 # Limit notifications (which thresholds to announce; posting lives in app.py)
 # ---------------------------------------------------------------------------
 

@@ -483,3 +483,50 @@ def test_limits_output_derives_plan_from_capabilities():
     out = core.limits_output({"org_id": "o", "data": {},
                               "account_plan": {"label": "", "capabilities": ["claude_pro"], "tier": ""}})
     assert out["account_plan"] == "Pro"
+
+
+# ---------------------------------------------------------------------------
+# Weekly window progress
+# ---------------------------------------------------------------------------
+
+def _week(start=None, end="2026-10-02T17:00:00.312302+00:00"):
+    lim = {"seven_day": {"utilization": 18, "resets_at": end}}
+    if start is not None:
+        lim["seven_day_breakdown"] = {"window_started_at": start}
+    return lim
+
+
+def test_week_window_uses_api_start():
+    start, end, dev = core.week_window(_week(start="2026-09-25T17:00:00.312302+00:00"))
+    assert (end - start) == timedelta(days=7) and dev is False
+
+
+def test_week_window_falls_back_to_seven_days():
+    for lim in (_week(), _week(start="garbage"), _week(start="2026-10-03T00:00:00+00:00")):
+        start, end, dev = core.week_window(lim)
+        assert end - start == timedelta(days=7) and dev is False
+
+
+def test_week_window_flags_non_seven_day_window():
+    _, _, dev = core.week_window(_week(start="2026-09-26T17:00:00+00:00"))
+    assert dev is True
+
+
+def test_week_window_without_reset():
+    assert core.week_window({}) is None
+    assert core.week_window({"seven_day": {"resets_at": "nope"}}) is None
+    assert core.week_progress({}, datetime.now(timezone.utc)) is None
+
+
+@pytest.mark.parametrize("now,pct,day", [
+    ("2026-09-25T17:00:00+00:00", 0.0, 1),     # start of window
+    ("2026-09-29T05:00:00+00:00", 50.0, 4),    # halfway
+    ("2026-10-01T05:54:00+00:00", 79.1, 6),    # observed 1-10: 79%, day 6 of 7
+    ("2026-10-02T17:00:00+00:00", 100.0, 7),   # end
+    ("2026-10-05T00:00:00+00:00", 100.0, 7),   # after end: clamped
+    ("2026-09-20T00:00:00+00:00", 0.0, 1),     # before start: clamped
+])
+def test_week_progress(now, pct, day):
+    p = core.week_progress(_week(start="2026-09-25T17:00:00+00:00", end="2026-10-02T17:00:00+00:00"),
+                           datetime.fromisoformat(now))
+    assert (p["elapsed_pct"], p["day"], p["days"]) == (pct, day, 7)

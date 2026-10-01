@@ -51,7 +51,7 @@ from core import (
     build_fetch_js, limits_output, format_reset_time, format_reset_compact,
     status_title, title_from_limits, load_limits, limits_are_fresh, MENUBAR_STYLES,
     due_notifications, load_notify_state, save_notify_state, color_for_pct, face_icon,
-    account_label,
+    account_label, week_window, week_progress,
     load_settings, save_settings,
     UPDATE_STATE_FILE, load_json, save_json, is_newer, update_check_due,
 )
@@ -209,6 +209,7 @@ class AppDelegate(NSObject):
         self._last_cookie_mtime = None
         self._last_session_hash = None
         self._pending_title = None     # menu bar title held back while popover is open
+        self._logged_week_windows = set()
         self._update = None            # latest release dict when newer than us
         self._update_checking = False  # release check running on a thread
         self._update_installing = False
@@ -843,6 +844,7 @@ class AppDelegate(NSObject):
             "weekly_reset": weekly_reset,
             "account": limits.get("account_email", ""),
             "account_label": account_label(limits),
+            "week_progress": self._week_progress(limits),
             "fetching": self._fetching,
             "last_updated": last_updated,
             "status": status,
@@ -858,6 +860,15 @@ class AppDelegate(NSObject):
                 for style in MENUBAR_STYLES
             },
         }
+
+    def _week_progress(self, limits: dict):
+        win = week_window(limits)
+        if win is not None and win[2]:
+            key = win[1].isoformat()
+            if key not in self._logged_week_windows:
+                self._logged_week_windows.add(key)
+                log(f"weekvenster wijkt af van 7 dagen: {win[0].isoformat()} → {key}")
+        return week_progress(limits, datetime.now(timezone.utc))
 
     def _push_status(self, status: str):
         js = f"if(window.setStatus) window.setStatus('{status}')"

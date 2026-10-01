@@ -2,7 +2,11 @@
 
 macOS-menubalk-app die Claude-plangebruik toont (5-uurs- en weeklimiet via claude.ai), met een melding als je een limiet nadert.
 
+De app volgt de taal van macOS: Nederlands als dat je eerste voorkeurstaal is, anders Engels.
+
 Werkt via het account dat in de Claude desktop-app is ingelogd — leest de sessiecookie live uit de macOS Keychain en stuurt niets naar derden.
+
+> **English:** macOS menu bar app showing your Claude plan usage (5-hour and weekly limits) with alerts when you approach a limit. The app follows your macOS language (Dutch or English). Install: download [ClaudeUsage.dmg](https://github.com/josbez/claude-usage/releases/latest/download/ClaudeUsage.dmg), drag the app to Applications, then run `bash /Volumes/ClaudeUsage/install.sh` in Terminal. Later updates install from the app (gear → Update).
 
 ## Installeren (DMG)
 

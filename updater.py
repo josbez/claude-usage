@@ -27,7 +27,16 @@ WORK_PREFIX = "claudeusage-update-"
 
 
 class UpdateError(Exception):
-    """Message is shown to the user as-is (Dutch)."""
+    """Carries a core.STRINGS key (without the 'err_' prefix) plus values, so
+    the app can show it in the user's language. str() is Dutch, for the log."""
+
+    def __init__(self, key: str, **values):
+        self.key = key
+        self.values = values
+        super().__init__(core.t("err_" + key, "nl", **values))
+
+    def message(self, lang: str) -> str:
+        return core.t("err_" + self.key, lang, **self.values)
 
 
 def _run(args, timeout=120, **kw):
@@ -45,7 +54,7 @@ def _curl(url: str, out_path: str = None, timeout: int = 30) -> str:
         args += ["-o", out_path]
     r = _run(args + [url], timeout=timeout + 10)
     if r.returncode != 0:
-        raise UpdateError(f"downloaden mislukt ({r.stderr.strip() or r.returncode})")
+        raise UpdateError("download", detail=r.stderr.strip() or r.returncode)
     return r.stdout
 
 
@@ -73,7 +82,7 @@ def fetch_latest_release(url: str = core.UPDATE_API_URL):
     try:
         obj = json.loads(_curl(url, timeout=20))
     except ValueError:
-        raise UpdateError("onleesbaar antwoord van GitHub")
+        raise UpdateError("bad_response")
     return core.parse_release(obj)
 
 
@@ -87,11 +96,11 @@ def download_and_stage(release: dict, current_version: str) -> str:
     the new app to a private temp dir. Returns the staged .app path.
     Raises UpdateError; never touches the installed app."""
     if not release.get("dmg_url"):
-        raise UpdateError("deze release heeft geen DMG")
+        raise UpdateError("no_dmg")
     if not release.get("sig_url"):
-        raise UpdateError("deze release is niet ondertekend")
+        raise UpdateError("unsigned")
     if not core.is_newer(release["version"], current_version):
-        raise UpdateError(f"{release['version']} is niet nieuwer dan {current_version}")
+        raise UpdateError("not_newer", new=release["version"], current=current_version)
 
     cleanup_stale()
     work = tempfile.mkdtemp(prefix=WORK_PREFIX)
@@ -103,7 +112,7 @@ def download_and_stage(release: dict, current_version: str) -> str:
         with open(dmg, "rb") as f:
             data = f.read()
         if not core.verify_release_signature(data, sig):
-            raise UpdateError("handtekening klopt niet — update geweigerd")
+            raise UpdateError("sig_invalid")
 
         mnt = os.path.join(work, "mnt")
         os.mkdir(mnt)
@@ -112,26 +121,26 @@ def download_and_stage(release: dict, current_version: str) -> str:
             r = _run([HDIUTIL, "attach", "-nobrowse", "-readonly", "-noautoopen",
                       "-mountpoint", mnt, dmg])
             if r.returncode != 0:
-                raise UpdateError("DMG openen mislukt")
+                raise UpdateError("dmg_open")
             src = os.path.join(mnt, APP_NAME)
             if not os.path.isdir(src):
-                raise UpdateError("geen ClaudeUsage.app in de DMG")
+                raise UpdateError("no_app")
             if _run([DITTO, src, staged]).returncode != 0:
-                raise UpdateError("app kopiëren mislukt")
+                raise UpdateError("copy")
         finally:
             # Also when attach itself raised half-way: never leave the DMG mounted.
             _detach(mnt)
 
         info = _bundle_info(staged)
         if info.get("CFBundleIdentifier") != core.BUNDLE_ID:
-            raise UpdateError("DMG bevat een andere app")
+            raise UpdateError("other_app")
         got = info.get("CFBundleShortVersionString", "")
         # The signature covers the DMG, this pins it to the advertised version:
         # an old signed DMG can't be replayed as a "new" release (downgrade).
         if core.parse_version(got) != core.parse_version(release["version"]):
-            raise UpdateError(f"versie in DMG ({got}) klopt niet met release ({release['version']})")
+            raise UpdateError("version_mismatch", got=got, expected=release["version"])
         if _run([CODESIGN, "--verify", "--deep", staged]).returncode != 0:
-            raise UpdateError("code-signature van de nieuwe app ongeldig")
+            raise UpdateError("codesign")
         os.unlink(dmg)
         return staged
     except UpdateError:
@@ -139,7 +148,7 @@ def download_and_stage(release: dict, current_version: str) -> str:
         raise
     except Exception as e:
         shutil.rmtree(work, ignore_errors=True)
-        raise UpdateError(f"onverwachte fout: {e}")
+        raise UpdateError("unexpected", detail=e)
 
 
 # Waits for the running app to exit, swaps the bundle (with rollback), restarts.

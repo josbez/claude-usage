@@ -247,7 +247,7 @@
     font-weight: 700;
     color: var(--text);
   }
-  .weekly-pct-label span {
+  #weeklyPctLabel {
     color: var(--accent-text);
   }
   .progress-bar-track {
@@ -346,20 +346,20 @@
   <!-- Header -->
   <div class="header">
     <span class="header-title" id="headerTitle">Claude Stats</span>
-    <button class="icon-btn" id="refreshBtn" title="Vernieuwen" onclick="onRefresh()">
+    <button class="icon-btn" id="refreshBtn" data-i18n-title="btn_refresh" title="Vernieuwen" onclick="onRefresh()">
       <svg width="15" height="15" viewBox="0 0 15 15" fill="none">
         <path d="M13.5 7.5a6 6 0 1 1-1.5-3.95" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/>
         <path d="M13.5 2.5v3h-3" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>
       </svg>
     </button>
-    <button class="icon-btn" id="settingsBtn" title="Instellingen" onclick="toggleSettings()">
+    <button class="icon-btn" id="settingsBtn" data-i18n-title="btn_settings" title="Instellingen" onclick="toggleSettings()">
       <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
         <circle cx="12" cy="12" r="3"/>
         <path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 1 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 1 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 1 1-2.83-2.83l.06-.06A1.65 1.65 0 0 0 4.68 15a1.65 1.65 0 0 0-1.51-1H3a2 2 0 1 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 1 1 2.83-2.83l.06.06A1.65 1.65 0 0 0 9 4.68a1.65 1.65 0 0 0 1-1.51V3a2 2 0 1 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 1 1 2.83 2.83l-.06.06A1.65 1.65 0 0 0 19.4 9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 1 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1Z"/>
       </svg>
       <span class="badge" id="settingsBadge"></span>
     </button>
-    <button class="icon-btn" title="Afsluiten" onclick="onQuit()">
+    <button class="icon-btn" data-i18n-title="btn_quit" title="Afsluiten" onclick="onQuit()">
       <svg width="15" height="15" viewBox="0 0 15 15" fill="none">
         <path d="M3 3l9 9M12 3l-9 9" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"/>
       </svg>
@@ -383,9 +383,9 @@
         </div>
       </div>
       <div class="session-info">
-        <div class="label-sm">Current Session</div>
+        <div class="label-sm" data-i18n="session_label">Huidige sessie</div>
         <div style="font-size:13px; font-weight:600;" id="sessionPctText">—%</div>
-        <div class="session-reset" id="sessionReset">Resets in —</div>
+        <div class="session-reset" id="sessionReset">—</div>
       </div>
     </div>
   </div>
@@ -393,8 +393,8 @@
   <!-- Weekly card -->
   <div class="card">
     <div class="weekly-header">
-      <div class="label-sm">Weekly Limit</div>
-      <div class="weekly-pct-label"><span id="weeklyPctLabel">—</span>% gebruikt</div>
+      <div class="label-sm" data-i18n="weekly_label">Weeklimiet</div>
+      <div class="weekly-pct-label"><span id="weeklyPctLabel">—</span><span data-i18n="used_suffix">% gebruikt</span></div>
     </div>
     <div class="progress-bar-track" id="weeklyTrack">
       <div class="progress-bar-time" id="weeklyTime" style="width:0%"></div>
@@ -402,8 +402,8 @@
       <div class="progress-bar-tick" id="weeklyTick" hidden></div>
     </div>
     <div class="weekly-footer">
-      <div class="weekly-reset" id="weeklyReset">Reset —</div>
-      <div class="weekly-reset" id="weeklyElapsed" hidden><span class="time-num" id="weeklyElapsedPct"></span>% van de week voorbij</div>
+      <div class="weekly-reset" id="weeklyReset">—</div>
+      <div class="weekly-reset" id="weeklyElapsed" hidden><span class="time-num" id="weeklyElapsedPct"></span><span data-i18n="elapsed_suffix">% van de week voorbij</span></div>
     </div>
   </div>
 
@@ -423,33 +423,33 @@
     <div class="card settings-card">
       <div class="setting-row">
         <div class="setting-text">
-          <div class="setting-title">Meldingen</div>
-          <div class="setting-sub">Bij 80% en 95% sessie, 90% week</div>
+          <div class="setting-title" data-i18n="set_notifications">Meldingen</div>
+          <div class="setting-sub" data-i18n="set_notifications_sub">Bij 80% en 95% sessie, 90% week</div>
         </div>
         <button class="switch" id="notifySwitch" role="switch" aria-checked="false" onclick="onToggleNotifications()"></button>
       </div>
       <div class="setting-row">
         <div class="setting-text">
-          <div class="setting-title">Menubalk</div>
+          <div class="setting-title" data-i18n="set_menubar">Menubalk</div>
           <div class="setting-sub" id="menubarPreview"></div>
         </div>
         <div class="segmented" role="radiogroup" id="menubarStyle">
-          <button role="radio" data-style="full" onclick="onMenubarStyle('full')">Alles</button>
-          <button role="radio" data-style="session" onclick="onMenubarStyle('session')">Sessie</button>
-          <button role="radio" data-style="emoji" onclick="onMenubarStyle('emoji')">Emoji</button>
+          <button role="radio" data-style="full" onclick="onMenubarStyle('full')" data-i18n="style_full">Alles</button>
+          <button role="radio" data-style="session" onclick="onMenubarStyle('session')" data-i18n="style_session">Sessie</button>
+          <button role="radio" data-style="emoji" onclick="onMenubarStyle('emoji')" data-i18n="style_emoji">Emoji</button>
         </div>
       </div>
       <div class="setting-row">
         <div class="setting-text">
-          <div class="setting-title">Versie <span class="setting-value" id="versionText"></span></div>
-          <div class="setting-sub" id="updateText">Up-to-date</div>
+          <div class="setting-title"><span data-i18n="set_version">Versie</span> <span class="setting-value" id="versionText"></span></div>
+          <div class="setting-sub" id="updateText" data-i18n="up_to_date">Up-to-date</div>
         </div>
         <button class="update-btn" id="updateBtn" hidden onclick="onStartUpdate()"></button>
       </div>
       <div class="setting-row">
         <div class="setting-text">
-          <div class="setting-title">Verbinding</div>
-          <div class="setting-sub" id="connText">Verbinden…</div>
+          <div class="setting-title" data-i18n="set_connection">Verbinding</div>
+          <div class="setting-sub" id="connText" data-i18n="connecting">Verbinden…</div>
         </div>
         <span class="status-dot" id="connDot"></span>
       </div>
@@ -464,6 +464,22 @@
 const CIRC = 2 * Math.PI * 36; // 226.2
 
 let _currentData = null;
+
+// ---- Translations: the table comes from core.STRINGS via updateData ----
+let I18N = {};
+function T(key, vars) {
+  const text = I18N[key] !== undefined ? I18N[key] : key;
+  return vars ? text.replace(/\{(\w+)\}/g, (m, k) => (k in vars ? vars[k] : m)) : text;
+}
+function applyI18n(d) {
+  if (!d.i18n) return;
+  I18N = d.i18n;
+  document.documentElement.lang = d.lang || 'en';
+  document.querySelectorAll('[data-i18n]').forEach(el => { el.textContent = T(el.dataset.i18n); });
+  document.querySelectorAll('[data-i18n-title]').forEach(el => { el.title = T(el.dataset.i18nTitle); });
+  const settingsOpen = !document.getElementById('settingsView').hidden;
+  document.getElementById('headerTitle').textContent = T(settingsOpen ? 'settings_title' : 'app_title');
+}
 
 // ---- Public API ----
 
@@ -567,6 +583,8 @@ function readableStressColor(stressCss) {
 }
 
 function render(d) {
+  applyI18n(d);  // first: static labels; dynamic text below overrides where needed
+
   // Session donut
   const pct = Math.max(0, Math.min(100, d.session_pct || 0));
   const filled = (pct / 100) * CIRC;
@@ -581,7 +599,7 @@ function render(d) {
   face.classList.toggle('stressed', pct >= 100);
   document.getElementById('sessionPctText').textContent = pct + '%';
   document.getElementById('sessionPctText').style.color = readableStressColor(color);
-  document.getElementById('sessionReset').textContent = 'Reset ' + (d.session_reset || '—');
+  document.getElementById('sessionReset').textContent = T('reset_prefix') + ' ' + (d.session_reset || '—');
 
   // Weekly
   const wpct = Math.max(0, Math.min(100, d.weekly_pct || 0));
@@ -597,31 +615,31 @@ function render(d) {
     time.style.width = tpct + '%';
     tick.style.left = tpct + '%';
     tick.hidden = !(wpct >= tpct && tpct > 0 && tpct < 100);
-    track.title = `dag ${wp.day} van ${wp.days} · ${Math.round(tpct)}% van de week voorbij · ${wpct}% gebruikt`;
+    track.title = T('week_tooltip', { day: wp.day, days: wp.days, elapsed: Math.round(tpct), used: wpct });
     document.getElementById('weeklyElapsedPct').textContent = Math.round(tpct);
     document.getElementById('weeklyElapsed').hidden = false;
-    document.getElementById('weeklyElapsed').title = `dag ${wp.day} van ${wp.days}`;
+    document.getElementById('weeklyElapsed').title = T('day_of', { day: wp.day, days: wp.days });
   } else {
     time.style.width = '0%';
     tick.hidden = true;
     track.title = '';
     document.getElementById('weeklyElapsed').hidden = true;
   }
-  document.getElementById('weeklyReset').textContent = 'Reset ' + (d.weekly_reset || '—');
+  document.getElementById('weeklyReset').textContent = T('reset_prefix') + ' ' + (d.weekly_reset || '—');
 
   // Status: 'ok' | 'stale' | 'not_logged_in'. Only problems surface on the
   // main view (dot before the account); details live in settings.
   const problem = d.status === 'stale' ? 'stale' : d.status === 'not_logged_in' ? 'disconnected' : '';
-  const statusText = d.status === 'stale' ? (d.status_reason || 'Kon niet vernieuwen')
-    : d.status === 'not_logged_in' ? (d.status_reason || 'Niet ingelogd')
-    : 'Verbonden met Anthropic API';
+  const statusText = d.status === 'stale' ? (d.status_reason || T('status_stale'))
+    : d.status === 'not_logged_in' ? (d.status_reason || T('status_not_logged_in'))
+    : T('status_ok');
   const dot = document.getElementById('statusDot');
   dot.className = 'status-dot' + (problem ? ' ' + problem : '');
   const acc = d.account_label || { name: d.account || '', plan: '', email: d.account || '' };
   document.getElementById('accountName').textContent = acc.name;
   document.getElementById('accountPlan').textContent = acc.plan ? '· ' + acc.plan : '';
   document.getElementById('accountBox').title = problem ? statusText + ' — ' + acc.email : acc.email;
-  document.getElementById('lastUpdated').textContent = d.last_updated ? 'Bijgewerkt: ' + d.last_updated : '';
+  document.getElementById('lastUpdated').textContent = d.last_updated ? T('updated', { when: d.last_updated }) : '';
 
   // Settings view
   const connDot = document.getElementById('connDot');
@@ -672,7 +690,7 @@ function toggleSettings(show, instant) {
   const swap = () => {
     from.hidden = true;
     to.hidden = false;
-    title.textContent = open ? 'Instellingen' : 'Claude Stats';
+    title.textContent = T(open ? 'settings_title' : 'app_title');
   };
 
   const reduced = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
@@ -707,18 +725,18 @@ function renderUpdate(u) {
   txt.classList.remove('error');
   if (!u) {
     btn.hidden = true;
-    txt.textContent = 'Up-to-date';
+    txt.textContent = T('up_to_date');
     return;
   }
   btn.hidden = false;
   btn.disabled = u.state === 'working';
-  btn.textContent = u.state === 'working' ? 'Bijwerken…'
-    : u.state === 'error' ? 'Opnieuw' : 'Bijwerken';
+  btn.textContent = u.state === 'working' ? T('update_working')
+    : u.state === 'error' ? T('update_retry') : T('update_btn');
   if (u.state === 'error') {
     txt.classList.add('error');
-    txt.textContent = 'Mislukt: ' + u.message;
+    txt.textContent = T('update_failed', { message: u.message });
   } else {
-    txt.textContent = 'v' + u.version + ' is beschikbaar';
+    txt.textContent = T('update_available', { version: u.version });
   }
 }
 
@@ -763,7 +781,7 @@ function onQuit() {
 // ---- Init placeholder ----
 (function init() {
   // Placeholder until Python calls updateData
-  document.getElementById('accountName').textContent = 'Laden…';
+  document.getElementById('accountName').textContent = '…';
 })();
 </script>
 </body>

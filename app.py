@@ -15,7 +15,7 @@ from datetime import datetime, timezone
 
 from Foundation import (
     NSObject, NSTimer, NSRunLoop, NSRunLoopCommonModes, NSURL, NSMakeRect, NSMakeSize,
-    NSURLRequest, NSHTTPCookie, NSProcessInfo, NSBundle,
+    NSURLRequest, NSHTTPCookie, NSProcessInfo, NSBundle, NSLocale,
     NSHTTPCookieDomain, NSHTTPCookieName, NSHTTPCookiePath,
     NSHTTPCookieValue, NSHTTPCookieSecure,
 )
@@ -51,7 +51,7 @@ from core import (
     build_fetch_js, limits_output, format_reset_time, format_reset_compact,
     status_title, title_from_limits, load_limits, limits_are_fresh, MENUBAR_STYLES,
     due_notifications, load_notify_state, save_notify_state, color_for_pct, face_icon,
-    account_label, week_window, week_progress,
+    account_label, week_window, week_progress, STRINGS, t, language_from,
     load_settings, save_settings,
     UPDATE_STATE_FILE, load_json, save_json, is_newer, update_check_due,
 )
@@ -168,6 +168,10 @@ def render_status_image(pct: int, path: str, size: int = 256):
     png.writeToFile_atomically_(path, True)
 
 
+def current_language() -> str:
+    return language_from(NSLocale.preferredLanguages())
+
+
 def app_version():
     """(short version, build) from the bundle's Info.plist; ('dev', '') outside it."""
     if not getattr(sys, "frozen", False):
@@ -215,7 +219,8 @@ class AppDelegate(NSObject):
         self._update_installing = False
         self._update_error = None
         self._version, self._build = app_version()
-        log(f"app gestart (versie {self._version})")
+        self._lang = current_language()
+        log(f"app gestart (versie {self._version}, taal {self._lang})")
         # Keep the process out of App Nap so the periodic timer below actually
         # keeps firing while backgrounded — without this, macOS throttles it
         # to a near-standstill after a few minutes since there's no visible window.
@@ -302,7 +307,7 @@ class AppDelegate(NSObject):
         if self._notify_center is None:
             return
         try:
-            notes, state = due_notifications(limits, load_notify_state())
+            notes, state = due_notifications(limits, load_notify_state(), lang=self._lang)
             if not load_settings()["notifications"]:
                 # Still record crossed thresholds, so switching back on
                 # doesn't replay warnings for this window.
@@ -369,8 +374,8 @@ class AppDelegate(NSObject):
                     log(f"update beschikbaar: {release['version']}")
                     self._post_notification(
                         f"update-{release['version']}",
-                        f"ClaudeUsage {release['version']} is beschikbaar",
-                        "Klik op het pijltje in de popover om bij te werken.",
+                        t("notif_update_title", self._lang, version=release["version"]),
+                        t("notif_update_body", self._lang),
                     )
             else:
                 self._update = None
@@ -398,15 +403,13 @@ class AppDelegate(NSObject):
             return
         NSApp.activateIgnoringOtherApps_(True)
         alert = NSAlert.new()
-        alert.setMessageText_(f"ClaudeUsage {release['version']} installeren?")
-        alert.setInformativeText_(
-            f"Je hebt nu versie {self._version}. De update wordt gedownload en "
-            "gecontroleerd; daarna sluit de app even af en start opnieuw."
-        )
-        alert.addButtonWithTitle_("Bijwerken")
-        alert.addButtonWithTitle_("Later")
+        lang = self._lang
+        alert.setMessageText_(t("alert_install_title", lang, version=release["version"]))
+        alert.setInformativeText_(t("alert_install_body", lang, current=self._version))
+        alert.addButtonWithTitle_(t("btn_update", lang))
+        alert.addButtonWithTitle_(t("btn_later", lang))
         if release.get("html_url"):
-            alert.addButtonWithTitle_("Wat is er nieuw?")
+            alert.addButtonWithTitle_(t("btn_whats_new", lang))
         choice = alert.runModal()
         if choice == 1002:   # NSAlertThirdButtonReturn
             NSWorkspace.sharedWorkspace().openURL_(NSURL.URLWithString_(release["html_url"]))
@@ -424,21 +427,26 @@ class AppDelegate(NSObject):
             try:
                 AppHelper.callAfter(self._on_update_staged,
                                     updater.download_and_stage(release, current), None)
+            except updater.UpdateError as e:
+                AppHelper.callAfter(self._on_update_staged, None, e)
             except Exception as e:
-                AppHelper.callAfter(self._on_update_staged, None, str(e))
+                AppHelper.callAfter(self._on_update_staged, None,
+                                    updater.UpdateError("unexpected", detail=e))
 
         threading.Thread(target=work, daemon=True).start()
 
     def _on_update_staged(self, staged, error):
+        """error is an updater.UpdateError (translated for the user, Dutch in the log)."""
         if error:
+            message = error.message(self._lang)
             self._update_installing = False
-            self._update_error = error
+            self._update_error = message
             log(f"update mislukt: {error}")
             self._push_data()
             NSApp.activateIgnoringOtherApps_(True)
             alert = NSAlert.new()
-            alert.setMessageText_("Bijwerken is niet gelukt")
-            alert.setInformativeText_(f"{error}. De huidige versie blijft gewoon werken.")
+            alert.setMessageText_(t("alert_failed_title", self._lang))
+            alert.setInformativeText_(t("alert_failed_body", self._lang, error=message))
             alert.runModal()
             return
         target = str(NSBundle.mainBundle().bundlePath())
@@ -446,7 +454,7 @@ class AppDelegate(NSObject):
         try:
             updater.launch_swap(staged, target, os.getpid())
         except Exception as e:
-            self._on_update_staged(None, f"installeren mislukt: {e}")
+            self._on_update_staged(None, updater.UpdateError("install", detail=e))
             return
         NSApp.terminate_(None)
 
@@ -549,6 +557,7 @@ class AppDelegate(NSObject):
             self.popover.showRelativeToRect_ofView_preferredEdge_(
                 btn.bounds(), btn, NSMinYEdge
             )
+            self._lang = current_language()
             self._check_account_switch()
             self._maybe_check_updates()
             self._push_data(animated=True)
@@ -717,7 +726,8 @@ class AppDelegate(NSObject):
 
     def _show_cached_pct(self):
         try:
-            self._set_status_title(title_from_limits(load_limits(), self._menubar_style()))
+            self._set_status_title(
+                title_from_limits(load_limits(), self._menubar_style(), self._lang))
         except Exception:
             self._set_status_title("🚀")
 
@@ -797,9 +807,10 @@ class AppDelegate(NSObject):
         session_pct = five_h.get("utilization", 0) or 0
         weekly_pct = seven_d.get("utilization", 0) or 0
 
-        session_reset = format_reset_time(five_h.get("resets_at", ""))
-        session_reset_compact = format_reset_compact(five_h.get("resets_at", ""))
-        weekly_reset = format_reset_time(seven_d.get("resets_at", ""))
+        lang = self._lang
+        session_reset = format_reset_time(five_h.get("resets_at", ""), lang)
+        session_reset_compact = format_reset_compact(five_h.get("resets_at", ""), lang)
+        weekly_reset = format_reset_time(seven_d.get("resets_at", ""), lang)
 
         fetched = limits.get("fetched_at", "")
         last_updated = ""
@@ -813,11 +824,11 @@ class AppDelegate(NSObject):
                 fetched_hhmm = ft.strftime("%H:%M")
                 diff_m = int(age_minutes)
                 if diff_m < 1:
-                    last_updated = "zojuist"
+                    last_updated = t("ago_now", lang)
                 elif diff_m == 1:
-                    last_updated = "1 min geleden"
+                    last_updated = t("ago_one_min", lang)
                 else:
-                    last_updated = f"{diff_m} min geleden"
+                    last_updated = t("ago_min", lang, n=diff_m)
             except Exception:
                 last_updated = ""
 
@@ -825,16 +836,18 @@ class AppDelegate(NSObject):
         status_reason = ""
         if not self._logged_in:
             status = "not_logged_in"
-            status_reason = "log in in de Claude desktop-app"
+            status_reason = t("reason_not_logged_in", lang)
         elif self._last_fetch_error:
             status = "stale"
-            status_reason = f"kon niet vernieuwen, data van {fetched_hhmm}" if fetched_hhmm else "kon niet vernieuwen"
+            status_reason = (t("reason_failed_at", lang, time=fetched_hhmm) if fetched_hhmm
+                             else t("reason_failed", lang))
         elif age_minutes is None:
             status = "stale"
-            status_reason = "nog niet opgehaald"
+            status_reason = t("reason_not_fetched", lang)
         elif age_minutes > 15:
             status = "stale"
-            status_reason = f"data van {fetched_hhmm}" if fetched_hhmm else "data verouderd"
+            status_reason = (t("reason_data_at", lang, time=fetched_hhmm) if fetched_hhmm
+                             else t("reason_stale", lang))
 
         return {
             "session_pct": int(session_pct),
@@ -855,6 +868,8 @@ class AppDelegate(NSObject):
             "build": self._build,
             "update": self._update_view(),
             "menubar_style": load_settings()["menubar_style"],
+            "lang": lang,
+            "i18n": STRINGS[lang],
             "menubar_previews": {
                 style: status_title(int(session_pct), int(weekly_pct), session_reset_compact, style)
                 for style in MENUBAR_STYLES
@@ -884,7 +899,8 @@ class AppDelegate(NSObject):
             self._push_data()
         else:
             try:
-                self._set_status_title(title_from_limits(limits, self._menubar_style()))
+                self._set_status_title(
+                    title_from_limits(limits, self._menubar_style(), self._lang))
             except Exception:
                 pass
 

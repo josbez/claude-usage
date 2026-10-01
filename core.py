@@ -21,7 +21,6 @@ from Crypto.Cipher import AES
 LIMITS_FILE = os.path.expanduser("~/.claude/usage-limits.json")
 LOG_FILE = os.path.expanduser("~/Library/Logs/ClaudeUsage.log")
 CLAUDE_APP_SUPPORT = os.path.expanduser("~/Library/Application Support/Claude")
-DAYS_NL = ["ma", "di", "wo", "do", "vr", "za", "zo"]
 
 # JS that fetches usage from all orgs and hands the best result to DELIVER(json_string).
 # The caller substitutes DELIVER: app.py posts to a message handler, fetch_limits.py
@@ -76,6 +75,195 @@ fetch('/api/bootstrap', {credentials:'include', headers:{Accept:'application/jso
 def build_fetch_js(deliver_stmt: str) -> str:
     """deliver_stmt is a JS statement that consumes the result string `s`."""
     return _FETCH_JS_TEMPLATE.replace("DELIVER", deliver_stmt)
+
+
+# ---------------------------------------------------------------------------
+# Languages: the app follows the macOS preferred language (nl, else en).
+# All user-facing text lives here; logs stay Dutch (they're for the maintainer).
+# ---------------------------------------------------------------------------
+
+LANGS = ("nl", "en")
+DEFAULT_LANG = "en"
+
+DAYS = {
+    "nl": ["ma", "di", "wo", "do", "vr", "za", "zo"],
+    "en": ["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"],
+}
+
+STRINGS = {
+    "nl": {
+        # popover
+        "app_title": "Claude Stats",
+        "settings_title": "Instellingen",
+        "btn_refresh": "Vernieuwen",
+        "btn_settings": "Instellingen",
+        "btn_quit": "Afsluiten",
+        "session_label": "Huidige sessie",
+        "weekly_label": "Weeklimiet",
+        "used_suffix": "% gebruikt",
+        "elapsed_suffix": "% van de week voorbij",
+        "reset_prefix": "Reset",
+        "day_of": "dag {day} van {days}",
+        "week_tooltip": "dag {day} van {days} · {elapsed}% van de week voorbij · {used}% gebruikt",
+        "updated": "Bijgewerkt: {when}",
+        "status_ok": "Verbonden met Anthropic API",
+        "status_stale": "Kon niet vernieuwen",
+        "status_not_logged_in": "Niet ingelogd",
+        "loading": "Laden…",
+        "connecting": "Verbinden…",
+        "set_notifications": "Meldingen",
+        "set_notifications_sub": "Bij 80% en 95% sessie, 90% week",
+        "set_menubar": "Menubalk",
+        "style_full": "Alles",
+        "style_session": "Sessie",
+        "style_emoji": "Emoji",
+        "set_version": "Versie",
+        "up_to_date": "Up-to-date",
+        "update_available": "v{version} is beschikbaar",
+        "update_btn": "Bijwerken",
+        "update_working": "Bijwerken…",
+        "update_retry": "Opnieuw",
+        "update_failed": "Mislukt: {message}",
+        "set_connection": "Verbinding",
+        # relative time / reset time
+        "ago_now": "zojuist",
+        "ago_one_min": "1 min geleden",
+        "ago_min": "{n} min geleden",
+        "in_hm": "over {h}u {m}m",
+        "in_m": "over {m}m",
+        "compact_hm": "{h}u{m:02d}m",
+        "compact_m": "{m}m",
+        # status reasons
+        "reason_not_logged_in": "log in in de Claude desktop-app",
+        "reason_failed_at": "kon niet vernieuwen, data van {time}",
+        "reason_failed": "kon niet vernieuwen",
+        "reason_not_fetched": "nog niet opgehaald",
+        "reason_data_at": "data van {time}",
+        "reason_stale": "data verouderd",
+        # notifications
+        "limit_five_hour": "5-uurslimiet",
+        "limit_seven_day": "Weeklimiet",
+        "notif_limit_title": "Claude: {limit} op {pct}%",
+        "notif_limit_body": "Reset {when}.",
+        "notif_update_title": "ClaudeUsage {version} is beschikbaar",
+        "notif_update_body": "Open de instellingen (tandwiel) in de popover om bij te werken.",
+        # update dialogs
+        "alert_install_title": "ClaudeUsage {version} installeren?",
+        "alert_install_body": "Je hebt nu versie {current}. De update wordt gedownload en "
+                              "gecontroleerd; daarna sluit de app even af en start opnieuw.",
+        "btn_update": "Bijwerken",
+        "btn_later": "Later",
+        "btn_whats_new": "Wat is er nieuw?",
+        "alert_failed_title": "Bijwerken is niet gelukt",
+        "alert_failed_body": "{error}. De huidige versie blijft gewoon werken.",
+        # update errors
+        "err_no_dmg": "deze release heeft geen DMG",
+        "err_unsigned": "deze release is niet ondertekend",
+        "err_not_newer": "{new} is niet nieuwer dan {current}",
+        "err_download": "downloaden mislukt ({detail})",
+        "err_bad_response": "onleesbaar antwoord van GitHub",
+        "err_sig_invalid": "handtekening klopt niet — update geweigerd",
+        "err_dmg_open": "DMG openen mislukt",
+        "err_no_app": "geen ClaudeUsage.app in de DMG",
+        "err_copy": "app kopiëren mislukt",
+        "err_other_app": "DMG bevat een andere app",
+        "err_version_mismatch": "versie in DMG ({got}) klopt niet met release ({expected})",
+        "err_codesign": "code-signature van de nieuwe app ongeldig",
+        "err_unexpected": "onverwachte fout: {detail}",
+        "err_install": "installeren mislukt: {detail}",
+    },
+    "en": {
+        "app_title": "Claude Stats",
+        "settings_title": "Settings",
+        "btn_refresh": "Refresh",
+        "btn_settings": "Settings",
+        "btn_quit": "Quit",
+        "session_label": "Current session",
+        "weekly_label": "Weekly limit",
+        "used_suffix": "% used",
+        "elapsed_suffix": "% of the week passed",
+        "reset_prefix": "Resets",
+        "day_of": "day {day} of {days}",
+        "week_tooltip": "day {day} of {days} · {elapsed}% of the week passed · {used}% used",
+        "updated": "Updated: {when}",
+        "status_ok": "Connected to Anthropic API",
+        "status_stale": "Couldn't refresh",
+        "status_not_logged_in": "Not logged in",
+        "loading": "Loading…",
+        "connecting": "Connecting…",
+        "set_notifications": "Notifications",
+        "set_notifications_sub": "At 80% and 95% session, 90% week",
+        "set_menubar": "Menu bar",
+        "style_full": "All",
+        "style_session": "Session",
+        "style_emoji": "Emoji",
+        "set_version": "Version",
+        "up_to_date": "Up to date",
+        "update_available": "v{version} is available",
+        "update_btn": "Update",
+        "update_working": "Updating…",
+        "update_retry": "Retry",
+        "update_failed": "Failed: {message}",
+        "set_connection": "Connection",
+        "ago_now": "just now",
+        "ago_one_min": "1 min ago",
+        "ago_min": "{n} min ago",
+        "in_hm": "in {h}h {m}m",
+        "in_m": "in {m}m",
+        "compact_hm": "{h}h{m:02d}m",
+        "compact_m": "{m}m",
+        "reason_not_logged_in": "log in to the Claude desktop app",
+        "reason_failed_at": "couldn't refresh, data from {time}",
+        "reason_failed": "couldn't refresh",
+        "reason_not_fetched": "not fetched yet",
+        "reason_data_at": "data from {time}",
+        "reason_stale": "data out of date",
+        "limit_five_hour": "5-hour limit",
+        "limit_seven_day": "Weekly limit",
+        "notif_limit_title": "Claude: {limit} at {pct}%",
+        "notif_limit_body": "Resets {when}.",
+        "notif_update_title": "ClaudeUsage {version} is available",
+        "notif_update_body": "Open settings (gear) in the popover to update.",
+        "alert_install_title": "Install ClaudeUsage {version}?",
+        "alert_install_body": "You're on version {current}. The update will be downloaded and "
+                              "verified; then the app briefly quits and restarts.",
+        "btn_update": "Update",
+        "btn_later": "Later",
+        "btn_whats_new": "What's new?",
+        "alert_failed_title": "Update failed",
+        "alert_failed_body": "{error}. The current version keeps working.",
+        "err_no_dmg": "this release has no DMG",
+        "err_unsigned": "this release is not signed",
+        "err_not_newer": "{new} is not newer than {current}",
+        "err_download": "download failed ({detail})",
+        "err_bad_response": "unreadable response from GitHub",
+        "err_sig_invalid": "signature doesn't match — update refused",
+        "err_dmg_open": "couldn't open the DMG",
+        "err_no_app": "no ClaudeUsage.app in the DMG",
+        "err_copy": "couldn't copy the app",
+        "err_other_app": "the DMG contains a different app",
+        "err_version_mismatch": "version in DMG ({got}) doesn't match release ({expected})",
+        "err_codesign": "the new app's code signature is invalid",
+        "err_unexpected": "unexpected error: {detail}",
+        "err_install": "install failed: {detail}",
+    },
+}
+
+
+def language_from(preferred) -> str:
+    """macOS preferred languages (e.g. ['nl-NL', 'en-US']) -> 'nl' or 'en'.
+    Only the first (= the user's chosen) language counts."""
+    try:
+        first = str(list(preferred)[0]).lower()
+    except Exception:
+        return DEFAULT_LANG
+    return "nl" if first.split("-")[0].split("_")[0] == "nl" else DEFAULT_LANG
+
+
+def t(key: str, lang: str = DEFAULT_LANG, **kw) -> str:
+    table = STRINGS.get(lang, STRINGS[DEFAULT_LANG])
+    text = table.get(key, STRINGS[DEFAULT_LANG].get(key, key))
+    return text.format(**kw) if kw else text
 
 
 # ---------------------------------------------------------------------------
@@ -180,7 +368,7 @@ def session_key_from(cookies: dict) -> str:
 # Formatting
 # ---------------------------------------------------------------------------
 
-def format_reset_time(iso_str: str) -> str:
+def format_reset_time(iso_str: str, lang: str = "nl") -> str:
     if not iso_str:
         return "—"
     try:
@@ -192,16 +380,16 @@ def format_reset_time(iso_str: str) -> str:
             h = total_sec // 3600
             m = (total_sec % 3600) // 60
             if h > 0:
-                return f"over {h}u {m}m"
-            return f"over {m}m"
-        day = DAYS_NL[dt.weekday()]
+                return t("in_hm", lang, h=h, m=m)
+            return t("in_m", lang, m=m)
+        day = DAYS.get(lang, DAYS[DEFAULT_LANG])[dt.weekday()]
         return f"{day} {dt.strftime('%H:%M')}"
     except Exception:
         return "—"
 
 
-def format_reset_compact(iso_str: str) -> str:
-    """Compact countdown for the menu bar title, e.g. '2u15m' or '45m'."""
+def format_reset_compact(iso_str: str, lang: str = "nl") -> str:
+    """Compact countdown for the menu bar title, e.g. '2u15m' / '2h15m' or '45m'."""
     if not iso_str:
         return "—"
     try:
@@ -213,8 +401,8 @@ def format_reset_compact(iso_str: str) -> str:
         h = total_sec // 3600
         m = (total_sec % 3600) // 60
         if h > 0:
-            return f"{h}u{m:02d}m"
-        return f"{m}m"
+            return t("compact_hm", lang, h=h, m=m)
+        return t("compact_m", lang, m=m)
     except Exception:
         return "—"
 
@@ -263,12 +451,12 @@ def status_title(session_pct: int, weekly_pct: int, session_reset_compact: str,
     return f"{face} {session_pct}% / {weekly_pct}% · {session_reset_compact}"
 
 
-def title_from_limits(limits: dict, style: str = "full") -> str:
+def title_from_limits(limits: dict, style: str = "full", lang: str = "nl") -> str:
     five_h = limits.get("five_hour") or {}
     seven_d = limits.get("seven_day") or {}
     session_pct = int(five_h.get("utilization", 0) or 0)
     weekly_pct = int(seven_d.get("utilization", 0) or 0)
-    reset_compact = format_reset_compact(five_h.get("resets_at", ""))
+    reset_compact = format_reset_compact(five_h.get("resets_at", ""), lang)
     return status_title(session_pct, weekly_pct, reset_compact, style)
 
 
@@ -394,8 +582,6 @@ FIVE_HOUR_THRESHOLDS = (80, 95)
 WEEKLY_THRESHOLDS = (90,)
 NOTIFY_STATE_FILE = os.path.expanduser("~/.claude/usage-tracker-notified.json")
 
-_LIMIT_LABELS = {"five_hour": "5-uurslimiet", "seven_day": "Weeklimiet"}
-
 
 def window_key(resets_at: str) -> str:
     """Stable id for one limit window. The API's resets_at jitters by a few
@@ -412,7 +598,7 @@ def window_key(resets_at: str) -> str:
 
 def due_notifications(limits: dict, state: dict,
                       five_hour_thresholds=FIVE_HOUR_THRESHOLDS,
-                      weekly_thresholds=WEEKLY_THRESHOLDS):
+                      weekly_thresholds=WEEKLY_THRESHOLDS, lang: str = "nl"):
     """Return (notifications, new_state).
 
     One notification per limit per fetch at most: if several thresholds were
@@ -435,8 +621,8 @@ def due_notifications(limits: dict, state: dict,
         if crossed:
             notes.append({
                 "id": f"{key}|{wk}|{max(crossed)}",
-                "title": f"Claude: {_LIMIT_LABELS[limit]} op {pct}%",
-                "body": f"Reset {format_reset_time(block.get('resets_at', ''))}.",
+                "title": t("notif_limit_title", lang, limit=t(f"limit_{limit}", lang), pct=pct),
+                "body": t("notif_limit_body", lang, when=format_reset_time(block.get("resets_at", ""), lang)),
                 "limit": limit,
                 "threshold": max(crossed),
                 "pct": pct,

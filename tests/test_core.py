@@ -115,13 +115,13 @@ def test_format_reset_time_within_a_day():
 def test_format_reset_time_beyond_a_day_shows_weekday_and_time():
     target = datetime.now(timezone.utc) + timedelta(days=3)
     local = target.astimezone()
-    expected = f"{core.DAYS_NL[local.weekday()]} {local.strftime('%H:%M')}"
+    expected = f"{core.DAYS['nl'][local.weekday()]} {local.strftime('%H:%M')}"
     assert core.format_reset_time(target.isoformat()) == expected
 
 
 def test_format_reset_time_in_past_shows_weekday():
     target = datetime.now(timezone.utc) - timedelta(hours=1)
-    assert core.format_reset_time(target.isoformat()).split(" ")[0] in core.DAYS_NL
+    assert core.format_reset_time(target.isoformat()).split(" ")[0] in core.DAYS['nl']
 
 
 @pytest.mark.parametrize("bad", ["", "garbage", "2026-13-45T00:00:00"])
@@ -530,3 +530,88 @@ def test_week_progress(now, pct, day):
     p = core.week_progress(_week(start="2026-09-25T17:00:00+00:00", end="2026-10-02T17:00:00+00:00"),
                            datetime.fromisoformat(now))
     assert (p["elapsed_pct"], p["day"], p["days"]) == (pct, day, 7)
+
+
+# ---------------------------------------------------------------------------
+# Languages
+# ---------------------------------------------------------------------------
+
+import re  # noqa: E402
+import string  # noqa: E402
+
+
+def _placeholders(text):
+    return {f for _, f, _, _ in string.Formatter().parse(text) if f}
+
+
+def test_all_languages_have_the_same_keys_and_placeholders():
+    nl, en = core.STRINGS["nl"], core.STRINGS["en"]
+    assert set(nl) == set(en)
+    for key in nl:
+        assert _placeholders(nl[key]) == _placeholders(en[key]), key
+    assert len(core.DAYS['nl']) == len(core.DAYS["en"]) == 7
+
+
+@pytest.mark.parametrize("preferred,lang", [
+    (["nl-NL", "en-US"], "nl"), (["nl"], "nl"), (["nl_BE"], "nl"),
+    (["en-NL", "nl-NL"], "en"),   # only the first language counts
+    (["de-DE"], "en"), ([], "en"), (None, "en"),
+])
+def test_language_from(preferred, lang):
+    assert core.language_from(preferred) == lang
+
+
+def test_t_formats_and_falls_back():
+    assert core.t("in_hm", "en", h=2, m=5) == "in 2h 5m"
+    assert core.t("compact_hm", "nl", h=2, m=5) == "2u05m"
+    assert core.t("status_ok", "fr") == "Connected to Anthropic API"   # unknown lang -> en
+    assert core.t("no_such_key", "nl") == "no_such_key"
+
+
+def test_reset_formats_in_english():
+    assert core.format_reset_time(_iso_in(hours=2, minutes=5), "en") == "in 2h 5m"
+    assert core.format_reset_compact(_iso_in(hours=2, minutes=5), "en") == "2h05m"
+    target = datetime.now(timezone.utc) + timedelta(days=3)
+    assert core.format_reset_time(target.isoformat(), "en").split(" ")[0] in core.DAYS["en"]
+
+
+def test_limit_notification_in_english():
+    notes, _ = core.due_notifications(_limits(five=81), {}, lang="en")
+    assert notes[0]["title"] == "Claude: 5-hour limit at 81%"
+    assert notes[0]["body"].startswith("Resets ")
+
+
+def test_update_errors_translate():
+    import updater
+    e = updater.UpdateError("not_newer", new="1.2", current="1.3")
+    assert str(e) == "1.2 is niet nieuwer dan 1.3"            # log stays Dutch
+    assert e.message("en") == "1.2 is not newer than 1.3"
+
+
+def test_every_update_error_key_exists():
+    import updater
+    src = open(updater.__file__, encoding="utf-8").read()
+    for key in re.findall(r'UpdateError\("([a-z_]+)"', src):
+        assert "err_" + key in core.STRINGS["nl"], key
+
+
+def _dashboard():
+    path = os.path.join(os.path.dirname(core.__file__), "dashboard.html")
+    return open(path, encoding="utf-8").read()
+
+
+def test_dashboard_keys_exist_in_translations():
+    html = _dashboard()
+    keys = set(re.findall(r'data-i18n(?:-title)?="([a-z_]+)"', html))
+    keys |= set(re.findall(r"\bT\('([a-z_]+)'", html))
+    assert keys, "no translation keys found"
+    missing = keys - set(core.STRINGS["en"])
+    assert not missing, missing
+
+
+def test_dashboard_script_has_no_hardcoded_ui_text():
+    """User-facing text in the script must go through T(); catch regressions."""
+    script = _dashboard().split("<script>", 1)[1]
+    for phrase in ("Bijgewerkt", "Verbonden", "beschikbaar", "Mislukt", "Instellingen",
+                   "gebruikt", "van de week", "Reset ", "Up-to-date", "Laden"):
+        assert phrase not in script, phrase

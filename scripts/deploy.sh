@@ -1,8 +1,11 @@
 #!/bin/bash
 # Herbouwt de app, rolt uit naar /Applications, herstart de LaunchAgent
 # en verifieert dat de nieuwe build echt draait én data ophaalt.
-#   ./scripts/deploy.sh          → Python-versie
-#   ./scripts/deploy.sh --swift  → Swift-versie (taak 35)
+#   ./scripts/deploy.sh --swift          → Swift-versie (taak 35) — de gewone route
+#   ./scripts/deploy.sh                  → Python-versie; weigert als er al een
+#                                          Swift-app in /Applications staat
+#   ./scripts/deploy.sh --force-python   → Python-versie toch over Swift heen
+#                                          (alleen voor een bewuste noodrelease)
 set -euo pipefail
 cd "$(dirname "$0")/.."
 
@@ -22,7 +25,22 @@ fail() {
     exit 1
 }
 
-if [ "${1:-}" = "--swift" ]; then
+MODE="${1:-python}"
+case "$MODE" in
+    --swift|python|--force-python) ;;
+    *) echo "✗ onbekende optie: $MODE (gebruik --swift of --force-python)" >&2; exit 1 ;;
+esac
+
+# Vangnet: een kale deploy.sh zou de Python-versie over de Swift-app zetten.
+# fetch.js zit alleen in de Swift-bundle (de Python-bundle heeft core.py).
+if [ "$MODE" = python ] && [ -f "$APP/Contents/Resources/fetch.js" ]; then
+    echo "✗ In /Applications staat de Swift-versie; deze deploy zou hem vervangen door Python." >&2
+    echo "  Bedoelde je ./scripts/deploy.sh --swift ?" >&2
+    echo "  Python er bewust overheen zetten (noodrelease): ./scripts/deploy.sh --force-python" >&2
+    exit 1
+fi
+
+if [ "$MODE" = --swift ]; then
     ./scripts/build-swift.sh --release
     SRC=dist-swift/ClaudeUsage.app
 else

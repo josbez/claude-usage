@@ -29,12 +29,17 @@ fail() { echo "✗ $*" >&2; exit 1; }
 echo "🔗 Gedeelde teksten en fixtures bijwerken..."
 /usr/bin/python3 scripts/swift-fixtures.py > /dev/null || fail "swift-fixtures.py faalt"
 
+echo "🧪 Python-tests (fixtures en gedeelde bestanden)..."
+/usr/bin/python3 -m pytest -q > /dev/null || fail "pytest faalt — niet gebouwd"
+
 echo "🧪 Swift-tests..."
 (cd swift && swift test -q 2>&1 | tail -5) || fail "Swift-tests falen — niet gebouwd"
 
 echo "📦 Building $NAME.app..."
-(cd swift && swift build -c release -q) || fail "swift build faalde"
-BIN="swift/.build/release/ClaudeUsage"
+# Universal (Apple Silicon + Intel), like the py2app bundle it replaces.
+ARCHS=(--arch arm64 --arch x86_64)
+(cd swift && swift build -c release "${ARCHS[@]}" -q) || fail "swift build faalde"
+BIN="$(cd swift && swift build -c release "${ARCHS[@]}" --show-bin-path)/ClaudeUsage"
 [ -x "$BIN" ] || fail "$BIN ontbreekt na build"
 
 rm -rf "$APP"
@@ -55,7 +60,7 @@ cat > "$APP/Contents/Info.plist" <<EOF
     <key>CFBundleShortVersionString</key><string>$VERSION</string>
     <key>CFBundleVersion</key><string>$BUILD</string>
     <key>CFBundleIconFile</key><string>ClaudeUsage</string>
-    <key>LSMinimumSystemVersion</key><string>13.0</string>
+    <key>LSMinimumSystemVersion</key><string>11.0</string>
     <key>LSUIElement</key><true/>
     <key>NSHighResolutionCapable</key><true/>
 </dict>

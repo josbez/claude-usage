@@ -1,6 +1,8 @@
 #!/bin/bash
 # Herbouwt de app, rolt uit naar /Applications, herstart de LaunchAgent
 # en verifieert dat de nieuwe build echt draait én data ophaalt.
+#   ./scripts/deploy.sh          → Python-versie
+#   ./scripts/deploy.sh --swift  → Swift-versie (taak 35)
 set -euo pipefail
 cd "$(dirname "$0")/.."
 
@@ -20,7 +22,13 @@ fail() {
     exit 1
 }
 
-./scripts/build.sh
+if [ "${1:-}" = "--swift" ]; then
+    ./scripts/build-swift.sh --release
+    SRC=dist-swift/ClaudeUsage.app
+else
+    ./scripts/build.sh
+    SRC=dist/ClaudeUsage.app
+fi
 
 [ -f "$PLIST" ] || { echo "✗ LaunchAgent ontbreekt — draai eerst ./install.sh" >&2; exit 1; }
 
@@ -35,7 +43,7 @@ pkill -f "$BIN" 2>/dev/null || true
 sleep 1
 
 rm -rf "$APP"
-cp -R dist/ClaudeUsage.app /Applications/
+cp -R "$SRC" /Applications/
 launchctl load "$PLIST"
 
 # 1. Draait het proces?

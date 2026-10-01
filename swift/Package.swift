@@ -5,7 +5,7 @@ import PackageDescription
 
 let package = Package(
     name: "ClaudeUsage",
-    platforms: [.macOS(.v13)],
+    platforms: [.macOS(.v11)],
     targets: [
         .target(name: "UsageCore"),
         .executableTarget(name: "ClaudeUsage", dependencies: ["UsageCore"]),

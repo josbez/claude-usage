@@ -1,13 +1,21 @@
 #!/bin/bash
 # Bouwt ClaudeUsage.app en verpakt 'm in een deelbare DMG.
+#   ./scripts/make-dmg.sh          → Python-versie (py2app)
+#   ./scripts/make-dmg.sh --swift  → Swift-versie (taak 35, v2.0)
 set -euo pipefail
 cd "$(dirname "$0")/.."
 
-./scripts/build.sh
+if [ "${1:-}" = "--swift" ]; then
+    ./scripts/build-swift.sh --release
+    SRC=dist-swift/ClaudeUsage.app
+else
+    ./scripts/build.sh
+    SRC=dist/ClaudeUsage.app
+fi
 
 STAGE=$(mktemp -d)
 chmod 755 "$STAGE"
-cp -R dist/ClaudeUsage.app "$STAGE/"
+cp -R "$SRC" "$STAGE/"
 cp install.sh "$STAGE/"
 ln -s /Applications "$STAGE/Applications"
 

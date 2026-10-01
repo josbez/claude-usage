@@ -269,9 +269,11 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSPopoverDelegate {
             // Fixed URL, no argument from the page.
             NSWorkspace.shared.open(URL(string: resetsURL)!)
         case "openStatusPage":
-            if let s = body as? String, isStatusURL(s), let url = URL(string: s) {
-                NSWorkspace.shared.open(url)
+            guard let s = body as? String, isStatusURL(s), let url = URL(string: s) else {
+                log("claude-status: link geweigerd: \(String(String(describing: body).prefix(80)))")
+                return
             }
+            NSWorkspace.shared.open(url)
         case "fetchResult":
             onFetchResult(body as? String ?? "")
         default:

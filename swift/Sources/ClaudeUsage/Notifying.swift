@@ -33,7 +33,7 @@ extension AppDelegate {
         content.title = devMark + title
         content.body = body
         content.sound = .default
-        if let attachment = statusAttachment(pct: pct) {
+        if pct >= 0, let attachment = statusAttachment(pct: pct) {
             content.attachments = [attachment]
         }
         center.add(UNNotificationRequest(identifier: id, content: content, trigger: nil)) { [weak self] error in

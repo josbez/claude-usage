@@ -22,6 +22,7 @@ public struct Paths {
     public var blockLogState: URL { own("usage-tracker-blocks", ext: "json") }
     public var settings: URL { own("usage-tracker-settings", ext: "json") }
     public var notifyState: URL { own("usage-tracker-notified", ext: "json") }
+    public var updateState: URL { own("usage-tracker-update", ext: "json") }
     public var historyDir: URL { claudeDir.appendingPathComponent(isDev ? "usage-history-dev" : "usage-history") }
     public var log: URL {
         home.appendingPathComponent("Library/Logs")

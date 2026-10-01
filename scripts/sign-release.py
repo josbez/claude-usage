@@ -3,6 +3,7 @@
 
     /usr/bin/python3 scripts/sign-release.py --init   # once: create the signing key
     /usr/bin/python3 scripts/sign-release.py          # sign ClaudeUsage.dmg -> ClaudeUsage.dmg.sig
+    /usr/bin/python3 scripts/sign-release.py <file>   # sign another file -> <file>.sig (update tests)
 
 The private key stays in ~/.config/claude-usage/ and must never be committed.
 Back it up (e.g. in a password manager): without it you cannot ship updates
@@ -41,7 +42,7 @@ def init():
     print(f"  Publieke sleutel voor core.py UPDATE_PUBLIC_KEY_HEX:\n  {public_hex(key)}")
 
 
-def sign():
+def sign(dmg: str = DMG, sig_path: str = SIG):
     if not os.path.exists(KEY_FILE):
         sys.exit(f"✗ Geen signing key in {KEY_FILE}. Eenmalig: scripts/sign-release.py --init")
     with open(KEY_FILE) as f:
@@ -49,15 +50,21 @@ def sign():
     if public_hex(key) != core.UPDATE_PUBLIC_KEY_HEX:
         sys.exit("✗ Signing key hoort niet bij UPDATE_PUBLIC_KEY_HEX in core.py — "
                  "bestaande installaties zouden deze update weigeren.")
-    with open(DMG, "rb") as f:
+    with open(dmg, "rb") as f:
         data = f.read()
     sig = core.sign_release(data, key)
     if not core.verify_release_signature(data, sig):
         sys.exit("✗ Zelfcontrole van de handtekening faalde.")
-    with open(SIG, "w") as f:
+    with open(sig_path, "w") as f:
         f.write(sig + "\n")
-    print(f"✓ {os.path.basename(SIG)} aangemaakt en geverifieerd")
+    print(f"✓ {os.path.basename(sig_path)} aangemaakt en geverifieerd")
 
 
 if __name__ == "__main__":
-    init() if "--init" in sys.argv[1:] else sign()
+    args = sys.argv[1:]
+    if "--init" in args:
+        init()
+    elif args:
+        sign(args[0], args[0] + ".sig")
+    else:
+        sign()

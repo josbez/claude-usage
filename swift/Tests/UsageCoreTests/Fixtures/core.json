@@ -2180,6 +2180,48 @@
         "out": {}
       }
     ],
+    "is_newer": [
+      {
+        "cand": "1.10.0",
+        "cur": "1.9.2",
+        "out": true
+      },
+      {
+        "cand": "1.2",
+        "cur": "1.1.1",
+        "out": true
+      },
+      {
+        "cand": "1.2.0",
+        "cur": "1.2",
+        "out": false
+      },
+      {
+        "cand": "1.1.1",
+        "cur": "1.2",
+        "out": false
+      },
+      {
+        "cand": "1.3",
+        "cur": "dev",
+        "out": false
+      },
+      {
+        "cand": "1.3-beta",
+        "cur": "1.2",
+        "out": false
+      },
+      {
+        "cand": "2.0",
+        "cur": "1.2.7",
+        "out": true
+      },
+      {
+        "cand": "2.0.1",
+        "cur": "2.0",
+        "out": true
+      }
+    ],
     "limit_resets_view": [
       {
         "lang": "nl",
@@ -3067,6 +3109,202 @@
         "seen": {}
       }
     ],
+    "parse_release": [
+      {
+        "in": {
+          "assets": [
+            {
+              "browser_download_url": "https://dl/dmg",
+              "name": "ClaudeUsage.dmg"
+            },
+            {
+              "browser_download_url": "https://dl/sig",
+              "name": "ClaudeUsage.dmg.sig"
+            },
+            "junk"
+          ],
+          "draft": false,
+          "html_url": "https://github.com/x/y/releases/tag/v1.2",
+          "prerelease": false,
+          "tag_name": "v1.2"
+        },
+        "out": {
+          "dmg_url": "https://dl/dmg",
+          "html_url": "https://github.com/x/y/releases/tag/v1.2",
+          "sig_url": "https://dl/sig",
+          "version": "1.2"
+        }
+      },
+      {
+        "in": {
+          "assets": [
+            {
+              "browser_download_url": "u",
+              "name": "ClaudeUsage.dmg"
+            }
+          ],
+          "draft": false,
+          "html_url": "https://github.com/x/y/releases/tag/v1.2",
+          "prerelease": false,
+          "tag_name": "v1.2"
+        },
+        "out": {
+          "dmg_url": "u",
+          "html_url": "https://github.com/x/y/releases/tag/v1.2",
+          "sig_url": "",
+          "version": "1.2"
+        }
+      },
+      {
+        "in": {
+          "assets": [
+            {
+              "browser_download_url": "https://dl/dmg",
+              "name": "ClaudeUsage.dmg"
+            },
+            {
+              "browser_download_url": "https://dl/sig",
+              "name": "ClaudeUsage.dmg.sig"
+            },
+            "junk"
+          ],
+          "draft": true,
+          "html_url": "https://github.com/x/y/releases/tag/v1.2",
+          "prerelease": false,
+          "tag_name": "v1.2"
+        },
+        "out": null
+      },
+      {
+        "in": {
+          "assets": [
+            {
+              "browser_download_url": "https://dl/dmg",
+              "name": "ClaudeUsage.dmg"
+            },
+            {
+              "browser_download_url": "https://dl/sig",
+              "name": "ClaudeUsage.dmg.sig"
+            },
+            "junk"
+          ],
+          "draft": false,
+          "html_url": "https://github.com/x/y/releases/tag/v1.2",
+          "prerelease": true,
+          "tag_name": "v1.2"
+        },
+        "out": null
+      },
+      {
+        "in": {
+          "assets": [
+            {
+              "browser_download_url": "https://dl/dmg",
+              "name": "ClaudeUsage.dmg"
+            },
+            {
+              "browser_download_url": "https://dl/sig",
+              "name": "ClaudeUsage.dmg.sig"
+            },
+            "junk"
+          ],
+          "draft": false,
+          "html_url": "https://github.com/x/y/releases/tag/v1.2",
+          "prerelease": false,
+          "tag_name": "nightly"
+        },
+        "out": null
+      },
+      {
+        "in": {
+          "assets": null,
+          "draft": false,
+          "html_url": "https://github.com/x/y/releases/tag/v1.2",
+          "prerelease": false,
+          "tag_name": "v1.2"
+        },
+        "out": {
+          "dmg_url": "",
+          "html_url": "https://github.com/x/y/releases/tag/v1.2",
+          "sig_url": "",
+          "version": "1.2"
+        }
+      },
+      {
+        "in": "not a dict",
+        "out": null
+      },
+      {
+        "in": {},
+        "out": null
+      }
+    ],
+    "parse_version": [
+      {
+        "in": "1.2",
+        "out": [
+          1,
+          2
+        ]
+      },
+      {
+        "in": "v1.2.0",
+        "out": [
+          1,
+          2
+        ]
+      },
+      {
+        "in": "1.10.3",
+        "out": [
+          1,
+          10,
+          3
+        ]
+      },
+      {
+        "in": "V2",
+        "out": [
+          2
+        ]
+      },
+      {
+        "in": "1.2.0-rc1",
+        "out": null
+      },
+      {
+        "in": "dev",
+        "out": null
+      },
+      {
+        "in": "",
+        "out": null
+      },
+      {
+        "in": null,
+        "out": null
+      },
+      {
+        "in": "1..2",
+        "out": null
+      },
+      {
+        "in": " 2.0 ",
+        "out": [
+          2
+        ]
+      },
+      {
+        "in": 5,
+        "out": null
+      },
+      {
+        "in": "2.0.0.0",
+        "out": [
+          2
+        ]
+      }
+    ],
     "plan_label": [
       {
         "in": null,
@@ -3761,6 +3999,72 @@
         "style": "emoji"
       }
     ],
+    "update_check_due": [
+      {
+        "out": true,
+        "state": {}
+      },
+      {
+        "out": false,
+        "state": {
+          "last_check": "2026-09-30T11:00:00+00:00"
+        }
+      },
+      {
+        "out": true,
+        "state": {
+          "last_check": "2026-09-30T09:00:00+00:00"
+        }
+      },
+      {
+        "out": true,
+        "state": {
+          "last_check": "garbage"
+        }
+      },
+      {
+        "out": true,
+        "state": {
+          "last_check": null
+        }
+      }
+    ],
+    "verify_release_signature": {
+      "cases": [
+        {
+          "data": "436c6175646555736167652074657374207061796c6f61642000ff",
+          "out": true,
+          "sig": "dfGRtDn+pW4lfJxGdG8oZ7hthpgzC57SLl4iJ0NvMl+xedcXusM13VTCWpfX4HEgpoD4hmEY0RLcIxKQ6pFGBA=="
+        },
+        {
+          "data": "436c6175646555736167652074657374207061796c6f61642000ff21",
+          "out": false,
+          "sig": "dfGRtDn+pW4lfJxGdG8oZ7hthpgzC57SLl4iJ0NvMl+xedcXusM13VTCWpfX4HEgpoD4hmEY0RLcIxKQ6pFGBA=="
+        },
+        {
+          "data": "436c6175646555736167652074657374207061796c6f61642000ff",
+          "out": false,
+          "sig": "not base64!"
+        },
+        {
+          "data": "436c6175646555736167652074657374207061796c6f61642000ff",
+          "out": false,
+          "sig": ""
+        },
+        {
+          "data": "436c6175646555736167652074657374207061796c6f61642000ff",
+          "out": true,
+          "sig": "  dfGRtDn+pW4lfJxGdG8oZ7hthpgzC57SLl4iJ0NvMl+xedcXusM13VTCWpfX4HEgpoD4hmEY0RLcIxKQ6pFGBA==\n"
+        },
+        {
+          "data": "",
+          "out": true,
+          "sig": "nKU1eVMGVNXD33cInvRe2mE+L+32cOlr7axGOVBOWEXvS5XVeTB3Iz3RaBeyUy6cVSWHKnOkrXS3WTaangXBAg=="
+        }
+      ],
+      "public_key": "03a107bff3ce10be1d70dd18e74bc09967e4d6309ba50d5f1ddc8664125531b8",
+      "release_public_key": "cd50f6dc348c4c0b3170df3c4204cb6b7adabb92c11a798116127c02d207cc66"
+    },
     "week_progress": [
       {
         "limits": {},

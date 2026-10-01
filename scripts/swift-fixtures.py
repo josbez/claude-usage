@@ -251,6 +251,40 @@ HISTORY_CASES = [
 ]
 
 
+VERSIONS = ["1.2", "v1.2.0", "1.10.3", "V2", "1.2.0-rc1", "dev", "", None, "1..2", " 2.0 ", 5, "2.0.0.0"]
+NEWER = [("1.10.0", "1.9.2"), ("1.2", "1.1.1"), ("1.2.0", "1.2"), ("1.1.1", "1.2"), ("1.3", "dev"),
+         ("1.3-beta", "1.2"), ("2.0", "1.2.7"), ("2.0.1", "2.0")]
+
+
+def _release(**over):
+    rel = {"tag_name": "v1.2", "html_url": "https://github.com/x/y/releases/tag/v1.2",
+           "draft": False, "prerelease": False, "assets": [
+               {"name": "ClaudeUsage.dmg", "browser_download_url": "https://dl/dmg"},
+               {"name": "ClaudeUsage.dmg.sig", "browser_download_url": "https://dl/sig"},
+               "junk"]}
+    rel.update(over)
+    return rel
+
+
+RELEASES = [_release(), _release(assets=[{"name": "ClaudeUsage.dmg", "browser_download_url": "u"}]),
+            _release(draft=True), _release(prerelease=True), _release(tag_name="nightly"),
+            _release(assets=None), "not a dict", {}]
+
+
+def signature_cases():
+    """Ed25519 with a fixed TEST key (never the release key)."""
+    from Crypto.PublicKey import ECC
+    key = ECC.construct(curve="ed25519", seed=bytes(range(32)))
+    pub = key.public_key().export_key(format="raw").hex()
+    data = b"ClaudeUsage test payload \x00\xff"
+    sig = core.sign_release(data, key)
+    cases = [(data, sig), (data + b"!", sig), (data, "not base64!"), (data, ""),
+             (data, "  " + sig + "\n"), (b"", core.sign_release(b"", key))]
+    return {"public_key": pub, "release_public_key": core.UPDATE_PUBLIC_KEY_HEX,
+            "cases": [{"data": d.hex(), "sig": sg, "out": core.verify_release_signature(d, sg, pub)}
+                      for d, sg in cases]}
+
+
 def build_fixtures() -> dict:
     core.datetime = _FixedNow
     now = datetime.fromisoformat(NOW)
@@ -323,6 +357,15 @@ def build_fixtures() -> dict:
     c["history_path"] = [{"in": ts, "out": os.path.basename(core.history_path(ts, "/base"))}
                          for ts in ("2026-10-01T10:00:00+00:00", "2026-10-31T23:30:00-02:00",
                                     "2026-12-31T23:59:59Z")]
+    c["parse_version"] = [{"in": v, "out": list(core.parse_version(v)) if core.parse_version(v) else None}
+                          for v in VERSIONS]
+    c["is_newer"] = [{"cand": a, "cur": b, "out": core.is_newer(a, b)} for a, b in NEWER]
+    c["parse_release"] = [{"in": r, "out": core.parse_release(r)} for r in RELEASES]
+    c["update_check_due"] = [{"state": st, "out": core.update_check_due(st, now)} for st in
+                             ({}, {"last_check": "2026-09-30T11:00:00+00:00"},
+                              {"last_check": "2026-09-30T09:00:00+00:00"}, {"last_check": "garbage"},
+                              {"last_check": None})]
+    c["verify_release_signature"] = signature_cases()
     c["t"] = [{"key": k, "lang": l, "kw": kw, "out": core.t(k, l, **kw)}
               for k, kw in T_CASES for l in langs]
     return fx

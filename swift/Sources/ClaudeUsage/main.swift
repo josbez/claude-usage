@@ -1,4 +1,5 @@
 import AppKit
+import UsageCore
 
 let args = CommandLine.arguments
 
@@ -12,6 +13,16 @@ if args.count == 4, args[1] == "--render-status-image", let pct = Int(args[2]) {
         FileHandle.standardError.write(Data("\(error)\n".utf8))
         exit(1)
     }
+}
+
+// Check a release file against its .sig with the release key:
+//   ClaudeUsage --verify-release <file> <file.sig>
+if args.count == 4, args[1] == "--verify-release",
+   let data = FileManager.default.contents(atPath: args[2]),
+   let sig = try? String(contentsOfFile: args[3], encoding: .utf8) {
+    let ok = verifyReleaseSignature(data, sig)
+    print(ok ? "✓ handtekening geldig" : "✗ handtekening ongeldig")
+    exit(ok ? 0 : 1)
 }
 
 let app = NSApplication.shared

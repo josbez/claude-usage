@@ -5,7 +5,8 @@ import WebKit
 
 /// Native port of app.py: menu bar + popover with dashboard.html (fase 1) and
 /// the usage fetch through a hidden WKWebView (fase 2, Fetching.swift),
-/// notifications and history (fase 3, Notifying.swift). Updates follow in fase 4.
+/// notifications and history (fase 3, Notifying.swift) and in-app updates
+/// (fase 4, Updater.swift).
 final class AppDelegate: NSObject, NSApplicationDelegate, NSPopoverDelegate {
     static let popoverWidth: CGFloat = 360
     static let popoverMinHeight: CGFloat = 296   // main view; fixed
@@ -41,6 +42,12 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSPopoverDelegate {
     let notifyDelegate = NotificationDelegate()
     var postTestNotification = false
 
+    // Updates (Updater.swift)
+    var update: [String: String]?
+    var updateChecking = false
+    var updateInstalling = false
+    var updateError: String?
+
     func applicationDidFinishLaunching(_ notification: Notification) {
         guard let url = Bundle.main.url(forResource: "strings", withExtension: "json"),
               let strings = try? Strings(contentsOf: url)
@@ -71,6 +78,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSPopoverDelegate {
         setupPopover()
         setupFetchWebView()
         startFetch()
+        maybeCheckUpdates()
         maybeCheckServiceStatus()
         // Every minute, also while the popover is open (common run loop modes).
         let t = Timer(timeInterval: 60, repeats: true) { [weak self] _ in self?.tick() }
@@ -138,6 +146,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSPopoverDelegate {
 
     func tick() {
         checkAccountSwitch()
+        maybeCheckUpdates()
         maybeCheckServiceStatus()
         if !limitsAreFresh(loadJSONObject(paths.limits), now: Date()) {
             startFetch()
@@ -182,6 +191,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSPopoverDelegate {
             popover.show(relativeTo: button.bounds, of: button, preferredEdge: .minY)
             lang = languageFrom(Locale.preferredLanguages, defaultLang: strings.defaultLang)
             checkAccountSwitch()
+            maybeCheckUpdates()
             pushData(animated: true)
         }
     }
@@ -204,6 +214,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSPopoverDelegate {
                 log("weekvenster wijkt af van 7 dagen: \(pyIsoformatUTC(win.start)) → \(key)")
             }
         }
+        state.update = updateView()
         let data = formatter.dashboardData(limits: limits, settings: settings,
                                            state: state, lang: lang)
         guard let json = try? JSONSerialization.data(withJSONObject: data),
@@ -251,7 +262,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSPopoverDelegate {
             applyAppearance()
             pushData()
         case "startUpdate":
-            log("bijwerken: nog niet in de Swift-versie (fase 4)")
+            startUpdate()
         case "resize":
             if let n = body as? NSNumber { setPopoverHeight(CGFloat(n.doubleValue)) }
         case "openResetsPage":

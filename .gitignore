@@ -6,3 +6,7 @@ __pycache__/
 .DS_Store
 .pytest_cache/
 *.dmg.sig
+
+# Private notes: stay local, never public
+backlog.md
+CLAUDE.md

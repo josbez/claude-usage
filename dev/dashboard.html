@@ -121,6 +121,7 @@
     white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
   }
   .setting-sub.error { color: var(--status-error); white-space: normal; }
+  .ring-preview { vertical-align: -2px; color: var(--text); }
   .setting-value { font-size: 12px; color: var(--muted); white-space: nowrap; }
   .version-status { display: flex; align-items: center; gap: 9px; }
   .version-status .setting-sub { margin-top: 0; }
@@ -747,6 +748,7 @@ function render(d) {
     d.version && d.version !== 'dev' ? 'v' + d.version : (d.version || '');
   document.getElementById('versionText').title = d.build ? 'Build ' + d.build : '';
   renderUpdate(d.update);
+  _menubarRing = d.menubar_icon === 'ring' ? (d.menubar_ring || { fraction: 0 }) : null;
   renderMenubarStyle(d.menubar_style || 'full', d.menubar_previews || {});
   renderAppearance(d.appearance || 'system');
   renderRefreshChoice(d.refresh_minutes || 5);
@@ -909,12 +911,35 @@ function onStartUpdate() {
 }
 
 let _menubarPreviews = {};
+let _menubarRing = null;
+
+// The same ring as in the menu bar (MenubarIcon.swift): 16-unit box, 2-unit
+// line, track at 35%, filled clockwise from 12 o'clock; monochrome below 75%,
+// stress colour from 75% on.
+function menubarRingSvg(ring) {
+  const r = 6.5, c = 2 * Math.PI * r, f = Math.max(0, Math.min(1, ring.fraction || 0));
+  const stroke = ring.color || 'currentColor';
+  const cap = f < 1 ? 'round' : 'butt';
+  const arc = f > 0
+    ? `<circle cx="8" cy="8" r="${r}" fill="none" stroke="${stroke}" stroke-width="2" stroke-linecap="${cap}"
+         stroke-dasharray="${(f * c).toFixed(2)} ${c.toFixed(2)}" transform="rotate(-90 8 8)"/>`
+    : '';
+  return `<svg class="ring-preview" width="13" height="13" viewBox="0 0 16 16" aria-hidden="true">
+    <circle cx="8" cy="8" r="${r}" fill="none" stroke="currentColor" stroke-opacity="0.35" stroke-width="2"/>${arc}</svg>`;
+}
 
 function renderMenubarStyle(style, previews) {
   _menubarPreviews = previews;
   document.querySelectorAll('#menubarStyle button').forEach(b =>
     b.setAttribute('aria-checked', b.dataset.style === style ? 'true' : 'false'));
-  document.getElementById('menubarPreview').textContent = previews[style] || '';
+  const el = document.getElementById('menubarPreview');
+  const text = previews[style] || '';
+  if (_menubarRing) {
+    el.innerHTML = menubarRingSvg(_menubarRing) + (text ? ' ' : '');
+    el.appendChild(document.createTextNode(text));
+  } else {
+    el.textContent = text;
+  }
 }
 
 function onMenubarStyle(style) {

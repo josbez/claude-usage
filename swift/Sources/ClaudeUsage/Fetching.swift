@@ -160,8 +160,10 @@ extension AppDelegate {
                     log("limieten opslaan mislukt: \(error)")
                     state.lastFetchError = "opslaan mislukt"
                 }
+                recordHistory(output)
                 logBlockReasons(parsed, output)
                 logCedarEmber(output)
+                notifyLimits(output)
             } else {
                 let error = parsed["error"] as? String ?? "onbekende fout"
                 log("fetch mislukt: \(error)")

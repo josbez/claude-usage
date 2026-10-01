@@ -203,6 +203,54 @@ STATUS_SUMMARIES = [
 ]
 
 
+A = "user@example.com"
+FH = "2026-10-01T12:00:00.123456+00:00"      # current 5-hour window
+FH_OLD = "2026-10-01T07:00:00+00:00"         # previous one (3 h ago)
+WK = "2026-10-05T07:00:00+00:00"
+
+
+def _lim(fh_pct, wk_pct=10, fh=FH, wk=WK, account=A):
+    return {"account_email": account,
+            "five_hour": {"utilization": fh_pct, "resets_at": fh},
+            "seven_day": {"utilization": wk_pct, "resets_at": wk}}
+
+
+NOTIFY_CASES = [
+    (_lim(50), {}),
+    (_lim(81), {}),
+    (_lim(96, 91), {}),
+    (_lim(96), {A + "|five_hour": {"window": "2026-10-01T12:00:00+00:00", "sent": [80]}}),
+    (_lim(96), {A + "|five_hour": {"window": "2026-10-01T12:00:00+00:00", "sent": [80, 95]}}),
+    (_lim(5), {A + "|five_hour": {"window": "2026-10-01T07:00:00+00:00", "sent": [80]}}),
+    (_lim(85), {A + "|five_hour": {"window": "2026-10-01T07:00:00+00:00", "sent": [80, 95]}}),
+    (_lim(5), {A + "|five_hour": {"window": "2026-09-29T07:00:00+00:00", "sent": [80]}}),
+    (_lim(5), {A + "|five_hour": {"window": "2026-10-01T07:00:00+00:00", "sent": []}}),
+    (_lim(5, fh=""), {}),
+    (_lim(None, None), {}),
+    ({"five_hour": {"utilization": 99.9, "resets_at": "bad"}}, {}),
+    (_lim(90, 95, account=""), {"other": {"window": "x", "sent": [1]}}),
+]
+
+WINDOW_KEYS = ["", "bad", "2026-10-01T12:00:00Z", "2026-10-01T11:59:30.000001+00:00",
+               "2026-10-01T11:59:29.999999+00:00", "2026-10-01T14:00:00+02:00", FH]
+
+HISTORY_CASES = [
+    {},
+    {"fetched_at": "2026-10-01T10:00:00+00:00", "account_email": A, "org_id": "org-1",
+     "five_hour": {"utilization": 12.0, "resets_at": FH, "extra": 1},
+     "seven_day": {"utilization": None, "resets_at": WK},
+     "seven_day_breakdown": {"window_started_at": "2026-09-28T07:00:00Z", "as_of": "x",
+                             "rows": [{"key": "chat", "display_name": "Chats", "percent": 1, "x": 2},
+                                      {"key": None}, "junk", {}]},
+     "extra_usage": {"is_enabled": True, "used_credits": 0, "monthly_limit": 1700, "currency": "EUR",
+                     "other": 1},
+     "cedar_ember": {"eligible": True, "at_limit": False, "grants": [GRANT]}},
+    {"fetched_at": "2026-10-01T10:00:00+00:00", "five_hour": "x",
+     "seven_day_breakdown": {"rows": None}, "extra_usage": {"is_enabled": False}},
+    {"seven_day_breakdown": {}},
+]
+
+
 def build_fixtures() -> dict:
     core.datetime = _FixedNow
     now = datetime.fromisoformat(NOW)
@@ -262,6 +310,19 @@ def build_fixtures() -> dict:
     c["cedar_ember"] = [{"limits": lim, "unrecognised": core.cedar_ember_unrecognised(lim),
                          "stable": core.cedar_ember_stable(lim)} for lim in RESETS_CASES]
     c["service_status"] = [{"in": s, "out": core.service_status(s)} for s in STATUS_SUMMARIES]
+    c["color_for_pct"] = [{"in": p, "out": list(core.color_for_pct(p))}
+                          for p in (-5, 0, 12.5, 25, 50, 50.5, 75, 99, 100, 130)]
+    c["window_key"] = [{"in": w, "out": core.window_key(w)} for w in WINDOW_KEYS]
+    c["due_notifications"] = []
+    for lim, state in NOTIFY_CASES:
+        for l in core.LANGS:
+            notes, new_state = core.due_notifications(lim, state, lang=l, now=now)
+            c["due_notifications"].append({"limits": lim, "state": state, "lang": l,
+                                           "notes": notes, "new_state": new_state})
+    c["history_record"] = [{"in": h, "out": core.history_record(h)} for h in HISTORY_CASES]
+    c["history_path"] = [{"in": ts, "out": os.path.basename(core.history_path(ts, "/base"))}
+                         for ts in ("2026-10-01T10:00:00+00:00", "2026-10-31T23:30:00-02:00",
+                                    "2026-12-31T23:59:59Z")]
     c["t"] = [{"key": k, "lang": l, "kw": kw, "out": core.t(k, l, **kw)}
               for k, kw in T_CASES for l in langs]
     return fx

@@ -1,10 +1,11 @@
 import AppKit
 import UsageCore
+import UserNotifications
 import WebKit
 
 /// Native port of app.py: menu bar + popover with dashboard.html (fase 1) and
-/// the usage fetch through a hidden WKWebView (fase 2, Fetching.swift).
-/// Notifications, history and updates follow in fasen 3–4.
+/// the usage fetch through a hidden WKWebView (fase 2, Fetching.swift),
+/// notifications and history (fase 3, Notifying.swift). Updates follow in fase 4.
 final class AppDelegate: NSObject, NSApplicationDelegate, NSPopoverDelegate {
     static let popoverWidth: CGFloat = 360
     static let popoverMinHeight: CGFloat = 296   // main view; fixed
@@ -33,6 +34,12 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSPopoverDelegate {
     var serviceChecking = false
     var serviceCheckedAt: Date?
     var loggedUnknownStatus = Set<String>()
+    var loggedWeekWindows = Set<String>()
+
+    // Notifications (Notifying.swift)
+    var notifyCenter: UNUserNotificationCenter?
+    let notifyDelegate = NotificationDelegate()
+    var postTestNotification = false
 
     func applicationDidFinishLaunching(_ notification: Notification) {
         guard let url = Bundle.main.url(forResource: "strings", withExtension: "json"),
@@ -59,6 +66,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSPopoverDelegate {
         activity = ProcessInfo.processInfo.beginActivity(
             options: .userInitiatedAllowingIdleSystemSleep, reason: "periodieke Claude-usage-refresh")
 
+        setupNotifications()
         setupStatusItem()
         setupPopover()
         setupFetchWebView()
@@ -188,7 +196,15 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSPopoverDelegate {
     }
 
     func pushData(animated: Bool = false) {
-        let data = formatter.dashboardData(limits: loadJSONObject(paths.limits), settings: settings,
+        let limits = loadJSONObject(paths.limits)
+        if let win = weekWindow(limits), win.deviates {
+            let key = pyIsoformatUTC(win.end)
+            if !loggedWeekWindows.contains(key) {
+                loggedWeekWindows.insert(key)
+                log("weekvenster wijkt af van 7 dagen: \(pyIsoformatUTC(win.start)) → \(key)")
+            }
+        }
+        let data = formatter.dashboardData(limits: limits, settings: settings,
                                            state: state, lang: lang)
         guard let json = try? JSONSerialization.data(withJSONObject: data),
               let text = String(data: json, encoding: .utf8) else { return }
@@ -220,7 +236,9 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSPopoverDelegate {
         case "quit":
             NSApp.terminate(nil)
         case "setNotifications":
-            updateSetting("notifications", (body as? Bool) ?? ((body as? NSNumber)?.boolValue ?? false))
+            let enabled = (body as? Bool) ?? ((body as? NSNumber)?.boolValue ?? false)
+            updateSetting("notifications", enabled)
+            log("meldingen \(enabled ? "aan" : "uit")")
             pushData()
         case "setMenubarStyle":
             guard let style = body as? String, menubarStyles.contains(style) else { return }

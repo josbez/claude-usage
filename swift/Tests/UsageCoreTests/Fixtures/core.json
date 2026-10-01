@@ -461,6 +461,88 @@
         "unrecognised": false
       }
     ],
+    "color_for_pct": [
+      {
+        "in": -5,
+        "out": [
+          47,
+          168,
+          74
+        ]
+      },
+      {
+        "in": 0,
+        "out": [
+          47,
+          168,
+          74
+        ]
+      },
+      {
+        "in": 12.5,
+        "out": [
+          99,
+          163,
+          56
+        ]
+      },
+      {
+        "in": 25,
+        "out": [
+          151,
+          159,
+          37
+        ]
+      },
+      {
+        "in": 50,
+        "out": [
+          255,
+          149,
+          0
+        ]
+      },
+      {
+        "in": 50.5,
+        "out": [
+          255,
+          148,
+          0
+        ]
+      },
+      {
+        "in": 75,
+        "out": [
+          255,
+          104,
+          24
+        ]
+      },
+      {
+        "in": 99,
+        "out": [
+          255,
+          61,
+          47
+        ]
+      },
+      {
+        "in": 100,
+        "out": [
+          255,
+          59,
+          48
+        ]
+      },
+      {
+        "in": 130,
+        "out": [
+          255,
+          59,
+          48
+        ]
+      }
+    ],
     "decrypt_cookie_value": [
       {
         "enc": "7631301a83e9ff505e195f09abc1fe95e7122a60c4aa99ea77cc364e80d15a09840e5f8caa3324fadc7e333f28c62cace02847",
@@ -511,6 +593,938 @@
       {
         "out": "c44f2208f685b841bb890cdf67449f17",
         "password": "pässwörd"
+      }
+    ],
+    "due_notifications": [
+      {
+        "lang": "nl",
+        "limits": {
+          "account_email": "user@example.com",
+          "five_hour": {
+            "resets_at": "2026-10-01T12:00:00.123456+00:00",
+            "utilization": 50
+          },
+          "seven_day": {
+            "resets_at": "2026-10-05T07:00:00+00:00",
+            "utilization": 10
+          }
+        },
+        "new_state": {
+          "user@example.com|five_hour": {
+            "sent": [],
+            "window": "2026-10-01T12:00:00+00:00"
+          },
+          "user@example.com|seven_day": {
+            "sent": [],
+            "window": "2026-10-05T07:00:00+00:00"
+          }
+        },
+        "notes": [],
+        "state": {}
+      },
+      {
+        "lang": "en",
+        "limits": {
+          "account_email": "user@example.com",
+          "five_hour": {
+            "resets_at": "2026-10-01T12:00:00.123456+00:00",
+            "utilization": 50
+          },
+          "seven_day": {
+            "resets_at": "2026-10-05T07:00:00+00:00",
+            "utilization": 10
+          }
+        },
+        "new_state": {
+          "user@example.com|five_hour": {
+            "sent": [],
+            "window": "2026-10-01T12:00:00+00:00"
+          },
+          "user@example.com|seven_day": {
+            "sent": [],
+            "window": "2026-10-05T07:00:00+00:00"
+          }
+        },
+        "notes": [],
+        "state": {}
+      },
+      {
+        "lang": "nl",
+        "limits": {
+          "account_email": "user@example.com",
+          "five_hour": {
+            "resets_at": "2026-10-01T12:00:00.123456+00:00",
+            "utilization": 81
+          },
+          "seven_day": {
+            "resets_at": "2026-10-05T07:00:00+00:00",
+            "utilization": 10
+          }
+        },
+        "new_state": {
+          "user@example.com|five_hour": {
+            "sent": [
+              80
+            ],
+            "window": "2026-10-01T12:00:00+00:00"
+          },
+          "user@example.com|seven_day": {
+            "sent": [],
+            "window": "2026-10-05T07:00:00+00:00"
+          }
+        },
+        "notes": [
+          {
+            "body": "Reset over 2u 0m.",
+            "id": "user@example.com|five_hour|2026-10-01T12:00:00+00:00|80",
+            "limit": "five_hour",
+            "pct": 81,
+            "threshold": 80,
+            "title": "Claude: 5-uurslimiet op 81%"
+          }
+        ],
+        "state": {}
+      },
+      {
+        "lang": "en",
+        "limits": {
+          "account_email": "user@example.com",
+          "five_hour": {
+            "resets_at": "2026-10-01T12:00:00.123456+00:00",
+            "utilization": 81
+          },
+          "seven_day": {
+            "resets_at": "2026-10-05T07:00:00+00:00",
+            "utilization": 10
+          }
+        },
+        "new_state": {
+          "user@example.com|five_hour": {
+            "sent": [
+              80
+            ],
+            "window": "2026-10-01T12:00:00+00:00"
+          },
+          "user@example.com|seven_day": {
+            "sent": [],
+            "window": "2026-10-05T07:00:00+00:00"
+          }
+        },
+        "notes": [
+          {
+            "body": "Resets in 2h 0m.",
+            "id": "user@example.com|five_hour|2026-10-01T12:00:00+00:00|80",
+            "limit": "five_hour",
+            "pct": 81,
+            "threshold": 80,
+            "title": "Claude: 5-hour limit at 81%"
+          }
+        ],
+        "state": {}
+      },
+      {
+        "lang": "nl",
+        "limits": {
+          "account_email": "user@example.com",
+          "five_hour": {
+            "resets_at": "2026-10-01T12:00:00.123456+00:00",
+            "utilization": 96
+          },
+          "seven_day": {
+            "resets_at": "2026-10-05T07:00:00+00:00",
+            "utilization": 91
+          }
+        },
+        "new_state": {
+          "user@example.com|five_hour": {
+            "sent": [
+              80,
+              95
+            ],
+            "window": "2026-10-01T12:00:00+00:00"
+          },
+          "user@example.com|seven_day": {
+            "sent": [
+              90
+            ],
+            "window": "2026-10-05T07:00:00+00:00"
+          }
+        },
+        "notes": [
+          {
+            "body": "Reset over 2u 0m.",
+            "id": "user@example.com|five_hour|2026-10-01T12:00:00+00:00|95",
+            "limit": "five_hour",
+            "pct": 96,
+            "threshold": 95,
+            "title": "Claude: 5-uurslimiet op 96%"
+          },
+          {
+            "body": "Reset ma 09:00.",
+            "id": "user@example.com|seven_day|2026-10-05T07:00:00+00:00|90",
+            "limit": "seven_day",
+            "pct": 91,
+            "threshold": 90,
+            "title": "Claude: Weeklimiet op 91%"
+          }
+        ],
+        "state": {}
+      },
+      {
+        "lang": "en",
+        "limits": {
+          "account_email": "user@example.com",
+          "five_hour": {
+            "resets_at": "2026-10-01T12:00:00.123456+00:00",
+            "utilization": 96
+          },
+          "seven_day": {
+            "resets_at": "2026-10-05T07:00:00+00:00",
+            "utilization": 91
+          }
+        },
+        "new_state": {
+          "user@example.com|five_hour": {
+            "sent": [
+              80,
+              95
+            ],
+            "window": "2026-10-01T12:00:00+00:00"
+          },
+          "user@example.com|seven_day": {
+            "sent": [
+              90
+            ],
+            "window": "2026-10-05T07:00:00+00:00"
+          }
+        },
+        "notes": [
+          {
+            "body": "Resets in 2h 0m.",
+            "id": "user@example.com|five_hour|2026-10-01T12:00:00+00:00|95",
+            "limit": "five_hour",
+            "pct": 96,
+            "threshold": 95,
+            "title": "Claude: 5-hour limit at 96%"
+          },
+          {
+            "body": "Resets Mon 09:00.",
+            "id": "user@example.com|seven_day|2026-10-05T07:00:00+00:00|90",
+            "limit": "seven_day",
+            "pct": 91,
+            "threshold": 90,
+            "title": "Claude: Weekly limit at 91%"
+          }
+        ],
+        "state": {}
+      },
+      {
+        "lang": "nl",
+        "limits": {
+          "account_email": "user@example.com",
+          "five_hour": {
+            "resets_at": "2026-10-01T12:00:00.123456+00:00",
+            "utilization": 96
+          },
+          "seven_day": {
+            "resets_at": "2026-10-05T07:00:00+00:00",
+            "utilization": 10
+          }
+        },
+        "new_state": {
+          "user@example.com|five_hour": {
+            "sent": [
+              80,
+              95
+            ],
+            "window": "2026-10-01T12:00:00+00:00"
+          },
+          "user@example.com|seven_day": {
+            "sent": [],
+            "window": "2026-10-05T07:00:00+00:00"
+          }
+        },
+        "notes": [
+          {
+            "body": "Reset over 2u 0m.",
+            "id": "user@example.com|five_hour|2026-10-01T12:00:00+00:00|95",
+            "limit": "five_hour",
+            "pct": 96,
+            "threshold": 95,
+            "title": "Claude: 5-uurslimiet op 96%"
+          }
+        ],
+        "state": {
+          "user@example.com|five_hour": {
+            "sent": [
+              80
+            ],
+            "window": "2026-10-01T12:00:00+00:00"
+          }
+        }
+      },
+      {
+        "lang": "en",
+        "limits": {
+          "account_email": "user@example.com",
+          "five_hour": {
+            "resets_at": "2026-10-01T12:00:00.123456+00:00",
+            "utilization": 96
+          },
+          "seven_day": {
+            "resets_at": "2026-10-05T07:00:00+00:00",
+            "utilization": 10
+          }
+        },
+        "new_state": {
+          "user@example.com|five_hour": {
+            "sent": [
+              80,
+              95
+            ],
+            "window": "2026-10-01T12:00:00+00:00"
+          },
+          "user@example.com|seven_day": {
+            "sent": [],
+            "window": "2026-10-05T07:00:00+00:00"
+          }
+        },
+        "notes": [
+          {
+            "body": "Resets in 2h 0m.",
+            "id": "user@example.com|five_hour|2026-10-01T12:00:00+00:00|95",
+            "limit": "five_hour",
+            "pct": 96,
+            "threshold": 95,
+            "title": "Claude: 5-hour limit at 96%"
+          }
+        ],
+        "state": {
+          "user@example.com|five_hour": {
+            "sent": [
+              80
+            ],
+            "window": "2026-10-01T12:00:00+00:00"
+          }
+        }
+      },
+      {
+        "lang": "nl",
+        "limits": {
+          "account_email": "user@example.com",
+          "five_hour": {
+            "resets_at": "2026-10-01T12:00:00.123456+00:00",
+            "utilization": 96
+          },
+          "seven_day": {
+            "resets_at": "2026-10-05T07:00:00+00:00",
+            "utilization": 10
+          }
+        },
+        "new_state": {
+          "user@example.com|five_hour": {
+            "sent": [
+              80,
+              95
+            ],
+            "window": "2026-10-01T12:00:00+00:00"
+          },
+          "user@example.com|seven_day": {
+            "sent": [],
+            "window": "2026-10-05T07:00:00+00:00"
+          }
+        },
+        "notes": [],
+        "state": {
+          "user@example.com|five_hour": {
+            "sent": [
+              80,
+              95
+            ],
+            "window": "2026-10-01T12:00:00+00:00"
+          }
+        }
+      },
+      {
+        "lang": "en",
+        "limits": {
+          "account_email": "user@example.com",
+          "five_hour": {
+            "resets_at": "2026-10-01T12:00:00.123456+00:00",
+            "utilization": 96
+          },
+          "seven_day": {
+            "resets_at": "2026-10-05T07:00:00+00:00",
+            "utilization": 10
+          }
+        },
+        "new_state": {
+          "user@example.com|five_hour": {
+            "sent": [
+              80,
+              95
+            ],
+            "window": "2026-10-01T12:00:00+00:00"
+          },
+          "user@example.com|seven_day": {
+            "sent": [],
+            "window": "2026-10-05T07:00:00+00:00"
+          }
+        },
+        "notes": [],
+        "state": {
+          "user@example.com|five_hour": {
+            "sent": [
+              80,
+              95
+            ],
+            "window": "2026-10-01T12:00:00+00:00"
+          }
+        }
+      },
+      {
+        "lang": "nl",
+        "limits": {
+          "account_email": "user@example.com",
+          "five_hour": {
+            "resets_at": "2026-10-01T12:00:00.123456+00:00",
+            "utilization": 5
+          },
+          "seven_day": {
+            "resets_at": "2026-10-05T07:00:00+00:00",
+            "utilization": 10
+          }
+        },
+        "new_state": {
+          "user@example.com|five_hour": {
+            "sent": [],
+            "window": "2026-10-01T12:00:00+00:00"
+          },
+          "user@example.com|seven_day": {
+            "sent": [],
+            "window": "2026-10-05T07:00:00+00:00"
+          }
+        },
+        "notes": [
+          {
+            "body": "Je kunt weer verder. Nu op 5%.",
+            "id": "user@example.com|five_hour|2026-10-01T12:00:00+00:00|reset",
+            "kind": "reset",
+            "limit": "five_hour",
+            "pct": 5,
+            "threshold": null,
+            "title": "Claude: 5-uurslimiet is gereset"
+          }
+        ],
+        "state": {
+          "user@example.com|five_hour": {
+            "sent": [
+              80
+            ],
+            "window": "2026-10-01T07:00:00+00:00"
+          }
+        }
+      },
+      {
+        "lang": "en",
+        "limits": {
+          "account_email": "user@example.com",
+          "five_hour": {
+            "resets_at": "2026-10-01T12:00:00.123456+00:00",
+            "utilization": 5
+          },
+          "seven_day": {
+            "resets_at": "2026-10-05T07:00:00+00:00",
+            "utilization": 10
+          }
+        },
+        "new_state": {
+          "user@example.com|five_hour": {
+            "sent": [],
+            "window": "2026-10-01T12:00:00+00:00"
+          },
+          "user@example.com|seven_day": {
+            "sent": [],
+            "window": "2026-10-05T07:00:00+00:00"
+          }
+        },
+        "notes": [
+          {
+            "body": "You can carry on. Now at 5%.",
+            "id": "user@example.com|five_hour|2026-10-01T12:00:00+00:00|reset",
+            "kind": "reset",
+            "limit": "five_hour",
+            "pct": 5,
+            "threshold": null,
+            "title": "Claude: 5-hour limit has reset"
+          }
+        ],
+        "state": {
+          "user@example.com|five_hour": {
+            "sent": [
+              80
+            ],
+            "window": "2026-10-01T07:00:00+00:00"
+          }
+        }
+      },
+      {
+        "lang": "nl",
+        "limits": {
+          "account_email": "user@example.com",
+          "five_hour": {
+            "resets_at": "2026-10-01T12:00:00.123456+00:00",
+            "utilization": 85
+          },
+          "seven_day": {
+            "resets_at": "2026-10-05T07:00:00+00:00",
+            "utilization": 10
+          }
+        },
+        "new_state": {
+          "user@example.com|five_hour": {
+            "sent": [
+              80
+            ],
+            "window": "2026-10-01T12:00:00+00:00"
+          },
+          "user@example.com|seven_day": {
+            "sent": [],
+            "window": "2026-10-05T07:00:00+00:00"
+          }
+        },
+        "notes": [
+          {
+            "body": "Reset over 2u 0m.",
+            "id": "user@example.com|five_hour|2026-10-01T12:00:00+00:00|80",
+            "limit": "five_hour",
+            "pct": 85,
+            "threshold": 80,
+            "title": "Claude: 5-uurslimiet op 85%"
+          }
+        ],
+        "state": {
+          "user@example.com|five_hour": {
+            "sent": [
+              80,
+              95
+            ],
+            "window": "2026-10-01T07:00:00+00:00"
+          }
+        }
+      },
+      {
+        "lang": "en",
+        "limits": {
+          "account_email": "user@example.com",
+          "five_hour": {
+            "resets_at": "2026-10-01T12:00:00.123456+00:00",
+            "utilization": 85
+          },
+          "seven_day": {
+            "resets_at": "2026-10-05T07:00:00+00:00",
+            "utilization": 10
+          }
+        },
+        "new_state": {
+          "user@example.com|five_hour": {
+            "sent": [
+              80
+            ],
+            "window": "2026-10-01T12:00:00+00:00"
+          },
+          "user@example.com|seven_day": {
+            "sent": [],
+            "window": "2026-10-05T07:00:00+00:00"
+          }
+        },
+        "notes": [
+          {
+            "body": "Resets in 2h 0m.",
+            "id": "user@example.com|five_hour|2026-10-01T12:00:00+00:00|80",
+            "limit": "five_hour",
+            "pct": 85,
+            "threshold": 80,
+            "title": "Claude: 5-hour limit at 85%"
+          }
+        ],
+        "state": {
+          "user@example.com|five_hour": {
+            "sent": [
+              80,
+              95
+            ],
+            "window": "2026-10-01T07:00:00+00:00"
+          }
+        }
+      },
+      {
+        "lang": "nl",
+        "limits": {
+          "account_email": "user@example.com",
+          "five_hour": {
+            "resets_at": "2026-10-01T12:00:00.123456+00:00",
+            "utilization": 5
+          },
+          "seven_day": {
+            "resets_at": "2026-10-05T07:00:00+00:00",
+            "utilization": 10
+          }
+        },
+        "new_state": {
+          "user@example.com|five_hour": {
+            "sent": [],
+            "window": "2026-10-01T12:00:00+00:00"
+          },
+          "user@example.com|seven_day": {
+            "sent": [],
+            "window": "2026-10-05T07:00:00+00:00"
+          }
+        },
+        "notes": [],
+        "state": {
+          "user@example.com|five_hour": {
+            "sent": [
+              80
+            ],
+            "window": "2026-09-29T07:00:00+00:00"
+          }
+        }
+      },
+      {
+        "lang": "en",
+        "limits": {
+          "account_email": "user@example.com",
+          "five_hour": {
+            "resets_at": "2026-10-01T12:00:00.123456+00:00",
+            "utilization": 5
+          },
+          "seven_day": {
+            "resets_at": "2026-10-05T07:00:00+00:00",
+            "utilization": 10
+          }
+        },
+        "new_state": {
+          "user@example.com|five_hour": {
+            "sent": [],
+            "window": "2026-10-01T12:00:00+00:00"
+          },
+          "user@example.com|seven_day": {
+            "sent": [],
+            "window": "2026-10-05T07:00:00+00:00"
+          }
+        },
+        "notes": [],
+        "state": {
+          "user@example.com|five_hour": {
+            "sent": [
+              80
+            ],
+            "window": "2026-09-29T07:00:00+00:00"
+          }
+        }
+      },
+      {
+        "lang": "nl",
+        "limits": {
+          "account_email": "user@example.com",
+          "five_hour": {
+            "resets_at": "2026-10-01T12:00:00.123456+00:00",
+            "utilization": 5
+          },
+          "seven_day": {
+            "resets_at": "2026-10-05T07:00:00+00:00",
+            "utilization": 10
+          }
+        },
+        "new_state": {
+          "user@example.com|five_hour": {
+            "sent": [],
+            "window": "2026-10-01T12:00:00+00:00"
+          },
+          "user@example.com|seven_day": {
+            "sent": [],
+            "window": "2026-10-05T07:00:00+00:00"
+          }
+        },
+        "notes": [],
+        "state": {
+          "user@example.com|five_hour": {
+            "sent": [],
+            "window": "2026-10-01T07:00:00+00:00"
+          }
+        }
+      },
+      {
+        "lang": "en",
+        "limits": {
+          "account_email": "user@example.com",
+          "five_hour": {
+            "resets_at": "2026-10-01T12:00:00.123456+00:00",
+            "utilization": 5
+          },
+          "seven_day": {
+            "resets_at": "2026-10-05T07:00:00+00:00",
+            "utilization": 10
+          }
+        },
+        "new_state": {
+          "user@example.com|five_hour": {
+            "sent": [],
+            "window": "2026-10-01T12:00:00+00:00"
+          },
+          "user@example.com|seven_day": {
+            "sent": [],
+            "window": "2026-10-05T07:00:00+00:00"
+          }
+        },
+        "notes": [],
+        "state": {
+          "user@example.com|five_hour": {
+            "sent": [],
+            "window": "2026-10-01T07:00:00+00:00"
+          }
+        }
+      },
+      {
+        "lang": "nl",
+        "limits": {
+          "account_email": "user@example.com",
+          "five_hour": {
+            "resets_at": "",
+            "utilization": 5
+          },
+          "seven_day": {
+            "resets_at": "2026-10-05T07:00:00+00:00",
+            "utilization": 10
+          }
+        },
+        "new_state": {
+          "user@example.com|seven_day": {
+            "sent": [],
+            "window": "2026-10-05T07:00:00+00:00"
+          }
+        },
+        "notes": [],
+        "state": {}
+      },
+      {
+        "lang": "en",
+        "limits": {
+          "account_email": "user@example.com",
+          "five_hour": {
+            "resets_at": "",
+            "utilization": 5
+          },
+          "seven_day": {
+            "resets_at": "2026-10-05T07:00:00+00:00",
+            "utilization": 10
+          }
+        },
+        "new_state": {
+          "user@example.com|seven_day": {
+            "sent": [],
+            "window": "2026-10-05T07:00:00+00:00"
+          }
+        },
+        "notes": [],
+        "state": {}
+      },
+      {
+        "lang": "nl",
+        "limits": {
+          "account_email": "user@example.com",
+          "five_hour": {
+            "resets_at": "2026-10-01T12:00:00.123456+00:00",
+            "utilization": null
+          },
+          "seven_day": {
+            "resets_at": "2026-10-05T07:00:00+00:00",
+            "utilization": null
+          }
+        },
+        "new_state": {
+          "user@example.com|five_hour": {
+            "sent": [],
+            "window": "2026-10-01T12:00:00+00:00"
+          },
+          "user@example.com|seven_day": {
+            "sent": [],
+            "window": "2026-10-05T07:00:00+00:00"
+          }
+        },
+        "notes": [],
+        "state": {}
+      },
+      {
+        "lang": "en",
+        "limits": {
+          "account_email": "user@example.com",
+          "five_hour": {
+            "resets_at": "2026-10-01T12:00:00.123456+00:00",
+            "utilization": null
+          },
+          "seven_day": {
+            "resets_at": "2026-10-05T07:00:00+00:00",
+            "utilization": null
+          }
+        },
+        "new_state": {
+          "user@example.com|five_hour": {
+            "sent": [],
+            "window": "2026-10-01T12:00:00+00:00"
+          },
+          "user@example.com|seven_day": {
+            "sent": [],
+            "window": "2026-10-05T07:00:00+00:00"
+          }
+        },
+        "notes": [],
+        "state": {}
+      },
+      {
+        "lang": "nl",
+        "limits": {
+          "five_hour": {
+            "resets_at": "bad",
+            "utilization": 99.9
+          }
+        },
+        "new_state": {},
+        "notes": [],
+        "state": {}
+      },
+      {
+        "lang": "en",
+        "limits": {
+          "five_hour": {
+            "resets_at": "bad",
+            "utilization": 99.9
+          }
+        },
+        "new_state": {},
+        "notes": [],
+        "state": {}
+      },
+      {
+        "lang": "nl",
+        "limits": {
+          "account_email": "",
+          "five_hour": {
+            "resets_at": "2026-10-01T12:00:00.123456+00:00",
+            "utilization": 90
+          },
+          "seven_day": {
+            "resets_at": "2026-10-05T07:00:00+00:00",
+            "utilization": 95
+          }
+        },
+        "new_state": {
+          "other": {
+            "sent": [
+              1
+            ],
+            "window": "x"
+          },
+          "|five_hour": {
+            "sent": [
+              80
+            ],
+            "window": "2026-10-01T12:00:00+00:00"
+          },
+          "|seven_day": {
+            "sent": [
+              90
+            ],
+            "window": "2026-10-05T07:00:00+00:00"
+          }
+        },
+        "notes": [
+          {
+            "body": "Reset over 2u 0m.",
+            "id": "|five_hour|2026-10-01T12:00:00+00:00|80",
+            "limit": "five_hour",
+            "pct": 90,
+            "threshold": 80,
+            "title": "Claude: 5-uurslimiet op 90%"
+          },
+          {
+            "body": "Reset ma 09:00.",
+            "id": "|seven_day|2026-10-05T07:00:00+00:00|90",
+            "limit": "seven_day",
+            "pct": 95,
+            "threshold": 90,
+            "title": "Claude: Weeklimiet op 95%"
+          }
+        ],
+        "state": {
+          "other": {
+            "sent": [
+              1
+            ],
+            "window": "x"
+          }
+        }
+      },
+      {
+        "lang": "en",
+        "limits": {
+          "account_email": "",
+          "five_hour": {
+            "resets_at": "2026-10-01T12:00:00.123456+00:00",
+            "utilization": 90
+          },
+          "seven_day": {
+            "resets_at": "2026-10-05T07:00:00+00:00",
+            "utilization": 95
+          }
+        },
+        "new_state": {
+          "other": {
+            "sent": [
+              1
+            ],
+            "window": "x"
+          },
+          "|five_hour": {
+            "sent": [
+              80
+            ],
+            "window": "2026-10-01T12:00:00+00:00"
+          },
+          "|seven_day": {
+            "sent": [
+              90
+            ],
+            "window": "2026-10-05T07:00:00+00:00"
+          }
+        },
+        "notes": [
+          {
+            "body": "Resets in 2h 0m.",
+            "id": "|five_hour|2026-10-01T12:00:00+00:00|80",
+            "limit": "five_hour",
+            "pct": 90,
+            "threshold": 80,
+            "title": "Claude: 5-hour limit at 90%"
+          },
+          {
+            "body": "Resets Mon 09:00.",
+            "id": "|seven_day|2026-10-05T07:00:00+00:00|90",
+            "limit": "seven_day",
+            "pct": 95,
+            "threshold": 90,
+            "title": "Claude: Weekly limit at 95%"
+          }
+        ],
+        "state": {
+          "other": {
+            "sent": [
+              1
+            ],
+            "window": "x"
+          }
+        }
       }
     ],
     "face_icon": [
@@ -1025,6 +2039,145 @@
         "in": "2026-10-01T10:00:00Z",
         "lang": "fr",
         "out": "Thu Oct 1"
+      }
+    ],
+    "history_path": [
+      {
+        "in": "2026-10-01T10:00:00+00:00",
+        "out": "2026-10.jsonl"
+      },
+      {
+        "in": "2026-10-31T23:30:00-02:00",
+        "out": "2026-11.jsonl"
+      },
+      {
+        "in": "2026-12-31T23:59:59Z",
+        "out": "2026-12.jsonl"
+      }
+    ],
+    "history_record": [
+      {
+        "in": {},
+        "out": {}
+      },
+      {
+        "in": {
+          "account_email": "user@example.com",
+          "cedar_ember": {
+            "at_limit": false,
+            "eligible": true,
+            "grants": [
+              {
+                "ends_at": "2026-10-22T21:59:00Z",
+                "id": "g1",
+                "label": "Launch week",
+                "paused": false,
+                "resets_left": 2,
+                "resets_total": 2,
+                "starts_at": "2026-09-20T00:00:00Z",
+                "usable_now": true
+              }
+            ]
+          },
+          "extra_usage": {
+            "currency": "EUR",
+            "is_enabled": true,
+            "monthly_limit": 1700,
+            "other": 1,
+            "used_credits": 0
+          },
+          "fetched_at": "2026-10-01T10:00:00+00:00",
+          "five_hour": {
+            "extra": 1,
+            "resets_at": "2026-10-01T12:00:00.123456+00:00",
+            "utilization": 12.0
+          },
+          "org_id": "org-1",
+          "seven_day": {
+            "resets_at": "2026-10-05T07:00:00+00:00",
+            "utilization": null
+          },
+          "seven_day_breakdown": {
+            "as_of": "x",
+            "rows": [
+              {
+                "display_name": "Chats",
+                "key": "chat",
+                "percent": 1,
+                "x": 2
+              },
+              {
+                "key": null
+              },
+              "junk",
+              {}
+            ],
+            "window_started_at": "2026-09-28T07:00:00Z"
+          }
+        },
+        "out": {
+          "account": "user@example.com",
+          "breakdown": {
+            "rows": [
+              {
+                "display_name": "Chats",
+                "key": "chat",
+                "percent": 1
+              }
+            ],
+            "window_started_at": "2026-09-28T07:00:00Z"
+          },
+          "cedar_ember": {
+            "at_limit": false,
+            "eligible": true,
+            "grants": [
+              {
+                "ends_at": "2026-10-22T21:59:00Z",
+                "id": "g1",
+                "paused": false,
+                "resets_left": 2,
+                "resets_total": 2,
+                "starts_at": "2026-09-20T00:00:00Z",
+                "usable_now": true
+              }
+            ]
+          },
+          "extra_usage": {
+            "currency": "EUR",
+            "monthly_limit": 1700,
+            "used_credits": 0
+          },
+          "five_hour": {
+            "resets_at": "2026-10-01T12:00:00.123456+00:00",
+            "utilization": 12.0
+          },
+          "org_id": "org-1",
+          "seven_day": {
+            "resets_at": "2026-10-05T07:00:00+00:00"
+          },
+          "ts": "2026-10-01T10:00:00+00:00"
+        }
+      },
+      {
+        "in": {
+          "extra_usage": {
+            "is_enabled": false
+          },
+          "fetched_at": "2026-10-01T10:00:00+00:00",
+          "five_hour": "x",
+          "seven_day_breakdown": {
+            "rows": null
+          }
+        },
+        "out": {
+          "ts": "2026-10-01T10:00:00+00:00"
+        }
+      },
+      {
+        "in": {
+          "seven_day_breakdown": {}
+        },
+        "out": {}
       }
     ],
     "limit_resets_view": [
@@ -2762,6 +3915,36 @@
           "fetched_at": "nonsense"
         },
         "out": null
+      }
+    ],
+    "window_key": [
+      {
+        "in": "",
+        "out": ""
+      },
+      {
+        "in": "bad",
+        "out": ""
+      },
+      {
+        "in": "2026-10-01T12:00:00Z",
+        "out": "2026-10-01T12:00:00+00:00"
+      },
+      {
+        "in": "2026-10-01T11:59:30.000001+00:00",
+        "out": "2026-10-01T12:00:00+00:00"
+      },
+      {
+        "in": "2026-10-01T11:59:29.999999+00:00",
+        "out": "2026-10-01T11:59:00+00:00"
+      },
+      {
+        "in": "2026-10-01T14:00:00+02:00",
+        "out": "2026-10-01T12:00:00+00:00"
+      },
+      {
+        "in": "2026-10-01T12:00:00.123456+00:00",
+        "out": "2026-10-01T12:00:00+00:00"
       }
     ]
   },

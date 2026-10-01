@@ -40,7 +40,7 @@ func jsonNumber(_ v: Any?) -> Double? {
 }
 
 /// Python truthiness for the values core.py tests with `or`.
-func truthy(_ v: Any?) -> Bool {
+public func truthy(_ v: Any?) -> Bool {
     switch v {
     case nil, is NSNull: return false
     case let s as String: return !s.isEmpty

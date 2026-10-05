@@ -58,7 +58,8 @@ if args.count == 4, args[1] == "--verify-release",
 }
 
 // Probe (taak 48): does claude.ai answer a plain URLSession request with the
-// sessionKey cookie, or does Cloudflare block it? Prints statuses only, no data.
+// sessionKey cookie, or does Cloudflare block it? Prints statuses and the key
+// paths of the usage response (names and types only, no values).
 //   ClaudeUsage --probe-native-fetch
 if args.count == 2, args[1] == "--probe-native-fetch" {
     guard let key = try? claudeSessionKey(), !key.isEmpty else { print("geen sessionKey"); exit(1) }
@@ -82,6 +83,21 @@ if args.count == 2, args[1] == "--probe-native-fetch" {
         sem.wait()
         return out
     }
+    func keyPaths(_ v: Any?, _ prefix: String = "") -> Set<String> {
+        switch v {
+        case let d as [String: Any]:
+            return d.reduce(into: Set<String>()) { acc, kv in
+                acc.formUnion(keyPaths(kv.value, prefix.isEmpty ? kv.key : "\(prefix).\(kv.key)"))
+            }
+        case let a as [Any]:
+            return a.isEmpty ? ["\(prefix)[] (leeg)"] : a.reduce(into: Set<String>()) { $0.formUnion(keyPaths($1, "\(prefix)[]")) }
+        case is NSNull: return ["\(prefix): null"]
+        case is String: return ["\(prefix): string"]
+        case let n as NSNumber: return ["\(prefix): \(CFGetTypeID(n) == CFBooleanGetTypeID() ? "bool" : "number")"]
+        default: return ["\(prefix): ?"]
+        }
+    }
+    var usageShape = Set<String>()
     for (name, ua) in agents.sorted(by: { $0.key < $1.key }) {
         let (st, note, json) = get("/api/bootstrap", ua)
         print("[\(name)] bootstrap: HTTP \(st) json=\(json != nil) \(note)")
@@ -91,8 +107,19 @@ if args.count == 2, args[1] == "--probe-native-fetch" {
             let (st, note, json) = get("/api/organizations/\(org)/usage?cedar_ember=1", ua)
             let has = (json as? [String: Any])?["five_hour"] != nil
             print("[\(name)]   org \(i + 1) usage: HTTP \(st) five_hour=\(has) \(note)")
+            if name == "default", has {
+                usageShape.formUnion(keyPaths(json))
+                // limits[]: only the server's own labels and percentages, no account data
+                for l in (json as? [String: Any])?["limits"] as? [[String: Any]] ?? [] {
+                    print("    limits: kind=\(l["kind"] ?? "-") group=\(l["group"] ?? "-") "
+                          + "severity=\(l["severity"] ?? "-") percent=\(l["percent"] ?? "-") active=\(l["is_active"] ?? "-")")
+                }
+            }
         }
     }
+    // Key paths and value types of the usage response, never the values themselves
+    print("usage-sleutels:")
+    usageShape.sorted().forEach { print("  \($0)") }
     exit(0)
 }
 

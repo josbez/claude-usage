@@ -286,6 +286,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSPopoverDelegate {
         case "refresh":
             cookieKeys.allowRetry()   // a Keychain prompt the user denied may come back now
             startFetch()
+            maybeCheckUpdates(manual: true)
         case "close":
             popover.performClose(nil)
         case "quit":

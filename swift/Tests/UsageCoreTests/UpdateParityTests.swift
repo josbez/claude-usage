@@ -28,6 +28,20 @@ final class UpdateParityTests: FixtureCase {
         }
     }
 
+    /// Taak 53: the refresh button checks after 5 min, not after a day.
+    func testManualUpdateCheckBrake() {
+        let now = Date(timeIntervalSince1970: 2_000_000_000)
+        func state(minutesAgo: Double) -> JSONObject {
+            ["last_check": pyIsoformatUTC(now.addingTimeInterval(-minutesAgo * 60))]
+        }
+        XCTAssertFalse(updateCheckDue(state(minutesAgo: 1), now: now, interval: manualUpdateCheckInterval))
+        XCTAssertFalse(updateCheckDue(state(minutesAgo: 4.9), now: now, interval: manualUpdateCheckInterval))
+        XCTAssertTrue(updateCheckDue(state(minutesAgo: 5), now: now, interval: manualUpdateCheckInterval))
+        XCTAssertTrue(updateCheckDue([:], now: now, interval: manualUpdateCheckInterval))
+        // The daily automatic check is unchanged.
+        XCTAssertFalse(updateCheckDue(state(minutesAgo: 60), now: now))
+    }
+
     func testVerifyReleaseSignature() {
         let v = cases["verify_release_signature"] as! JSONObject
         for c in v["cases"] as! [JSONObject] {

@@ -6,6 +6,9 @@ import Foundation
 
 public let updateAPIURL = URL(string: "https://api.github.com/repos/josbez/claude-usage/releases/latest")!
 public let updateCheckInterval: TimeInterval = 24 * 3600
+/// Refresh button: check right away, but at most this often (GitHub allows 60
+/// unauthenticated requests per hour per IP). Taak 53.
+public let manualUpdateCheckInterval: TimeInterval = 5 * 60
 public let dmgAsset = "ClaudeUsage.dmg"
 public let sigAsset = dmgAsset + ".sig"
 

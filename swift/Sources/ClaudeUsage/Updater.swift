@@ -21,14 +21,19 @@ extension AppDelegate {
 
     var isBundled: Bool { Bundle.main.bundleURL.pathExtension == "app" }
 
-    func maybeCheckUpdates(force: Bool = false) {
+    /// `manual`: from the refresh button, due after 5 min instead of a day (taak 53).
+    func maybeCheckUpdates(manual: Bool = false) {
         guard isBundled, !updateChecking, !updateInstalling, truthy(settings["update_check"]) else { return }
         let stored = loadJSONObject(paths.updateState)
         if update == nil, let latest = stored["latest"] as? [String: String],
            isNewer(latest["version"] ?? "", than: state.version) {
             update = latest   // remembered from an earlier check, no network needed
         }
-        if !force && !updateCheckDue(stored, now: Date()) { return }
+        let interval = manual ? manualUpdateCheckInterval : updateCheckInterval
+        if !updateCheckDue(stored, now: Date(), interval: interval) {
+            if manual { log("update-check overgeslagen: vorige check < \(Int(interval / 60)) min geleden") }
+            return
+        }
         updateChecking = true
         let feed = updateFeedURL
         let strings = self.strings!

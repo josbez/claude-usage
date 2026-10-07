@@ -282,6 +282,7 @@ extension AppDelegate {
         showCachedTitle()
         pushData()
         teardownFetchWebViewSoon()
+        maybeFetchCodex()   // rides along with the Claude fetch, at most every 5 min
     }
 
     func pushStatus(_ status: String) {

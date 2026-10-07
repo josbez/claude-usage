@@ -47,6 +47,8 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSPopoverDelegate {
     var serviceCheckedAt: Date?
     var loggedUnknownStatus = Set<String>()
     var loggedWeekWindows = Set<String>()
+    /// Codex as a second source (CodexFetching.swift, taak 55c).
+    var codex = CodexFetchState()
 
     // Notifications (Notifying.swift)
     var notifyCenter: UNUserNotificationCenter?
@@ -237,6 +239,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSPopoverDelegate {
             lang = languageFrom(Locale.preferredLanguages, defaultLang: strings.defaultLang)
             checkAccountSwitch()
             maybeCheckUpdates()
+            maybeFetchCodex()
             pushData(animated: true)
             // Never show stale numbers on open (e.g. right after waking from sleep).
             if !limitsAreFresh(loadJSONObject(paths.limits), now: Date(), maxAgeMinutes: refreshMinutes(settings)) {

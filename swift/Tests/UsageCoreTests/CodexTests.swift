@@ -28,7 +28,7 @@ final class CodexTests: XCTestCase {
 
     func testNoAccountDataLeaves() {
         let s = codexSnapshot(rateLimits: Self.fixture, fetchedAt: fetched, now: now).snapshot!
-        let text = String(decoding: try! JSONSerialization.data(withJSONObject: snapshotJSON(s)), as: UTF8.self)
+        let text = String(decoding: try! JSONSerialization.data(withJSONObject: snapshotJSON(s, origin: "app-server")), as: UTF8.self)
         for secret in ["account-id", "credit-id", "Thanks for using"] { XCTAssertFalse(text.contains(secret), secret) }
     }
 
@@ -75,13 +75,13 @@ final class CodexTests: XCTestCase {
 
     func testSnapshotFileRoundTrip() {
         let s = codexSnapshot(rateLimits: Self.fixture, fetchedAt: fetched, now: now).snapshot!
-        let back = snapshot(fromJSON: snapshotJSON(s), sourceId: "codex")!
+        let back = snapshot(fromJSON: snapshotJSON(s, origin: "app-server"), sourceId: "codex")!
         XCTAssertEqual(back.source, s.source)
         XCTAssertEqual(back.windows, s.windows)
         XCTAssertEqual(back.plan, "plus")
         XCTAssertEqual(back.resetCredits, s.resetCredits)
         XCTAssertEqual(back.fetchedAt, s.fetchedAt)
-        XCTAssertNil(snapshot(fromJSON: snapshotJSON(s), sourceId: "claude-desktop"))
+        XCTAssertNil(snapshot(fromJSON: snapshotJSON(s, origin: "app-server"), sourceId: "claude-desktop"))
         XCTAssertNil(snapshot(fromJSON: ["source": "codex"], sourceId: "codex"))
     }
 
@@ -193,5 +193,90 @@ final class CodexAppServerTests: XCTestCase {
             (try? JSONSerialization.jsonObject(with: $0) as? JSONObject)?["method"] as? String
         }
         XCTAssertEqual(methods, ["initialize", "initialized", "account/rateLimits/read"])
+    }
+}
+
+/// Taak 55i: fallback to the last rate-limits event in Codex's session files.
+final class CodexSessionFileTests: XCTestCase {
+    static let events: [JSONObject] = {
+        let url = FixtureCase.testsDir.appendingPathComponent("Fixtures/codex-rate-limits.jsonl")
+        return try! String(contentsOf: url, encoding: .utf8).split(separator: "\n")
+            .map { try! JSONSerialization.jsonObject(with: Data($0.utf8)) as! JSONObject }
+    }()
+    let now = parseDate("2026-10-07T13:30:00Z")!
+    var dir: URL!
+
+    override func setUpWithError() throws {
+        dir = FileManager.default.temporaryDirectory.appendingPathComponent("codexsessions-\(UUID().uuidString)")
+        try FileManager.default.createDirectory(at: dir, withIntermediateDirectories: true)
+    }
+    override func tearDownWithError() throws { try? FileManager.default.removeItem(at: dir) }
+
+    func testRealEvent() {
+        let parse = codexSessionSnapshot(event: Self.events[1], now: now)
+        XCTAssertEqual(parse.unknown, [])
+        let s = parse.snapshot!
+        XCTAssertEqual(s.windows, [
+            UsageWindow(id: "primary", kind: .session, utilization: 1, resetsAt: Date(timeIntervalSince1970: 1_791_396_969)),
+            UsageWindow(id: "secondary", kind: .weekly, utilization: 0, resetsAt: Date(timeIntervalSince1970: 1_791_983_769)),
+        ])
+        XCTAssertEqual(s.fetchedAt, parseDate("2026-10-07T13:21:49.986Z"))
+        XCTAssertEqual(s.plan, "plus")
+        XCTAssertNil(s.resetCredits)   // not in session files
+    }
+
+    func testPassedResetCountsAsZero() {
+        let later = Date(timeIntervalSince1970: 1_791_396_969 + 60)   // after the 5-hour reset
+        let s = codexSessionSnapshot(event: Self.events[1], now: later).snapshot!
+        XCTAssertEqual(s.window(.session), UsageWindow(id: "primary", kind: .session, utilization: 0, resetsAt: nil))
+        XCTAssertEqual(s.window(.weekly)?.resetsAt, Date(timeIntervalSince1970: 1_791_983_769))
+    }
+
+    func testOldEventIsNoSource() {
+        XCTAssertNil(codexSessionSnapshot(event: Self.events[1], now: now.addingTimeInterval(8 * 86400)).snapshot)
+        XCTAssertNil(codexSessionSnapshot(event: ["type": "event_msg"], now: now).snapshot)
+    }
+
+    func line(_ obj: JSONObject) -> String { String(decoding: try! JSONSerialization.data(withJSONObject: obj), as: UTF8.self) }
+
+    func testReadsTheLastEventFromTheEnd() throws {
+        let filler = String(repeating: #"{"type":"response_item","payload":{"text":"\#(String(repeating: "x", count: 1000))"}}"# + "\n", count: 200)
+        var older = Self.events[0]; older["timestamp"] = "2026-10-07T13:00:00.000Z"
+        let file = dir.appendingPathComponent("s.jsonl")
+        // older event, ~200 KB filler, newest event, more filler: the event spans 64 KB block borders.
+        try (line(older) + "\n" + filler + line(Self.events[1]) + "\n" + filler).write(to: file, atomically: true, encoding: .utf8)
+        let ev = lastCodexRateLimitsEvent(in: file)
+        XCTAssertEqual(ev?["timestamp"] as? String, "2026-10-07T13:21:49.986Z")
+        // Not within the read limit: nothing (rather than reading a huge file whole).
+        XCTAssertNil(lastCodexRateLimitsEvent(in: file, maxBytes: 64 << 10))
+        let empty = dir.appendingPathComponent("e.jsonl")
+        try "".write(to: empty, atomically: true, encoding: .utf8)
+        XCTAssertNil(lastCodexRateLimitsEvent(in: empty))
+        XCTAssertNil(lastCodexRateLimitsEvent(in: dir.appendingPathComponent("missing.jsonl")))
+    }
+
+    func testEventOnTheFirstLineWithoutNewline() throws {
+        let file = dir.appendingPathComponent("one.jsonl")
+        try line(Self.events[0]).write(to: file, atomically: true, encoding: .utf8)
+        XCTAssertEqual(lastCodexRateLimitsEvent(in: file)?["timestamp"] as? String, "2026-10-07T13:16:09.925Z")
+    }
+
+    func testLatestFileInRecentDayFolders() throws {
+        var cal = Calendar(identifier: .gregorian)
+        cal.timeZone = TimeZone(identifier: "Europe/Amsterdam")!
+        let fm = FileManager.default
+        func put(_ day: String, _ name: String, age: TimeInterval) throws {
+            let d = dir.appendingPathComponent(day)
+            try fm.createDirectory(at: d, withIntermediateDirectories: true)
+            let f = d.appendingPathComponent(name)
+            try "x".write(to: f, atomically: true, encoding: .utf8)
+            try fm.setAttributes([.modificationDate: now.addingTimeInterval(-age)], ofItemAtPath: f.path)
+        }
+        try put("2026/10/07", "today.jsonl", age: 600)
+        try put("2026/10/05", "longrunning.jsonl", age: 60)   // older folder, written more recently
+        try put("2026/10/07", "notes.txt", age: 1)
+        try put("2026/09/20", "ancient.jsonl", age: 1)       // outside the 8 days
+        XCTAssertEqual(latestCodexSessionFile(root: dir, now: now, calendar: cal)?.lastPathComponent, "longrunning.jsonl")
+        XCTAssertNil(latestCodexSessionFile(root: dir.appendingPathComponent("nope"), now: now, calendar: cal))
     }
 }

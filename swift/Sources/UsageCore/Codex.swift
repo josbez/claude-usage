@@ -122,10 +122,12 @@ func codexResetCredits(_ raw: Any?, now: Date) -> (ResetCredits?, [String]) {
 // MARK: - Snapshot file (usage-limits/<source>.json) for sources other than Claude
 
 /// The Claude source keeps its raw API file; other sources store this format.
-public func snapshotJSON(_ s: SourceSnapshot) -> JSONObject {
+/// `origin` says where the numbers came from (Codex: "app-server" is live,
+/// "session-file" is the last event Codex wrote, possibly minutes or days old).
+public func snapshotJSON(_ s: SourceSnapshot, origin: String) -> JSONObject {
     func iso(_ d: Date?) -> Any { d.map { isoString($0) } ?? NSNull() }
     var out: JSONObject = [
-        "source": s.source.id, "tool": s.source.tool,
+        "source": s.source.id, "tool": s.source.tool, "origin": origin,
         "fetched_at": iso(s.fetchedAt), "plan": s.plan ?? NSNull(),
         "windows": s.windows.map { ["id": $0.id, "kind": $0.kind.rawValue,
                                     "utilization": $0.utilization, "resets_at": iso($0.resetsAt)] },
@@ -155,4 +157,96 @@ public func snapshot(fromJSON obj: JSONObject, sourceId: String) -> SourceSnapsh
     return SourceSnapshot(source: UsageSource(id: sourceId, tool: tool, accountLabel: ""),
                           windows: windows, fetchedAt: (obj["fetched_at"] as? String).flatMap(parseDate),
                           plan: obj["plan"] as? String, resetCredits: credits, extras: [:])
+}
+
+// MARK: - Fallback: Codex session files (taak 55i)
+
+/// A session event older than this means Codex isn't in use: no source.
+public let codexSessionMaxAge: TimeInterval = 7 * 86400
+
+/// A `{"type":"event_msg","payload":{"type":"token_count","rate_limits":…}}` line
+/// from ~/.codex/sessions as a snapshot. It is a moment in time: `fetchedAt` is
+/// the event's own timestamp, and a window whose reset has passed counts as 0%
+/// (that happened; its next reset time is unknown, so none is given).
+public func codexSessionSnapshot(event: JSONObject, now: Date) -> CodexParse {
+    guard event["type"] as? String == "event_msg", let payload = event["payload"] as? JSONObject,
+          payload["type"] as? String == "token_count", let limits = payload["rate_limits"] as? JSONObject,
+          let asOf = (event["timestamp"] as? String).flatMap(parseDate)
+    else { return CodexParse(snapshot: nil, unknown: ["sessie-event zonder rate_limits"]) }
+    guard now.timeIntervalSince(asOf) < codexSessionMaxAge else { return CodexParse(snapshot: nil, unknown: []) }
+
+    var unknown: [String] = []
+    var windows: [UsageWindow] = []
+    for key in ["primary", "secondary"] {
+        guard let w = limits[key] as? JSONObject else { continue }
+        guard let used = jsonNumber(w["used_percent"]), let minutes = jsonInt(w["window_minutes"]) else {
+            unknown.append("venster \(key) zonder used_percent/window_minutes")
+            continue
+        }
+        let kind = windowKind(durationMinutes: minutes)
+        if kind == .other { unknown.append("venster \(key) van \(minutes) min") }
+        let resets = jsonNumber(w["resets_at"]).map { Date(timeIntervalSince1970: $0) }
+        if let r = resets, r <= now {
+            windows.append(UsageWindow(id: key, kind: kind, utilization: 0, resetsAt: nil))
+        } else {
+            windows.append(UsageWindow(id: key, kind: kind, utilization: used, resetsAt: resets))
+        }
+    }
+    var plan: String? = nil
+    if let p = limits["plan_type"] as? String, !p.isEmpty {
+        if codexKnownPlans.contains(p) { plan = p } else { unknown.append("plan_type \(p)") }
+    }
+    let snapshot = SourceSnapshot(source: UsageSource(id: codexSource, tool: "codex", accountLabel: ""),
+                                  windows: windows, fetchedAt: asOf, plan: plan, resetCredits: nil, extras: [:])
+    return CodexParse(snapshot: snapshot, unknown: unknown)
+}
+
+/// The most recently written session file in the day folders
+/// (`sessions/YYYY/MM/DD/`) of the last 8 days; only those are listed.
+public func latestCodexSessionFile(root: URL, now: Date, fm: FileManager = .default,
+                                   calendar: Calendar = .current) -> URL? {
+    var best: (url: URL, mtime: Date)? = nil
+    for daysBack in 0...7 {
+        guard let day = calendar.date(byAdding: .day, value: -daysBack, to: now) else { continue }
+        let c = calendar.dateComponents([.year, .month, .day], from: day)
+        let dir = root.appendingPathComponent(String(format: "%04d/%02d/%02d", c.year ?? 0, c.month ?? 0, c.day ?? 0))
+        guard let names = try? fm.contentsOfDirectory(atPath: dir.path) else { continue }
+        for name in names where name.hasSuffix(".jsonl") {
+            let url = dir.appendingPathComponent(name)
+            guard let m = (try? fm.attributesOfItem(atPath: url.path))?[.modificationDate] as? Date else { continue }
+            if best == nil || m > best!.mtime { best = (url, m) }
+        }
+    }
+    return best?.url
+}
+
+/// The last rate-limits event in a session file, read backwards from the end
+/// in 64 KB blocks (session files grow fast), at most `maxBytes`.
+public func lastCodexRateLimitsEvent(in file: URL, maxBytes: Int = 4 << 20) -> JSONObject? {
+    guard let handle = try? FileHandle(forReadingFrom: file) else { return nil }
+    defer { try? handle.close() }
+    guard let size = try? handle.seekToEnd() else { return nil }
+    let block: UInt64 = 64 << 10
+    var offset = size
+    var tail = Data()
+    var read = 0
+    let marker = Data("\"rate_limits\"".utf8)
+    while offset > 0, read < maxBytes {
+        let start = offset > block ? offset - block : 0
+        guard (try? handle.seek(toOffset: start)) != nil,
+              let chunk = try? handle.read(upToCount: Int(offset - start)) else { return nil }
+        read += chunk.count
+        tail = chunk + tail
+        offset = start
+        // Complete lines only: everything after the first newline (or all of it at the file's start).
+        let firstNewline = offset == 0 ? tail.startIndex : (tail.firstIndex(of: 0x0A).map { $0 + 1 } ?? tail.endIndex)
+        let lines = tail[firstNewline...].split(separator: 0x0A)
+        for line in lines.reversed() where line.range(of: marker) != nil {
+            if let obj = (try? JSONSerialization.jsonObject(with: Data(line))) as? JSONObject,
+               (obj["payload"] as? JSONObject)?["rate_limits"] != nil {
+                return obj
+            }
+        }
+    }
+    return nil
 }

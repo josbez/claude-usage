@@ -9,11 +9,17 @@ import WebKit
 extension AppDelegate {
     static let fetchTimeout: TimeInterval = 45
 
+    /// The sessionKey: "" when the desktop app is logged out, nil when it can't be read.
     func sessionKey() -> String? {
-        do {
-            return try claudeSessionKey()
-        } catch {
-            log("cookie decrypt: \(error)")
+        switch cookieKeys.sessionKey() {
+        case .key(let value): return value
+        case .loggedOut: return ""
+        case .noPassword:
+            log("cookie decrypt: \(CookieError.noPassword) of hij past niet — opnieuw na vernieuwen of over een uur")
+            return nil
+        case .waiting: return nil
+        case .noDatabase:
+            log("cookie decrypt: \(CookieError.noDatabase)")
             return nil
         }
     }

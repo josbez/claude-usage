@@ -39,6 +39,10 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSPopoverDelegate {
     var watchdog: Timer?
     var lastCookieMtime: Date?
     var lastSessionHash: String?
+    /// Cookie key in memory: one Keychain request per app start (taak 54).
+    lazy var cookieKeys = CookieKeyCache(onRead: { [weak self] reason in
+        self?.log("keychain: wachtwoord opgevraagd (reden: \(reason.rawValue))")
+    })
     var serviceChecking = false
     var serviceCheckedAt: Date?
     var loggedUnknownStatus = Set<String>()
@@ -280,6 +284,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSPopoverDelegate {
     func handle(_ name: String, _ body: Any) {
         switch name {
         case "refresh":
+            cookieKeys.allowRetry()   // a Keychain prompt the user denied may come back now
             startFetch()
         case "close":
             popover.performClose(nil)

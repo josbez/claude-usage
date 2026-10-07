@@ -106,7 +106,7 @@ public struct FaceTheme: Equatable {
 
 public let faceThemes = [
     FaceTheme(id: "halloween", faces: ["🎃", "🕷️", "🦇", "👻", "🧟", "🪦", "💀"],
-              from: (10, 20), through: (10, 31)),
+              from: (10, 1), through: (10, 31)),
     FaceTheme(id: "christmas", faces: ["⛄", "❄️", "🎄", "🎁", "🔔", "🕯️", "🔥"],
               from: (12, 5), through: (12, 25)),
     FaceTheme(id: "newyear", faces: ["🥂", "🍾", "🧨", "🎇", "🎆", "💥", "🔥"],

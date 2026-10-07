@@ -8,9 +8,9 @@ final class SeasonalFacesTests: XCTestCase {
     func date(_ iso: String) -> Date { parseDate(iso)! }
 
     func testHalloweenWindowInLocalTime() {
-        // 20 Oct 00:00 through 31 Oct 23:59 Amsterdam (UTC+2 until 25 Oct 2026, then UTC+1)
-        XCTAssertNil(activeFaceTheme(date("2026-10-19T21:59:00Z"), timeZone: amsterdam))
-        XCTAssertEqual(activeFaceTheme(date("2026-10-19T22:00:00Z"), timeZone: amsterdam)?.id, "halloween")
+        // 1 Oct 00:00 through 31 Oct 23:59 Amsterdam (UTC+2 until 25 Oct 2026, then UTC+1)
+        XCTAssertNil(activeFaceTheme(date("2026-09-30T21:59:00Z"), timeZone: amsterdam))
+        XCTAssertEqual(activeFaceTheme(date("2026-09-30T22:00:00Z"), timeZone: amsterdam)?.id, "halloween")
         XCTAssertEqual(activeFaceTheme(date("2026-10-31T22:59:00Z"), timeZone: amsterdam)?.id, "halloween")
         XCTAssertNil(activeFaceTheme(date("2026-10-31T23:00:00Z"), timeZone: amsterdam))
         XCTAssertNil(activeFaceTheme(date("2026-06-15T12:00:00Z"), timeZone: amsterdam))

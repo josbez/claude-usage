@@ -51,7 +51,7 @@ The second command prints the public key for `updatePublicKeyHex`. A new key in 
 
 ## Logs and pitfalls
 
-- Log: `~/Library/Logs/ClaudeUsage.log`; fetched data: `~/.claude/usage-limits.json`.
+- Log: `~/Library/Logs/ClaudeUsage.log`; fetched data: one file per source in `~/.claude/usage-limits/` (`claude-desktop.json`; up to 2.1 this was `~/.claude/usage-limits.json`, moved on first launch).
 - Usage history (own storage; the API keeps none): `~/.claude/usage-history/YYYY-MM.jsonl`, one line per fetch with raw API values only, about 5.5 MB per month. Stays local.
 - **Source ≠ deployed:** changes only take effect after `./scripts/deploy.sh`.
 - **Universal builds, macOS 11+:** releases ship arm64 + x86_64. An update is one-way: an arm64-only release would leave Intel Macs with an app that doesn't start.

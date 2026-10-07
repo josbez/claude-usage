@@ -11,6 +11,7 @@ final class PathsTests: XCTestCase {
     func testUninstallTargetsReleased() {
         let p = Paths(isDev: false, home: home)
         XCTAssertEqual(names(p.uninstallTargets(keepHistory: false)), [
+            "/Users/someone/.claude/usage-limits",
             "/Users/someone/.claude/usage-limits.json",
             "/Users/someone/.claude/usage-tracker-blocks.json",
             "/Users/someone/.claude/usage-tracker-settings.json",
@@ -27,7 +28,7 @@ final class PathsTests: XCTestCase {
         let p = Paths(isDev: false, home: home)
         let targets = names(p.uninstallTargets(keepHistory: true))
         XCTAssertFalse(targets.contains("/Users/someone/.claude/usage-history"))
-        XCTAssertEqual(targets.count, 6)
+        XCTAssertEqual(targets.count, 7)
     }
 
     func testDevBuildNeverTouchesReleasedFiles() {
@@ -36,6 +37,7 @@ final class PathsTests: XCTestCase {
         let targets = names(dev.uninstallTargets(keepHistory: false))
         XCTAssertTrue(released.isDisjoint(with: targets), "\(targets)")
         XCTAssertTrue(targets.contains("/Users/someone/.claude/usage-history-dev"))
+        XCTAssertTrue(targets.contains("/Users/someone/.claude/usage-limits-dev"))
         XCTAssertNil(dev.launchAgent)
     }
 
@@ -89,5 +91,75 @@ final class MenubarRingTests: XCTestCase {
         XCTAssertEqual(normalizeSettings(nil)["menubar_icon"] as? String, "ring")
         XCTAssertEqual(normalizeSettings(["menubar_icon": "emoji"])["menubar_icon"] as? String, "emoji")
         XCTAssertEqual(normalizeSettings(["menubar_icon": "x"])["menubar_icon"] as? String, "ring")
+    }
+}
+
+/// Taak 55d: one file per usage source, and the move from usage-limits.json.
+final class SourceFilesTests: XCTestCase {
+    var home: URL!
+    var paths: Paths!
+    let fm = FileManager.default
+
+    override func setUpWithError() throws {
+        home = fm.temporaryDirectory.appendingPathComponent("claudeusage-test-\(UUID().uuidString)")
+        try fm.createDirectory(at: home.appendingPathComponent(".claude"), withIntermediateDirectories: true)
+        paths = Paths(isDev: false, home: home)
+    }
+    override func tearDownWithError() throws { try? fm.removeItem(at: home) }
+
+    func write(_ url: URL, _ fetched: String, age: TimeInterval) throws {
+        try saveJSONObject(["fetched_at": fetched], to: url)
+        try fm.setAttributes([.modificationDate: Date().addingTimeInterval(-age)], ofItemAtPath: url.path)
+    }
+    func fetched(_ url: URL) -> String? { loadJSONObject(url)["fetched_at"] as? String }
+
+    func testPaths() {
+        let p = Paths(isDev: false, home: URL(fileURLWithPath: "/Users/someone"))
+        XCTAssertEqual(p.limits.path, "/Users/someone/.claude/usage-limits/claude-desktop.json")
+        XCTAssertEqual(p.snapshotFile("codex").path, "/Users/someone/.claude/usage-limits/codex.json")
+        XCTAssertEqual(p.legacyLimits.path, "/Users/someone/.claude/usage-limits.json")
+        let dev = Paths(isDev: true, home: URL(fileURLWithPath: "/Users/someone"))
+        XCTAssertEqual(dev.limits.path, "/Users/someone/.claude/usage-limits-dev/claude-desktop.json")
+        XCTAssertEqual(dev.legacyLimits.path, "/Users/someone/.claude/usage-limits.dev.json")
+    }
+
+    func testSourceIds() {
+        for ok in ["claude-desktop", "codex", "claude-code-2"] { XCTAssertTrue(isValidSourceId(ok), ok) }
+        for bad in ["", "../x", "a/b", "Codex", "user@example.com", "-x", "x-", "a--b", String(repeating: "a", count: 65)] {
+            XCTAssertFalse(isValidSourceId(bad), bad)
+        }
+    }
+
+    func testFreshInstallHasNothingToMove() {
+        XCTAssertEqual(migrateLimitsFile(paths), .none)
+        XCTAssertFalse(fm.fileExists(atPath: paths.sourcesDir.path))
+    }
+
+    func testMovesTheOldFile() throws {
+        try write(paths.legacyLimits, "oud", age: 60)
+        XCTAssertEqual(migrateLimitsFile(paths), .moved)
+        XCTAssertEqual(fetched(paths.limits), "oud")
+        XCTAssertFalse(fm.fileExists(atPath: paths.legacyLimits.path))
+        XCTAssertEqual(migrateLimitsFile(paths), .none)   // idempotent
+    }
+
+    func testAfterDowngradeTheNewerFileWins() throws {
+        try write(paths.limits, "nieuw-pad", age: 3600)
+        try write(paths.legacyLimits, "na-downgrade", age: 60)
+        XCTAssertEqual(migrateLimitsFile(paths), .keptNewer(fromLegacy: true))
+        XCTAssertEqual(fetched(paths.limits), "na-downgrade")
+        XCTAssertFalse(fm.fileExists(atPath: paths.legacyLimits.path))
+
+        try write(paths.legacyLimits, "ouder", age: 7200)
+        XCTAssertEqual(migrateLimitsFile(paths), .keptNewer(fromLegacy: false))
+        XCTAssertEqual(fetched(paths.limits), "na-downgrade")
+        XCTAssertFalse(fm.fileExists(atPath: paths.legacyLimits.path))
+    }
+
+    func testDevBuildOnlyTouchesItsOwnFiles() throws {
+        try write(paths.legacyLimits, "echte app", age: 60)
+        let dev = Paths(isDev: true, home: home)
+        XCTAssertEqual(migrateLimitsFile(dev), .none)
+        XCTAssertEqual(fetched(paths.legacyLimits), "echte app")
     }
 }

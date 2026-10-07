@@ -9,7 +9,7 @@ cd "$(dirname "$0")/.."
 APP=/Applications/ClaudeUsage.app
 BIN="$APP/Contents/MacOS/ClaudeUsage"
 PLIST="$HOME/Library/LaunchAgents/com.jos.claude-usage.plist"
-LIMITS="$HOME/.claude/usage-limits.json"
+LIMITS="$HOME/.claude/usage-limits/claude-desktop.json"   # taak 55d; tot 2.1: usage-limits.json
 LOG="$HOME/Library/Logs/ClaudeUsage.log"
 FETCH_WAIT_SEC=60
 
@@ -33,9 +33,12 @@ SRC=dist-swift/ClaudeUsage.app
 [ -f "$PLIST" ] || { echo "✗ LaunchAgent ontbreekt — draai eerst ./install.sh" >&2; exit 1; }
 
 fetched_at() {
-    plutil -extract fetched_at raw -o - "$LIMITS" 2>/dev/null || true
+    plutil -extract fetched_at raw -o - "${1:-$LIMITS}" 2>/dev/null || true
 }
+# The first start after 55d moves usage-limits.json into usage-limits/: compare
+# against the old file then, or the moved value would pass for a fresh fetch.
 BEFORE=$(fetched_at)
+[ -n "$BEFORE" ] || BEFORE=$(fetched_at "$HOME/.claude/usage-limits.json")
 
 echo "🔄 Deploying..."
 launchctl unload "$PLIST" 2>/dev/null || true

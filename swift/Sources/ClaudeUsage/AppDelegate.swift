@@ -86,6 +86,13 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSPopoverDelegate {
         activity = ProcessInfo.processInfo.beginActivity(
             options: .userInitiatedAllowingIdleSystemSleep, reason: "periodieke Claude-usage-refresh")
 
+        switch migrateLimitsFile(paths) {
+        case .none: break
+        case .moved: log("limieten verhuisd naar \(paths.limits.path)")
+        case .keptNewer(let fromLegacy):
+            log("limieten: oud en nieuw bestand gevonden, \(fromLegacy ? "oude (nieuwer)" : "nieuwe") bewaard")
+        case .failed(let error): log("limieten verhuizen mislukt: \(error)")
+        }
         setupNotifications()
         migrateMenubarIcon()
         setupStatusItem()

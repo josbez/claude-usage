@@ -1,7 +1,7 @@
 import Foundation
 
-/// Where the app keeps its files. The Python app and the released Swift app share
-/// the same paths (same formats, so an update keeps settings and history).
+/// Where the app keeps its files (same names and formats across versions, so an
+/// update keeps settings and history).
 /// The dev build (`ClaudeUsage Dev.app`, runs next to the released app) writes to
 /// its own files so both apps can be tested side by side without interfering.
 public struct Paths {
@@ -18,7 +18,17 @@ public struct Paths {
         claudeDir.appendingPathComponent(isDev ? "\(name).dev.\(ext)" : "\(name).\(ext)")
     }
 
-    public var limits: URL { own("usage-limits", ext: "json") }
+    /// One file per usage source (taak 55d): `usage-limits/<source id>.json`.
+    public var sourcesDir: URL { claudeDir.appendingPathComponent(isDev ? "usage-limits-dev" : "usage-limits") }
+    public func snapshotFile(_ sourceId: String) -> URL {
+        precondition(isValidSourceId(sourceId), "bron-id \(sourceId)")
+        return sourcesDir.appendingPathComponent("\(sourceId).json")
+    }
+    /// The Claude desktop source: what the app fetched into usage-limits.json before 55d.
+    public var limits: URL { snapshotFile(claudeDesktopSource) }
+    /// usage-limits.json up to 2.1; only read once to migrate (and written by an older
+    /// version after a downgrade).
+    public var legacyLimits: URL { own("usage-limits", ext: "json") }
     public var blockLogState: URL { own("usage-tracker-blocks", ext: "json") }
     public var settings: URL { own("usage-tracker-settings", ext: "json") }
     public var notifyState: URL { own("usage-tracker-notified", ext: "json") }
@@ -39,10 +49,52 @@ public struct Paths {
     /// the dev build can't touch the released app's files and nothing else in
     /// ~/.claude (that belongs to Claude Code) is ever removed.
     public func uninstallTargets(keepHistory: Bool) -> [URL] {
-        var urls = [limits, blockLogState, settings, notifyState, updateState]
+        var urls = [sourcesDir, legacyLimits, blockLogState, settings, notifyState, updateState]
         if !keepHistory { urls.append(historyDir) }
         urls.append(log)
         return urls
+    }
+}
+
+/// Source ids end up in file names: lowercase letters, digits and dashes only.
+public func isValidSourceId(_ id: String) -> Bool {
+    !id.isEmpty && id.count <= 64 && id.range(of: #"^[a-z0-9]+(-[a-z0-9]+)*$"#, options: .regularExpression) != nil
+}
+
+public enum LimitsMigration: Equatable {
+    /// Nothing to do: no old file.
+    case none
+    /// usage-limits.json moved to usage-limits/claude-desktop.json.
+    case moved
+    /// Both existed (after a downgrade and update): the newer one stays.
+    case keptNewer(fromLegacy: Bool)
+    case failed(String)
+}
+
+/// Moves usage-limits.json into usage-limits/ (taak 55d). Idempotent; when both
+/// exist the newer file wins, so going back to 2.1 and updating again loses nothing.
+public func migrateLimitsFile(_ paths: Paths, fm: FileManager = .default) -> LimitsMigration {
+    let old = paths.legacyLimits, new = paths.limits
+    guard fm.fileExists(atPath: old.path) else { return .none }
+    do {
+        try fm.createDirectory(at: paths.sourcesDir, withIntermediateDirectories: true)
+        if fm.fileExists(atPath: new.path) {
+            func mtime(_ u: URL) -> Date {
+                (try? fm.attributesOfItem(atPath: u.path))?[.modificationDate] as? Date ?? .distantPast
+            }
+            let legacyNewer = mtime(old) > mtime(new)
+            if legacyNewer {
+                try fm.removeItem(at: new)
+                try fm.moveItem(at: old, to: new)
+            } else {
+                try fm.removeItem(at: old)
+            }
+            return .keptNewer(fromLegacy: legacyNewer)
+        }
+        try fm.moveItem(at: old, to: new)
+        return .moved
+    } catch {
+        return .failed("\(error)")
     }
 }
 

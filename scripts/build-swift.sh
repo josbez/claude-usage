@@ -6,12 +6,12 @@
 #                                       naast de gewone app, eigen instellingen en log)
 #   ./scripts/build-swift.sh --release → dist-swift/ClaudeUsage.app
 #                                       (bundle-id com.jos.claude-usage; pas vanaf fase 5)
-#   VERSION=2.0.2 OUT_DIR=/tmp/x ./scripts/build-swift.sh
+#   VERSION=2.1 OUT_DIR=/tmp/x ./scripts/build-swift.sh
 #                                     → andere versie/map, bv. voor een update-test
 set -euo pipefail
 cd "$(dirname "$0")/.."
 
-VERSION="${VERSION:-2.0.2}"
+VERSION="${VERSION:-2.1}"
 OUT_DIR="${OUT_DIR:-dist-swift}"
 MODE=dev
 [ "${1:-}" = "--release" ] && MODE=release

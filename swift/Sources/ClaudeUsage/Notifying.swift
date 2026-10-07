@@ -73,7 +73,7 @@ extension AppDelegate {
         let url = FileManager.default.temporaryDirectory
             .appendingPathComponent("claudeusage-\(UUID().uuidString).png")
         do {
-            try renderStatusImage(pct: pct).write(to: url)
+            try renderStatusImage(pct: pct, theme: formatter.faceTheme(settings)).write(to: url)
             return try UNNotificationAttachment(identifier: "status", url: url)
         } catch {
             log("notificatie-afbeelding mislukt: \(error)")
@@ -93,7 +93,7 @@ extension AppDelegate {
 
 /// The popover's session donut as a PNG: ring filled to pct, stress colour,
 /// menu bar emoji in the centre (app.py render_status_image).
-func renderStatusImage(pct: Int, size: Int = 256) throws -> Data {
+func renderStatusImage(pct: Int, theme: FaceTheme? = nil, size: Int = 256) throws -> Data {
     guard let rep = NSBitmapImageRep(bitmapDataPlanes: nil, pixelsWide: size, pixelsHigh: size,
                                      bitsPerSample: 8, samplesPerPixel: 4, hasAlpha: true, isPlanar: false,
                                      colorSpaceName: .deviceRGB, bytesPerRow: 0, bitsPerPixel: 0),
@@ -137,7 +137,7 @@ func renderStatusImage(pct: Int, size: Int = 256) throws -> Data {
         arc.stroke()
     }
 
-    let face = NSAttributedString(string: faceIcon(pct),
+    let face = NSAttributedString(string: faceIcon(pct, theme: theme),
                                   attributes: [.font: NSFont.systemFont(ofSize: s * 0.42)])
     let sz = face.size()
     face.draw(at: NSPoint(x: center.x - sz.width / 2, y: center.y - sz.height / 2))

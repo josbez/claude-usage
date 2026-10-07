@@ -114,7 +114,9 @@ final class ParityTests: FixtureCase {
 
     func testLoadSettings() {
         for c in list("load_settings") {
-            assertSame(normalizeSettings(c["stored"]), c["out"], "\(c)")
+            var got = normalizeSettings(c["stored"])
+            got["seasonal_faces"] = nil   // added after the Python app (SeasonalFacesTests)
+            assertSame(got, c["out"], "\(c)")
         }
     }
 

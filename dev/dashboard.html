@@ -110,6 +110,7 @@
     display: flex; align-items: center; gap: 10px;
     padding: 8px 0; min-height: 46px;
   }
+  .setting-row[hidden] { display: none; }
   .setting-row.version {
     min-height: 40px; flex-wrap: wrap;
   }
@@ -536,6 +537,14 @@
             <button role="radio" data-appearance="dark" onclick="onAppearance('dark')" data-i18n="appearance_dark">Donker</button>
           </div>
         </div>
+        <!-- Only while a seasonal theme is active (season_theme) -->
+        <div class="setting-row" id="seasonRow" hidden>
+          <div class="setting-text">
+            <div class="setting-title" data-i18n="set_seasonal">Seizoensemoji</div>
+            <div class="setting-sub" id="seasonSub"></div>
+          </div>
+          <button class="switch" id="seasonSwitch" role="switch" aria-checked="true" onclick="onToggleSeasonal()"></button>
+        </div>
       </div>
     </div>
     <div class="settings-group">
@@ -651,16 +660,6 @@ window.setStatus = function(status) {
 
 // ---- Render ----
 
-function faceForPct(pct) {
-  if (pct >= 100) return '💀';
-  if (pct >= 90) return '😱';
-  if (pct >= 75) return '😰';
-  if (pct >= 60) return '😨';
-  if (pct >= 40) return '😅';
-  if (pct >= 20) return '🙂';
-  return '🚀';
-}
-
 // Green -> orange -> red as the session fills up (two-stage lerp).
 function colorForPct(pct) {
   const stops = pct <= 50
@@ -726,7 +725,7 @@ function render(d) {
   donutFill.style.stroke = color;
   document.querySelector('.card-session').style.setProperty('--stress-color', color);
   const face = document.getElementById('sessionFace');
-  face.textContent = faceForPct(pct);
+  face.textContent = d.session_face || '';   // UsageCore faceIcon, incl. seasonal theme
   face.classList.toggle('stressed', pct >= 100);
   document.getElementById('sessionPctText').textContent = pct + '%';
   document.getElementById('sessionPctText').style.color = readableStressColor(color);
@@ -798,6 +797,7 @@ function render(d) {
   renderAppearance(d.appearance || 'system');
   renderRefreshChoice(d.refresh_minutes || 5);
   renderMenubarIcon(d.menubar_icon || 'ring');
+  renderSeason(d.season_theme, d.seasonal_faces !== false);
 
   renderService(d.service);
 
@@ -1018,6 +1018,22 @@ function onMenubarIcon(icon) {
   renderMenubarIcon(icon);  // optimistic; the app pushes saved state back (incl. previews)
   if (window.webkit && window.webkit.messageHandlers && window.webkit.messageHandlers.setMenubarIcon) {
     window.webkit.messageHandlers.setMenubarIcon.postMessage(icon);
+  }
+}
+
+function renderSeason(theme, enabled) {
+  document.getElementById('seasonRow').hidden = !theme;
+  if (!theme) return;
+  document.getElementById('seasonSub').textContent = T('theme_' + theme.id) + ' ' + theme.faces;
+  document.getElementById('seasonSwitch').setAttribute('aria-checked', enabled ? 'true' : 'false');
+}
+
+function onToggleSeasonal() {
+  const sw = document.getElementById('seasonSwitch');
+  const enabled = sw.getAttribute('aria-checked') !== 'true';
+  sw.setAttribute('aria-checked', enabled ? 'true' : 'false');  // optimistic; the app pushes saved state back
+  if (window.webkit && window.webkit.messageHandlers && window.webkit.messageHandlers.setSeasonalFaces) {
+    window.webkit.messageHandlers.setSeasonalFaces.postMessage(enabled);
   }
 }
 

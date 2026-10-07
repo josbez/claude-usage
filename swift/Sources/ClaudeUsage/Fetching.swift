@@ -144,7 +144,7 @@ extension AppDelegate {
             refreshSessionCookie()
         }
         state.fetching = true
-        let icon = faceIcon(menubarPct)
+        let icon = faceIcon(menubarPct, theme: formatter.faceTheme(settings))
         // Emoji-only style stays emoji-only while fetching; others show "…"
         setStatusTitle(settings["menubar_style"] as? String == "emoji" ? icon : "\(icon) …")
         pushStatus("fetching")

@@ -10,7 +10,7 @@ import WebKit
 final class AppDelegate: NSObject, NSApplicationDelegate, NSPopoverDelegate {
     static let popoverWidth: CGFloat = 360
     static let popoverMinHeight: CGFloat = 296   // main view; fixed
-    static let popoverMaxHeight: CGFloat = 640   // settings view may grow up to this (fits a 13" screen)
+    static let popoverMaxHeight: CGFloat = 680   // settings view may grow up to this (667 with a seasonal theme; fits a 13" screen)
 
     let isDev = Bundle.main.bundleIdentifier?.hasSuffix(".dev") ?? true
     lazy var paths = Paths(isDev: isDev)
@@ -178,7 +178,8 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSPopoverDelegate {
         let limits = loadJSONObject(paths.limits)
         let style = settings["menubar_style"] as? String ?? "full"
         menubarPct = sessionPct(limits)
-        setStatusTitle(formatter.titleFromLimits(limits, style: style, lang: lang))
+        let f = formatter
+        setStatusTitle(f.titleFromLimits(limits, style: style, lang: lang, theme: f.faceTheme(settings)))
     }
 
     func tick() {
@@ -205,7 +206,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSPopoverDelegate {
         let config = WKWebViewConfiguration()
         let handler = ScriptHandler(owner: self)
         for name in ["refresh", "close", "quit", "uninstall", "setNotifications", "startUpdate",
-                     "setMenubarStyle", "setMenubarIcon", "setAppearance", "setRefresh", "openStatusPage", "openResetsPage", "resize"] {
+                     "setMenubarStyle", "setMenubarIcon", "setSeasonalFaces", "setAppearance", "setRefresh", "openStatusPage", "openResetsPage", "resize"] {
             config.userContentController.add(handler, name: name)
         }
         webView = WKWebView(frame: NSRect(x: 0, y: 0, width: Self.popoverWidth,
@@ -307,6 +308,11 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSPopoverDelegate {
         case "setMenubarIcon":
             guard let icon = body as? String, menubarIcons.contains(icon) else { return }
             updateSetting("menubar_icon", icon)
+            showCachedTitle()   // held until the popover closes (anchor)
+            pushData()
+        case "setSeasonalFaces":
+            let enabled = (body as? Bool) ?? ((body as? NSNumber)?.boolValue ?? true)
+            updateSetting("seasonal_faces", enabled)
             showCachedTitle()   // held until the popover closes (anchor)
             pushData()
         case "setAppearance":

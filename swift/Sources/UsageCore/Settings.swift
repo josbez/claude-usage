@@ -48,7 +48,7 @@ public struct Paths {
 
 public let defaultSettings: JSONObject = [
     "notifications": true, "update_check": true, "menubar_style": "full", "appearance": "system",
-    "refresh_minutes": 5, "menubar_icon": "ring",
+    "refresh_minutes": 5, "menubar_icon": "ring", "seasonal_faces": true,
 ]
 
 /// Menu bar icon (taak 49): the face emoji, or a ring that fills with the session.
@@ -109,6 +109,7 @@ public func normalizeSettings(_ stored: Any?) -> JSONObject {
     if !menubarIcons.contains(settings["menubar_icon"] as? String ?? "") {
         settings["menubar_icon"] = defaultSettings["menubar_icon"]
     }
+    if !isJSONBool(settings["seasonal_faces"]) { settings["seasonal_faces"] = defaultSettings["seasonal_faces"] }
     if jsonInt(settings["refresh_minutes"]).map({ !refreshChoices.contains($0) }) ?? true {
         settings["refresh_minutes"] = defaultSettings["refresh_minutes"]
     }

@@ -53,9 +53,10 @@ extension UsageFormatter {
 
         var previews: JSONObject = [:]
         let ring = settings["menubar_icon"] as? String == "ring"
+        let theme = faceTheme(settings)
         for style in menubarStyles {
             let title = statusTitle(session: sessionPct, weekly: weeklyPct,
-                                    compact: sessionCompact, style: style)
+                                    compact: sessionCompact, style: style, theme: theme)
             // Ring mode: the popover draws the ring itself (menubar_ring), then this text
             previews[style] = ring ? titleWithoutFace(title) : title
         }
@@ -64,6 +65,7 @@ extension UsageFormatter {
         if let (r, g, b) = mr.rgb { ringData["color"] = "rgb(\(r), \(g), \(b))" }
         return [
             "session_pct": sessionPct,
+            "session_face": faceIcon(sessionPct, theme: theme),
             "session_reset": resetTime(string(five, "resets_at"), lang),
             "session_reset_compact": sessionCompact,
             "weekly_pct": weeklyPct,
@@ -88,6 +90,11 @@ extension UsageFormatter {
             "refresh_minutes": refreshMinutes(settings),
             "menubar_icon": settings["menubar_icon"] ?? "ring",
             "menubar_ring": ringData,
+            // Set while a theme's window is open, also when switched off (the switch stays visible)
+            "season_theme": activeFaceTheme(now, timeZone: timeZone).map { theme -> JSONObject in
+                ["id": theme.id, "faces": theme.faces.joined(separator: " ")]
+            } ?? NSNull(),
+            "seasonal_faces": settings["seasonal_faces"] ?? true,
             "lang": lang,
             "i18n": strings.table[lang] ?? [:],
             "menubar_previews": previews,

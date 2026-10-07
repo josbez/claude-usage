@@ -1,6 +1,6 @@
 // swift-tools-version:5.9
-// ClaudeUsage, native (taak 35). UsageCore = pure logic (port of core.py, Foundation
-// only, tested against fixtures from core.py); ClaudeUsage = AppKit glue (app.py).
+// ClaudeUsage. UsageCore = pure logic (Foundation only, XCTest; ported from the
+// former Python app, tested against its frozen fixtures); ClaudeUsage = AppKit glue.
 import PackageDescription
 
 let package = Package(

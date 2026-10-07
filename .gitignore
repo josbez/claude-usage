@@ -1,12 +1,6 @@
-build/
-dist/
 *.dmg
-*.pyc
-__pycache__/
 .DS_Store
-.pytest_cache/
 .claude/
-.venv/
 .idea/
 *.dmg.sig
 
@@ -14,6 +8,6 @@ __pycache__/
 backlog.md
 CLAUDE.md
 
-# Swift (taak 35)
+# Swift build output
 swift/.build/
 dist-swift/

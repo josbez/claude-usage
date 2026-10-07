@@ -2,9 +2,10 @@ import Foundation
 import XCTest
 @testable import UsageCore
 
-/// Parity with core.py: every case in Fixtures/core.json was produced by the
-/// Python function (scripts/swift-fixtures.py); the Swift port must give the
-/// exact same output at the same "now" and time zone.
+/// Parity with the former Python app: every case in Fixtures/core.json was
+/// produced by the Python function it replaced (core.py, removed in taak 47;
+/// see git history). The fixtures are frozen: the Swift code must keep giving
+/// the exact same output at the same "now" and time zone.
 class FixtureCase: XCTestCase {
     static let testsDir = URL(fileURLWithPath: #filePath).deletingLastPathComponent()
     static let fixtures: JSONObject = {

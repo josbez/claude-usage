@@ -1,11 +1,11 @@
 #!/bin/bash
-# Bouwt de Swift-versie (taak 35) als .app en faalt luid als er iets mis is.
+# Bouwt de app als .app en faalt luid als er iets mis is.
 #
 #   ./scripts/build-swift.sh          → dist-swift/ClaudeUsage Dev.app
 #                                       (bundle-id com.jos.claude-usage.dev; draait
 #                                       naast de gewone app, eigen instellingen en log)
 #   ./scripts/build-swift.sh --release → dist-swift/ClaudeUsage.app
-#                                       (bundle-id com.jos.claude-usage; pas vanaf fase 5)
+#                                       (bundle-id com.jos.claude-usage)
 #   VERSION=2.1 OUT_DIR=/tmp/x ./scripts/build-swift.sh
 #                                     → andere versie/map, bv. voor een update-test
 set -euo pipefail
@@ -26,17 +26,11 @@ BUILD=$(date +%Y%m%d.%H%M%S)
 
 fail() { echo "✗ $*" >&2; exit 1; }
 
-echo "🔗 Gedeelde teksten en fixtures bijwerken..."
-/usr/bin/python3 scripts/swift-fixtures.py > /dev/null || fail "swift-fixtures.py faalt"
-
-echo "🧪 Python-tests (fixtures en gedeelde bestanden)..."
-/usr/bin/python3 -m pytest -q > /dev/null || fail "pytest faalt — niet gebouwd"
-
 echo "🧪 Swift-tests..."
 (cd swift && swift test -q 2>&1 | tail -5) || fail "Swift-tests falen — niet gebouwd"
 
 echo "📦 Building $NAME.app..."
-# Universal (Apple Silicon + Intel), like the py2app bundle it replaces.
+# Universal (Apple Silicon + Intel): an update is one-way, Intel Macs must keep working.
 ARCHS=(--arch arm64 --arch x86_64)
 (cd swift && swift build -c release "${ARCHS[@]}" -q) || fail "swift build faalde"
 BIN="$(cd swift && swift build -c release "${ARCHS[@]}" --show-bin-path)/ClaudeUsage"

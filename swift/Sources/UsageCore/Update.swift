@@ -104,3 +104,43 @@ public struct UpdateError: Error, CustomStringConvertible {
 
     public var description: String { message("nl") }
 }
+
+// MARK: - Signing releases (replaces scripts/sign-release.py, taak 47)
+
+/// The 32-byte Ed25519 seed from a PKCS#8 PEM ("BEGIN PRIVATE KEY", as
+/// pycryptodome wrote ~/.config/claude-usage/release-signing-key.pem); nil
+/// for anything else.
+public func ed25519Seed(fromPEM pem: String) -> Data? {
+    let body = pem.components(separatedBy: .newlines)
+        .filter { !$0.hasPrefix("-----") }.joined()
+    guard pem.contains("-----BEGIN PRIVATE KEY-----"), let der = Data(base64Encoded: body) else { return nil }
+    // SEQUENCE { INTEGER 0, SEQUENCE { OID 1.3.101.112 }, OCTET STRING { OCTET STRING (32) } }
+    let prefix = Data([0x30, 0x2e, 0x02, 0x01, 0x00, 0x30, 0x05, 0x06, 0x03, 0x2b, 0x65, 0x70,
+                       0x04, 0x22, 0x04, 0x20])
+    guard der.count == prefix.count + 32, der.prefix(prefix.count) == prefix else { return nil }
+    return der.suffix(32)
+}
+
+public enum SignReleaseError: Error, CustomStringConvertible {
+    case badKey, wrongKey, selfCheckFailed
+    public var description: String {
+        switch self {
+        case .badKey: return "signing key onleesbaar (verwacht een Ed25519 PKCS#8 PEM)"
+        case .wrongKey: return "signing key hoort niet bij updatePublicKeyHex — bestaande installaties zouden deze update weigeren"
+        case .selfCheckFailed: return "zelfcontrole van de handtekening faalde"
+        }
+    }
+}
+
+/// Base64 Ed25519 signature over `data`, only with the key that matches the
+/// public key installed apps check against.
+public func signRelease(_ data: Data, pem: String,
+                        publicKeyHex: String = updatePublicKeyHex) throws -> String {
+    guard let seed = ed25519Seed(fromPEM: pem),
+          let key = try? Curve25519.Signing.PrivateKey(rawRepresentation: seed) else { throw SignReleaseError.badKey }
+    let pub = key.publicKey.rawRepresentation.map { String(format: "%02x", $0) }.joined()
+    guard pub == publicKeyHex.lowercased() else { throw SignReleaseError.wrongKey }
+    let sig = try key.signature(for: data).base64EncodedString()
+    guard verifyReleaseSignature(data, sig, publicKeyHex: publicKeyHex) else { throw SignReleaseError.selfCheckFailed }
+    return sig
+}

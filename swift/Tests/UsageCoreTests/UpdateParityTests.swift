@@ -49,7 +49,7 @@ final class UpdateParityTests: FixtureCase {
                                                   publicKeyHex: v["public_key"] as! String),
                            c["out"] as! Bool, "\(c)")
         }
-        // Same release key as core.py: Python-signed releases verify here too.
+        // Same release key as the former Python app: its signed releases verify here too.
         XCTAssertEqual(updatePublicKeyHex, v["release_public_key"] as! String)
     }
 

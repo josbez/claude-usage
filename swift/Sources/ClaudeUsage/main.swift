@@ -57,6 +57,30 @@ if args.count == 4, args[1] == "--verify-release",
     exit(ok ? 0 : 1)
 }
 
+// Sign a release file with the key in ~/.config/claude-usage (never in git):
+//   ClaudeUsage --sign-release <file>   → <file>.sig
+if args.count == 3, args[1] == "--sign-release" {
+    let keyFile = FileManager.default.homeDirectoryForCurrentUser
+        .appendingPathComponent(".config/claude-usage/release-signing-key.pem")
+    guard let pem = try? String(contentsOf: keyFile, encoding: .utf8) else {
+        print("✗ geen signing key in \(keyFile.path)")
+        exit(1)
+    }
+    guard let data = FileManager.default.contents(atPath: args[2]) else {
+        print("✗ \(args[2]) niet gevonden")
+        exit(1)
+    }
+    do {
+        let sig = try signRelease(data, pem: pem)
+        try (sig + "\n").write(toFile: args[2] + ".sig", atomically: true, encoding: .utf8)
+        print("✓ \((args[2] as NSString).lastPathComponent).sig aangemaakt en geverifieerd")
+        exit(0)
+    } catch {
+        print("✗ \(error)")
+        exit(1)
+    }
+}
+
 // Probe (taak 48): does claude.ai answer a plain URLSession request with the
 // sessionKey cookie, or does Cloudflare block it? Prints statuses and the key
 // paths of the usage response (names and types only, no values).

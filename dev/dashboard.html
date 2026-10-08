@@ -239,8 +239,11 @@
     padding: var(--space-2) var(--space-8); border-radius: var(--radius-sm); background: var(--card-bg);
     border: var(--space-1) solid var(--track);
     font-size: var(--text-secondary); font-weight: var(--weight-medium); color: var(--text);
-    white-space: nowrap; overflow: hidden; text-overflow: ellipsis; max-width: var(--max-pill);
+    white-space: nowrap; overflow: hidden; max-width: var(--max-pill);
+    flex-shrink: 0;   /* the label gives way, not the preview */
   }
+  .menubar-pill .ring-preview { flex-shrink: 0; }   /* never squeezed away by long text */
+  .menubar-pill .pill-text { min-width: 0; overflow: hidden; text-overflow: ellipsis; }
   .version-chip {
     font: var(--weight-regular) var(--text-caption) var(--font-mono); color: var(--muted);
     background: var(--track); border-radius: var(--radius-chip); padding: var(--space-1) var(--space-5); margin-left: var(--space-4);
@@ -970,7 +973,6 @@ function renderSourceRows(d) {
   const multi = rows.length > 0;
   document.getElementById('systemGroupLabel').textContent = T(multi ? 'set_group_sources' : 'set_group_system');
   document.getElementById('claudeRowTitle').textContent = multi ? T('source_claude') : T('set_connection');
-  document.getElementById('previewLabel').textContent = T(multi ? 'menubar_tightest' : 'set_preview');
   const visible = rows.filter(r => !r.hidden).length;
   const setSwitch = (sw, r) => {
     sw.hidden = !r;
@@ -1179,12 +1181,11 @@ function renderMenubarStyle(style, previews) {
     T(_menubarRing ? 'style_icon' : 'style_emoji');
   const el = document.getElementById('menubarPreview');
   const text = previews[style] || '';
-  if (_menubarRing) {
-    el.innerHTML = menubarRingSvg(_menubarRing) + (text ? ' ' : '');
-    el.appendChild(document.createTextNode(text));
-  } else {
-    el.textContent = text;
-  }
+  const span = document.createElement('span');
+  span.className = 'pill-text';
+  span.textContent = text;
+  el.innerHTML = _menubarRing ? menubarRingSvg(_menubarRing) : '';
+  if (text) el.appendChild(span);
 }
 
 function onMenubarStyle(style) {

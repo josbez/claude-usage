@@ -26,6 +26,7 @@
        fills keep the lighter accent — their values are also given as text. */
     --accent-text: #3366D6;    /* 5.23:1 */
     --time-text: #4D6FB3;      /* 4.95:1, muted blue-grey of the time fill */
+    --accent-fill-strong: #3366D6;  /* update button: on-accent text 5.23:1, both themes */
     /* -- Colour: icons -- */
     --icon-color: #8A8A8A;
     --icon-hover-bg: rgba(0,0,0,0.07);
@@ -34,6 +35,7 @@
     --status-ok: #34C759;
     --status-stale: #FF9500;
     --status-error: #FF3B30;
+    --status-error-text: #D70015;   /* 5.39:1 on card; update error */
     /* -- Colour: session stress ramp, read by colorForPct() (same in both themes) -- */
     --stress-low: #2FA84A;     /* 0% */
     --stress-mid: #FF9500;     /* 50% */
@@ -131,6 +133,7 @@
       --time-fill: color-mix(in srgb, var(--accent-blue) 30%, var(--track));
       --accent-text: var(--accent-blue);  /* 4.72:1 on #2C2C2E */
       --time-text: #9DB5F2;               /* 6.85:1 */
+      --status-error-text: #FF6961;       /* 4.95:1 on #2C2C2E */
       --icon-color: #9A9A9E;
       --icon-hover-bg: rgba(255,255,255,0.08);
       --icon-hover-color: #F2F2F2;
@@ -215,7 +218,7 @@
     font-size: var(--text-caption); color: var(--muted); margin-top: var(--space-2);
     white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
   }
-  .setting-sub.error { color: var(--status-error); white-space: normal; }
+  .setting-sub.error { color: var(--status-error-text); white-space: normal; }
   .ring-preview { vertical-align: -2px; color: var(--text); }   /* optical baseline nudge */
   .setting-value { font-size: var(--text-secondary); color: var(--muted); white-space: nowrap; }
 
@@ -281,7 +284,7 @@
   .update-btn {
     border: none; border-radius: var(--radius-md); cursor: pointer;
     padding: var(--space-5) var(--space-10); font: inherit; font-size: var(--text-secondary); font-weight: var(--weight-semibold);
-    background: var(--accent-blue); color: var(--on-accent); white-space: nowrap;
+    background: var(--accent-fill-strong); color: var(--on-accent); white-space: nowrap;
   }
   .update-btn:disabled { opacity: var(--opacity-busy); cursor: default; }
   .update-btn[hidden] { display: none; }
@@ -355,6 +358,9 @@
     display: flex; flex-direction: column; gap: var(--space-10);
     transition: background var(--dur-slow) ease;
   }
+  /* No numbers at all (not logged in, never fetched): neutral, the reason in the card */
+  .source-card.no-data { --stress-color: var(--muted); }
+  .source-card.no-data .donut-fill { visibility: hidden; }
   .source-top { display: flex; align-items: center; gap: var(--space-12); }
   .source-info { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: var(--space-4); }
   .source-head { display: flex; justify-content: space-between; align-items: baseline; gap: var(--space-8); }
@@ -397,14 +403,15 @@
   .resets-link {
     display: block; max-width: 100%; margin-top: var(--space-4);
     border: none; background: none; padding: 0; font: inherit; font-size: var(--text-caption); font-weight: var(--weight-semibold);
-    color: var(--text); cursor: pointer; text-align: left; text-decoration: underline;
-    text-underline-offset: var(--space-2);
+    color: var(--text); cursor: pointer; text-align: left;
     white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
   }
   .resets-link[hidden] { display: none; }
   .source-head .resets-link { margin-top: 0; flex-shrink: 0; }
+  /* Only Claude's resets open claude.ai (button); other sources' are plain text */
+  button.resets-link { text-decoration: underline; text-underline-offset: var(--space-2); }
+  button.resets-link:hover { text-decoration-thickness: var(--underline-strong); }
   span.resets-link { cursor: default; }
-  .resets-link:hover { text-decoration-thickness: var(--underline-strong); }
   .resets-link:focus-visible { outline: var(--focus-ring) solid var(--accent-text); outline-offset: var(--space-1); border-radius: var(--radius-bar); }
 
   /* ---- Weekly card ---- */
@@ -624,7 +631,7 @@
         </div>
         <div class="setting-row">
           <div class="setting-text">
-            <div class="setting-title" data-i18n="set_icon">Pictogram</div>
+            <div class="setting-title" data-i18n="set_icon">Icoonstijl</div>
           </div>
           <div class="segmented" role="radiogroup" id="menubarIcon">
             <button role="radio" data-icon="ring" onclick="onMenubarIcon('ring')" data-i18n="icon_ring">Ring</button>
@@ -644,10 +651,10 @@
         <!-- Only while a seasonal theme is active (season_theme) -->
         <div class="setting-row" id="seasonRow" hidden>
           <div class="setting-text">
-            <div class="setting-title" data-i18n="set_seasonal">Seizoensemoji</div>
+            <div class="setting-title" id="seasonTitle" data-i18n="set_seasonal">Seizoensemoji</div>
             <div class="setting-sub" id="seasonSub"></div>
           </div>
-          <button class="switch" id="seasonSwitch" role="switch" aria-checked="true" onclick="onToggleSeasonal()"></button>
+          <button class="switch" id="seasonSwitch" role="switch" aria-labelledby="seasonTitle" aria-checked="true" onclick="onToggleSeasonal()"></button>
         </div>
       </div>
     </div>
@@ -656,10 +663,10 @@
       <div class="card settings-card">
         <div class="setting-row">
           <div class="setting-text">
-            <div class="setting-title" data-i18n="set_notifications">Meldingen</div>
+            <div class="setting-title" id="notifyTitle" data-i18n="set_notifications">Meldingen</div>
             <div class="setting-sub" data-i18n="set_notifications_sub">Bij 80% en 95% sessie, 90% week</div>
           </div>
-          <button class="switch" id="notifySwitch" role="switch" aria-checked="false" onclick="onToggleNotifications()"></button>
+          <button class="switch" id="notifySwitch" role="switch" aria-labelledby="notifyTitle" aria-checked="false" onclick="onToggleNotifications()"></button>
         </div>
         <div class="setting-row">
           <div class="setting-text">
@@ -818,18 +825,20 @@ function readableStressColor(stressCss) {
 function render(d, zeroGeometry) {
   applyI18n(d);  // first: static labels; dynamic text below overrides where needed
 
-  renderSources(d.sources || [], zeroGeometry);
-
-  // Status: 'ok' | 'stale' | 'not_logged_in'. Only problems surface on the
-  // main view (dot before the account); details live in settings.
+  // Status: 'ok' | 'stale' | 'not_logged_in'. Problems show as a dot before the
+  // account; a card without any numbers says why (details live in settings).
   const problem = d.status === 'stale' ? 'stale' : d.status === 'not_logged_in' ? 'disconnected' : '';
-  const statusText = d.status === 'stale' ? (d.status_reason || T('status_stale'))
+  const statusText = capitalize(d.status === 'stale' ? (d.status_reason || T('status_stale'))
     : d.status === 'not_logged_in' ? (d.status_reason || T('status_not_logged_in'))
-    : T('status_ok');
+    : T('status_ok'));
+
+  renderSources(d.sources || [], zeroGeometry, problem ? statusText : '');
   const dot = document.getElementById('statusDot');
   dot.className = 'status-dot' + (problem ? ' ' + problem : '');
   const acc = d.account_label || { name: d.account || '', org: '', plan: '', email: d.account || '' };
-  document.getElementById('accountName').textContent = acc.name;
+  // No account yet (not logged in): a short status, not a lone dot
+  document.getElementById('accountName').textContent = acc.name
+    || (problem === 'disconnected' ? T('status_not_logged_in') : problem ? statusText : '');
   document.getElementById('accountOrg').textContent = acc.org ? '· ' + acc.org : '';
   document.getElementById('accountPlan').textContent = acc.plan ? '· ' + acc.plan : '';
   // Full text in the tooltip, as the org name may be cut off
@@ -872,7 +881,10 @@ function render(d, zeroGeometry) {
 // ---- Source cards (taak 55f, design 55e "C1b") ----
 // One card per source, in the order the app sends them. Cards are reused
 // while the sources stay the same, so the ring and bar can animate.
-function renderSources(list, zeroGeometry) {
+// Reasons are also used mid-sentence, so they start lowercase
+const capitalize = t => t ? t.charAt(0).toUpperCase() + t.slice(1) : t;
+
+function renderSources(list, zeroGeometry, problemText) {
   const box = document.getElementById('sourceCards');
   const ids = list.map(s => s.id).join('|');
   if (box.dataset.ids !== ids) {
@@ -882,23 +894,27 @@ function renderSources(list, zeroGeometry) {
     box.dataset.ids = ids;
     box.querySelectorAll('[data-i18n]').forEach(el => { el.textContent = T(el.dataset.i18n); });
   }
-  list.forEach((s, i) => renderSourceCard(box.children[i], s, zeroGeometry));
+  list.forEach((s, i) => renderSourceCard(box.children[i], s, zeroGeometry, problemText));
 }
 
 const has = v => v !== null && v !== undefined;
 
-function renderSourceCard(card, s, zero) {
+function renderSourceCard(card, s, zero, problemText) {
   const pct = has(s.session_pct) ? Math.max(0, Math.min(100, s.session_pct)) : 0;
+  // No numbers at all and a problem: neutral card that says why, no face
+  const noData = !!problemText && !has(s.session_pct) && !has(s.weekly_pct);
+  card.classList.toggle('no-data', noData);
   const color = colorForPct(pct);
-  const readable = readableStressColor(color);   // ≥4.6:1 on the tinted card
-  card.style.setProperty('--stress-color', color);
+  const readable = noData ? 'var(--muted)' : readableStressColor(color);   // ≥4.6:1 on the tinted card
+  if (noData) card.style.removeProperty('--stress-color');
+  else card.style.setProperty('--stress-color', color);
 
   const fill = card.querySelector('.donut-fill');
   const filled = (zero ? 0 : pct) / 100 * CARD_CIRC;
   fill.setAttribute('stroke-dasharray', `${filled.toFixed(1)} ${(CARD_CIRC - filled).toFixed(1)}`);
   fill.style.stroke = color;
   const face = card.querySelector('.donut-face');
-  face.textContent = s.session_face || '';   // UsageCore faceIcon, incl. seasonal theme
+  face.textContent = noData ? '' : (s.session_face || '');   // UsageCore faceIcon, incl. seasonal theme
   face.classList.toggle('stressed', pct >= 100);
 
   card.querySelector('.source-name').textContent = s.name;
@@ -915,8 +931,10 @@ function renderSourceCard(card, s, zero) {
   const pctEl = card.querySelector('.source-pct');
   pctEl.textContent = has(s.session_pct) ? s.session_pct + '%' : '—%';
   pctEl.style.color = readable;
-  card.querySelector('.source-session-reset').textContent =
-    has(s.session_reset) ? T('card_session', { when: s.session_reset }) : T('card_session_plain');
+  const resetEl = card.querySelector('.source-session-reset');
+  resetEl.textContent = noData ? problemText
+    : has(s.session_reset) ? T('card_session', { when: s.session_reset }) : T('card_session_plain');
+  resetEl.title = noData ? problemText : '';
   card.querySelector('.source-updated').textContent = s.updated || '';
 
   // Week: usage in front of the elapsed share of the window

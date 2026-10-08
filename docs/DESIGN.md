@@ -32,17 +32,19 @@ All names below are CSS custom properties in `dev/dashboard.html`.
 | `--text` | `#1A1A1A` | `#F2F2F2` | Primary text |
 | `--muted` | `#636366` | `#ABABB0` | Secondary text; ≥ 4.5:1 on card, page and tinted session card |
 | `--track` | `#EAEAEA` | `#3A3A3C` | The universal "empty": bar track, segmented track, row divider, switch off |
-| `--on-accent` | `#FFFFFF` | same | Text on `--accent-blue`, switch knob |
-| `--accent-blue` | `#4B7BEC` | `#6B93F5` | Week bar fill, update button (fills only) |
+| `--on-accent` | `#FFFFFF` | same | Text on `--accent-fill-strong`, switch knob |
+| `--accent-blue` | `#4B7BEC` | `#6B93F5` | Week bar fill (fills only) |
 | `--time-fill` | `accent-blue` 30% over `track` | same formula | Elapsed week behind the usage fill |
 | `--accent-text` | `#3366D6` (5.23:1) | `= accent-blue` (4.72:1) | Week % as text, focus ring |
+| `--accent-fill-strong` | `#3366D6` | same | Update button fill: `--on-accent` on it 5.23:1 in both themes (taak 60) |
 | `--time-text` | `#4D6FB3` (4.95:1) | `#9DB5F2` (6.85:1) | "% elapsed" as text |
 | `--icon-color` | `#8A8A8A` | `#9A9A9E` | Header icon buttons (icons: 3:1 is enough) |
 | `--icon-hover-bg` | `rgba(0,0,0,.07)` | `rgba(255,255,255,.08)` | Icon button hover |
 | `--icon-hover-color` | `#1A1A1A` | `#F2F2F2` | Icon colour on hover |
 | `--status-ok` | `#34C759` | same | Connected, switch on |
 | `--status-stale` | `#FF9500` | same | Stale data, update badge |
-| `--status-error` | `#FF3B30` | same | Not logged in, outage, update error |
+| `--status-error` | `#FF3B30` | same | Not logged in, outage (dots and badges only) |
+| `--status-error-text` | `#D70015` (5.39:1) | `#FF6961` (4.95:1) | Update error as text (taak 60) |
 | `--stress-low` | `#2FA84A` | same | Session colour at 0% |
 | `--stress-mid` | `#FF9500` | same | Session colour at 50% |
 | `--stress-high` | `#FF3B30` | same | Session colour at 100% |
@@ -107,7 +109,7 @@ These stay numbers in the CSS on purpose: optical baseline nudges (`vertical-ali
 All in `dev/dashboard.html`; the design-system artifact has a live preview and notes for each.
 
 - **Header**: title (`--text-title`) and 28 px icon buttons (refresh, settings with a 6 px status badge, close; back chevron in settings).
-- **Source card** (one per source, stacked; taak 55f): tinted with that source's stress colour (`--stress-tint` over `--card-bg`). Top: 64 px ring with the emoji face (`faceIcon`, seasonal themes in Swift), name, then resets (Claude: a link to claude.ai; others: text) or the plan; session % large with "session · resets in 2h 40m"; "updated 11:10" when the numbers are old. Below: the week as a `--card-bg` strip (radius 8): "61% week · resets Thu 09:00", "30% elapsed", one track with elapsed time behind usage and a 2 px tick when usage covers it. A window the source didn't report shows "—" or no strip, never 0. Data: `sourceCard()` in `UsageCore/SourceCards.swift`.
+- **Source card** (one per source, stacked; taak 55f): tinted with that source's stress colour (`--stress-tint` over `--card-bg`). Top: 64 px ring with the emoji face (`faceIcon`, seasonal themes in Swift), name, then resets (Claude: a link to claude.ai; others: text) or the plan; session % large with "session · resets in 2h 40m"; "updated 11:10" when the numbers are old. Below: the week as a `--card-bg` strip (radius 8): "61% week · resets Thu 09:00", "30% elapsed", one track with elapsed time behind usage and a 2 px tick when usage covers it. A window the source didn't report shows "—" or no strip, never 0. No numbers at all and a problem (not logged in, never fetched; taak 60): neutral card (`--muted` ring and tint, no fill, no face), the capitalised reason in place of the reset line; the footer shows a short status instead of an empty account, and Claude's resets are underlined only because they are a link. Data: `sourceCard()` in `UsageCore/SourceCards.swift`.
 - **Footer**: status dot (only when something is wrong), account name, org, plan, "Updated".
 - **Settings** (taak 59): group label above a card of rows. Menu bar row: title and control on one line, the preview on its own line below (no box in the card). With more than one source the last group is "Sources & system": a row per source (status, show switch; the last visible source can't be hidden), then the version. Row = title (`--text-body` semibold), optional sub line (`--text-caption`, `--muted`, ellipsis), control on the right. Controls: segmented control, switch, update button. Quiet text buttons below (uninstall, quit).
 - **Menu bar preview**: pill with the ring and the title text exactly as the menu bar shows it.

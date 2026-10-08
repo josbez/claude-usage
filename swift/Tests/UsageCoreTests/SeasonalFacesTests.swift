@@ -61,7 +61,7 @@ final class SeasonalFacesTests: XCTestCase {
 
     func testHalloweenFacesFollowTheThresholds() {
         let halloween = faceThemes.first { $0.id == "halloween" }
-        let want = [0: "🎃", 19: "🎃", 20: "🕷️", 40: "🦇", 60: "👻", 75: "🧟", 89: "🧟",
+        let want = [0: "🎃", 19: "🎃", 20: "🧙", 40: "🧛", 60: "👻", 75: "🧟", 89: "🧟",
                     90: "🪦", 99: "🪦", 100: "💀", 130: "💀"]
         for (pct, face) in want { XCTAssertEqual(faceIcon(pct, theme: halloween), face, "\(pct)") }
         XCTAssertEqual(faceIcon(45), "😅")   // no theme: the usual faces
@@ -70,7 +70,7 @@ final class SeasonalFacesTests: XCTestCase {
     func testStatusTitleUsesTheTheme() {
         let halloween = faceThemes.first { $0.id == "halloween" }
         XCTAssertEqual(statusTitle(session: 45, weekly: 82, compact: "2u10m", style: "session", theme: halloween),
-                       "🦇 45%")
+                       "🧛 45%")
     }
 
     func testSettingSwitchesTheThemeOff() {

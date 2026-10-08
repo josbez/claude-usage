@@ -279,4 +279,27 @@ final class CodexSessionFileTests: XCTestCase {
         XCTAssertEqual(latestCodexSessionFile(root: dir, now: now, calendar: cal)?.lastPathComponent, "longrunning.jsonl")
         XCTAssertNil(latestCodexSessionFile(root: dir.appendingPathComponent("nope"), now: now, calendar: cal))
     }
+
+    /// Installed and logged in (decided 8-10-2026): a binary and auth.json; either missing = no source.
+    func testInstalledNeedsBinaryAndLogin() throws {
+        let fm = FileManager.default
+        let home = fm.temporaryDirectory.appendingPathComponent("codex-installed-\(UUID().uuidString)")
+        defer { try? fm.removeItem(at: home) }
+        try fm.createDirectory(at: home.appendingPathComponent(".local/bin"), withIntermediateDirectories: true)
+        try fm.createDirectory(at: home.appendingPathComponent(".codex"), withIntermediateDirectories: true)
+        let binary = home.appendingPathComponent(".local/bin/codex")
+        let auth = home.appendingPathComponent(".codex/auth.json")
+        // The real ChatGPT.app may exist on this Mac: only test the home-relative candidates.
+        let systemBinary = findCodexBinary(home: home) != nil
+        XCTAssertEqual(codexInstalled(home: home), false)          // no auth.json
+
+        try Data("{}".utf8).write(to: auth)
+        XCTAssertEqual(codexInstalled(home: home), systemBinary)   // auth, binary only if the system has one
+        try Data().write(to: binary)
+        try fm.setAttributes([.posixPermissions: 0o755], ofItemAtPath: binary.path)
+        XCTAssertTrue(codexInstalled(home: home))
+
+        try fm.removeItem(at: auth)                                 // logged out
+        XCTAssertFalse(codexInstalled(home: home))
+    }
 }

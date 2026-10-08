@@ -101,6 +101,7 @@ public func migrateLimitsFile(_ paths: Paths, fm: FileManager = .default) -> Lim
 public let defaultSettings: JSONObject = [
     "notifications": true, "update_check": true, "menubar_style": "full", "appearance": "system",
     "refresh_minutes": 5, "menubar_icon": "ring", "seasonal_faces": true,
+    "hidden_sources": [String](),
 ]
 
 /// Menu bar icon (taak 49): the face emoji, or a ring that fills with the session.
@@ -165,6 +166,9 @@ public func normalizeSettings(_ stored: Any?) -> JSONObject {
     if jsonInt(settings["refresh_minutes"]).map({ !refreshChoices.contains($0) }) ?? true {
         settings["refresh_minutes"] = defaultSettings["refresh_minutes"]
     }
+    // Source ids only (taak 55f); anything else is dropped
+    settings["hidden_sources"] = (settings["hidden_sources"] as? [Any] ?? [])
+        .compactMap { $0 as? String }.filter(isValidSourceId)
     return settings
 }
 

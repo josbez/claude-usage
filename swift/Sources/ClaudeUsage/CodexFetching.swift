@@ -16,30 +16,39 @@ struct CodexFetchState {
 
 /// Codex as a second source (taak 55c): ask `codex app-server` at most every
 /// 5 minutes (after a Claude fetch, or when the popover opens) and write
-/// usage-limits/codex.json. No binary, or the call fails: fall back to the
-/// last event in Codex's own session files (taak 55i). Nothing shows it yet (55f).
+/// usage-limits/codex.json. The call fails: fall back to the last event in
+/// Codex's own session files (taak 55i). Not installed or not logged in
+/// (codexInstalled): nothing at all, and no card (55f).
 extension AppDelegate {
     func maybeFetchCodex() {
         guard !codex.checking, codexCheckDue(lastCheck: codex.lastCheck, now: Date()) else { return }
         codex.checking = true
         codex.lastCheck = Date()
-        // Dev build: `open "ClaudeUsage Dev.app" --args -codexBinary none` tests the fallback.
-        let binary = isDev && UserDefaults.standard.string(forKey: "codexBinary") == "none" ? nil : findCodexBinary()
-        if binary == nil, !codex.missingLogged {
-            codex.missingLogged = true
-            log("codex: geen codex-programma gevonden — alleen het sessiebestand")
+        guard codexAvailable, let binary = findCodexBinary() else {
+            codex.checking = false
+            if !codex.missingLogged {
+                codex.missingLogged = true
+                log("codex: niet geïnstalleerd of niet ingelogd — geen bron")
+            }
+            return
         }
+        codex.missingLogged = false
         let version = state.version
         DispatchQueue.global(qos: .utility).async { [weak self] in
-            let result = binary.map { readCodexRateLimits(binary: $0, clientVersion: version) }
+            let result = readCodexRateLimits(binary: binary, clientVersion: version)
             DispatchQueue.main.async { self?.onCodexResult(result) }
         }
     }
 
-    /// `result` is nil when there is no binary.
-    func onCodexResult(_ result: Result<JSONObject, CodexAppServerError>?) {
+    /// Installed and logged in. Dev build: `open "ClaudeUsage Dev.app" --args -codexBinary none`
+    /// behaves as if Codex isn't there.
+    var codexAvailable: Bool {
+        !(isDev && UserDefaults.standard.string(forKey: "codexBinary") == "none") && codexInstalled()
+    }
+
+    func onCodexResult(_ result: Result<JSONObject, CodexAppServerError>) {
         switch result {
-        case .success(let response)?:
+        case .success(let response):
             codex.checking = false
             let parse = codexSnapshot(rateLimits: response, fetchedAt: Date(), now: Date())
             logCodexUnknown(parse.unknown)
@@ -48,10 +57,8 @@ extension AppDelegate {
                 return codexFallback()
             }
             saveCodex(snapshot, origin: "app-server")
-        case .failure(let error)?:
+        case .failure(let error):
             codexProblem("\(error)")
-            codexFallback()
-        case nil:
             codexFallback()
         }
     }
@@ -99,6 +106,9 @@ extension AppDelegate {
             if codex.lastProblem != nil { log("codex: weer bereikbaar") }
             codex.lastProblem = nil
         }
+        // New numbers: menu bar (held while the popover is open) and popover
+        showCachedTitle()
+        if popover.isShown { pushData() }
         let summary = codexSummary(snapshot) + (origin == "app-server" ? "" : " (sessiebestand)")
         if summary != codex.lastSummary {
             codex.lastSummary = summary

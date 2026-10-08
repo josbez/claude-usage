@@ -9,8 +9,8 @@ import WebKit
 /// (fase 4, Updater.swift).
 final class AppDelegate: NSObject, NSApplicationDelegate, NSPopoverDelegate {
     static let popoverWidth: CGFloat = 360
-    static let popoverMinHeight: CGFloat = 296   // main view; fixed
-    static let popoverMaxHeight: CGFloat = 680   // settings view may grow up to this (667 with a seasonal theme; fits a 13" screen)
+    static let popoverMinHeight: CGFloat = 160   // the main view reports its height: one card per source (taak 55f)
+    static let popoverMaxHeight: CGFloat = 800   // settings with source rows (~744, taak 59); fits a 13" screen
 
     let isDev = Bundle.main.bundleIdentifier?.hasSuffix(".dev") ?? true
     lazy var paths = Paths(isDev: isDev)
@@ -24,6 +24,8 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSPopoverDelegate {
     var pendingTitle: String?
     var appliedTitle: String?
     var menubarPct = 0
+    /// Last height the main view reported; the popover opens at it (no jump).
+    var mainHeight: CGFloat = 296
     var appearanceObservation: NSKeyValueObservation?
     var timer: Timer?
     var activity: NSObjectProtocol?
@@ -184,11 +186,17 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSPopoverDelegate {
     }
 
     func showCachedTitle() {
-        let limits = loadJSONObject(paths.limits)
-        let style = settings["menubar_style"] as? String ?? "full"
-        menubarPct = sessionPct(limits)
-        let f = formatter
-        setStatusTitle(f.titleFromLimits(limits, style: style, lang: lang, theme: f.faceTheme(settings)))
+        let t = formatter.menubarTitle(limits: loadJSONObject(paths.limits), others: otherSnapshots(),
+                                       settings: settings, lang: lang)
+        menubarPct = t.sessionPct
+        setStatusTitle(t.title)
+    }
+
+    /// Sources other than Claude, as last stored (usage-limits/<id>.json),
+    /// only while the tool is installed and logged in on this Mac.
+    func otherSnapshots() -> [SourceSnapshot] {
+        guard codexAvailable else { return [] }
+        return [codexSource].compactMap { snapshot(fromJSON: loadJSONObject(paths.snapshotFile($0)), sourceId: $0) }
     }
 
     func tick() {
@@ -208,18 +216,19 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSPopoverDelegate {
 
     func setupPopover() {
         popover = NSPopover()
-        popover.contentSize = NSSize(width: Self.popoverWidth, height: Self.popoverMinHeight)
+        popover.contentSize = NSSize(width: Self.popoverWidth, height: mainHeight)
         popover.behavior = .transient
         popover.delegate = self
 
         let config = WKWebViewConfiguration()
         let handler = ScriptHandler(owner: self)
         for name in ["refresh", "close", "quit", "uninstall", "setNotifications", "startUpdate",
-                     "setMenubarStyle", "setMenubarIcon", "setSeasonalFaces", "setAppearance", "setRefresh", "openStatusPage", "openResetsPage", "resize"] {
+                     "setMenubarStyle", "setMenubarIcon", "setSeasonalFaces", "setAppearance", "setRefresh", "openStatusPage", "openResetsPage", "resize",
+                     "setSourceHidden"] {
             config.userContentController.add(handler, name: name)
         }
         webView = WKWebView(frame: NSRect(x: 0, y: 0, width: Self.popoverWidth,
-                                          height: Self.popoverMinHeight), configuration: config)
+                                          height: mainHeight), configuration: config)
         if let html = Bundle.main.url(forResource: "dashboard", withExtension: "html") {
             webView.loadFileURL(html, allowingReadAccessTo: html.deletingLastPathComponent())
         } else {
@@ -249,8 +258,8 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSPopoverDelegate {
     }
 
     func popoverDidClose(_ notification: Notification) {
-        // The next open starts on the main view: back to its fixed height now.
-        setPopoverHeight(Self.popoverMinHeight)
+        // The next open starts on the main view: back to its last height now.
+        setPopoverHeight(mainHeight)
         if let title = pendingTitle {
             applyStatusTitle(title)
             pendingTitle = nil
@@ -268,7 +277,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSPopoverDelegate {
         }
         state.update = updateView()
         let data = formatter.dashboardData(limits: limits, settings: settings,
-                                           state: state, lang: lang)
+                                           state: state, lang: lang, others: otherSnapshots())
         guard let json = try? JSONSerialization.data(withJSONObject: data),
               let text = String(data: json, encoding: .utf8) else { return }
         let fn = animated ? "openWithAnimation" : "updateData"
@@ -339,7 +348,19 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSPopoverDelegate {
         case "startUpdate":
             startUpdate()
         case "resize":
-            if let n = body as? NSNumber { setPopoverHeight(CGFloat(n.doubleValue)) }
+            // {height, main}: the main view's height is also the next opening height
+            guard let msg = body as? [String: Any], let n = msg["height"] as? NSNumber else { return }
+            if msg["main"] as? Bool == true { mainHeight = CGFloat(n.doubleValue) }
+            setPopoverHeight(CGFloat(n.doubleValue))
+        case "setSourceHidden":
+            // {id, hidden}: only ids of sources that exist
+            guard let msg = body as? [String: Any], let id = msg["id"] as? String, isValidSourceId(id),
+                  let hide = msg["hidden"] as? Bool else { return }
+            var hidden = hiddenSources(settings)
+            if hide { hidden.insert(id) } else { hidden.remove(id) }
+            updateSetting(hiddenSourcesKey, hidden.sorted())
+            showCachedTitle()   // held until the popover closes (anchor)
+            pushData()
         case "openResetsPage":
             // Fixed URL, no argument from the page.
             NSWorkspace.shared.open(URL(string: resetsURL)!)

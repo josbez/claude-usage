@@ -17,7 +17,7 @@ How the popover looks and why. The popover is one page, [`dev/dashboard.html`](.
 2. **Contrast WCAG 2.2 AA.** Text ≥ 4.5:1 on every background it can sit on: card, page, and the tinted session card, in light and dark. Work it out before adding a colour. Fills (`--accent-blue`, `--time-fill`, the stress colours) are never text colours.
 3. **All user text through `swift/Resources/strings.json`**, Dutch and English, every key in both.
 4. **Prove "no visible change".** A refactor must leave every computed style and box identical; compare before and after in the browser with fake data (see Verifying).
-5. Fixed width 360. The main view is 296 high until task 36; the settings view reports its own height through the `resize` message and may grow (`popoverMaxHeight` in `AppDelegate.swift`). Never change the menu bar title or icon while the popover is open.
+5. Fixed width 360. Both views report their content height through the `resize` message (`{height, main}`); the main view grows with the number of source cards and the popover opens at its last height (`mainHeight`, clamped 160–800 in `AppDelegate.swift`). Never change the menu bar title or icon while the popover is open.
 
 ## Tokens
 
@@ -57,7 +57,10 @@ One family, `--font-system` (`-apple-system, BlinkMacSystemFont, 'SF Pro Text', 
 
 | Token | Size | Typical weight | Use |
 |---|---|---|---|
-| `--text-face` | 34px | — | Emoji in the donut |
+| `--text-face` | 34px | — | Emoji in the large donut (not used since 55f) |
+| `--text-face-card` | 25px | — | Emoji in a source card's ring |
+| `--text-value-lg` | 20px | bold | Session % on a source card |
+| `--text-name` | 14px | bold | Source name on its card |
 | `--text-title` | 15px | bold | Header title |
 | `--text-body` | 13px | regular / semibold / bold | Body, row titles, session %, week % |
 | `--text-secondary` | 12px | regular / semibold | Session reset, row values, account name, buttons |
@@ -86,7 +89,7 @@ The ones that carry the layout:
 
 ### Size
 
-`--popover-width` 360 · `--size-icon-button` 28 · `--size-donut` 90 (stroke 9, r 36, in the SVG) · `--size-bar` 6 · `--size-tick` 2 · `--size-dot` 7 · `--size-dot-small` 6 · `--size-row` 46 · `--size-row-compact` 40 · `--size-pill` 22 · `--size-switch-w` 36 × `--size-switch-h` 21 with `--size-knob` 17 (knob travel is computed from these) · `--max-pill` 220 · `--max-account` 140 · `--focus-ring` 2 · `--underline-strong` 2.
+`--popover-width` 360 · `--size-icon-button` 28 · `--size-donut` 90 (not used since 55f) · `--size-donut-card` 64 (stroke 7, r 26, in the SVG) · `--size-segmented` 186 (every segmented control, equal segments) · `--size-bar` 6 · `--size-tick` 2 · `--size-dot` 7 · `--size-dot-small` 6 · `--size-row` 46 · `--size-row-compact` 40 · `--size-pill` 22 · `--size-switch-w` 36 × `--size-switch-h` 21 with `--size-knob` 17 (knob travel is computed from these) · `--max-pill` 220 · `--max-account` 140 · `--focus-ring` 2 · `--underline-strong` 2.
 
 ### Shadow, opacity, motion
 
@@ -104,25 +107,24 @@ These stay numbers in the CSS on purpose: optical baseline nudges (`vertical-ali
 All in `dev/dashboard.html`; the design-system artifact has a live preview and notes for each.
 
 - **Header**: title (`--text-title`) and 28 px icon buttons (refresh, settings with a 6 px status badge, close; back chevron in settings).
-- **Session card**: 90 px donut with the emoji face (`faceIcon`, seasonal themes in Swift), label, session %, reset time, optional resets link. Tinted with the stress colour.
-- **Week card**: label, "61% used", one track with elapsed time behind usage, reset and "% elapsed". A 2 px tick in `--card-bg` marks the week position when usage covers it.
+- **Source card** (one per source, stacked; taak 55f): tinted with that source's stress colour (`--stress-tint` over `--card-bg`). Top: 64 px ring with the emoji face (`faceIcon`, seasonal themes in Swift), name, then resets (Claude: a link to claude.ai; others: text) or the plan; session % large with "session · resets in 2h 40m"; "updated 11:10" when the numbers are old. Below: the week as a `--card-bg` strip (radius 8): "61% week · resets Thu 09:00", "30% elapsed", one track with elapsed time behind usage and a 2 px tick when usage covers it. A window the source didn't report shows "—" or no strip, never 0. Data: `sourceCard()` in `UsageCore/SourceCards.swift`.
 - **Footer**: status dot (only when something is wrong), account name, org, plan, "Updated".
-- **Settings**: group label above a card of rows. Row = title (`--text-body` semibold), optional sub line (`--text-caption`, `--muted`, ellipsis), control on the right. Controls: segmented control, switch, update button. Quiet text buttons below (uninstall, quit).
+- **Settings** (taak 59): group label above a card of rows. Menu bar row: title and control on one line, the preview on its own line below (no box in the card). With more than one source the last group is "Sources & system": a row per source (status, show switch; the last visible source can't be hidden), then the version. Row = title (`--text-body` semibold), optional sub line (`--text-caption`, `--muted`, ellipsis), control on the right. Controls: segmented control, switch, update button. Quiet text buttons below (uninstall, quit).
 - **Menu bar preview**: pill with the ring and the title text exactly as the menu bar shows it.
 
 ## App icon
 
 `icon/ClaudeUsage.svg` is the source (512 × 512, a 412 × 412 macOS tile with radius 92.5); `icon/ClaudeUsage-1024.png` and `icon/ClaudeUsage.icns` are made from it. A smiling face in a ring with a green arc: the same ring-with-face as the donut. Its colours, taken from the SVG: arc `#76B528` → `#5B931C`, empty ring `#D3E0C0`, plate `#F5F8F0` → `#EBF0E1`, face `#FFD642` → `#FFBA1A` → `#FFA80A`, features `#704400`. Do not redraw it. After changing it, macOS shows the old icon until the icon cache is cleared (see CLAUDE.md).
 
-## Decided for multiple sources (task 55e, 7-10-2026)
+## Multiple sources (designed in 55e, built in 55f/59)
 
-Not built yet (55f, 59). Mock-ups: <https://claude.ai/artifact/AePS2L7t15pFoEZKBuvP7C> (private).
+Mock-ups: <https://claude.ai/artifact/AePS2L7t15pFoEZKBuvP7C> (private).
 
 - **Popover (C1b):** no picker. One card per source, stacked. The card is tinted with that source's stress colour (`--stress-tint` over `--card-bg`); top: ring with face, name, plan or resets, session % large; below: the week as a `--card-bg` strip inside the tinted card (radius 8). One source = the same card once. The main view grows with the number of sources.
 - **Source names:** "Claude" and "ChatGPT" (not "Codex": the limit covers the whole ChatGPT plan).
 - **Menu bar:** the source closest to a limit, with its name when it is not Claude.
 - **Notifications:** source name first ("ChatGPT: 5-hour limit at 80%"), same thresholds per source, one switch.
-- **Settings:** current layout with equal-width segmented controls and the menu bar preview as a line inside the Menu bar row; sources (status per source, show/hide switch) at the bottom where Connection is now; then version; then Uninstall / Send feedback / Quit. With the source rows the settings view is about 744 px high: raise `popoverMaxHeight`.
+- **Settings:** current layout with equal-width segmented controls and the menu bar preview as a line inside the Menu bar row; sources (status per source, show/hide switch) at the bottom where Connection is now; then version; then Uninstall / Send feedback / Quit. Settings are about 705 px high with two sources. Notifications per source follow in 55g.
 
 ## Verifying
 

@@ -116,6 +116,7 @@ final class ParityTests: FixtureCase {
         for c in list("load_settings") {
             var got = normalizeSettings(c["stored"])
             got["seasonal_faces"] = nil   // added after the Python app (SeasonalFacesTests)
+            got["hidden_sources"] = nil   // added after the Python app (SourceCardsTests)
             assertSame(got, c["out"], "\(c)")
         }
     }

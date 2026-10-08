@@ -35,6 +35,16 @@ public func findCodexBinary(home: URL = FileManager.default.homeDirectoryForCurr
     codexBinaryCandidates(home: home).first { fm.isExecutableFile(atPath: $0.path) }
 }
 
+/// Codex counts as a source only while it is installed and logged in on this
+/// Mac (decided 8-10-2026): a `codex` binary and `~/.codex/auth.json`. Only the
+/// file's existence is checked; its content (tokens) is never read.
+/// Uninstalling or logging out removes the card at the next check.
+public func codexInstalled(home: URL = FileManager.default.homeDirectoryForCurrentUser,
+                           fm: FileManager = .default) -> Bool {
+    findCodexBinary(home: home, fm: fm) != nil
+        && fm.fileExists(atPath: home.appendingPathComponent(".codex/auth.json").path)
+}
+
 /// Whether to ask the app-server again.
 public func codexCheckDue(lastCheck: Date?, now: Date, interval: TimeInterval = codexCheckInterval) -> Bool {
     guard let lastCheck else { return true }
@@ -156,7 +166,8 @@ public func snapshot(fromJSON obj: JSONObject, sourceId: String) -> SourceSnapsh
     }
     return SourceSnapshot(source: UsageSource(id: sourceId, tool: tool, accountLabel: ""),
                           windows: windows, fetchedAt: (obj["fetched_at"] as? String).flatMap(parseDate),
-                          plan: obj["plan"] as? String, resetCredits: credits, extras: [:])
+                          plan: obj["plan"] as? String, resetCredits: credits,
+                          extras: (obj["origin"] as? String).map { ["origin": $0] } ?? [:])
 }
 
 // MARK: - Fallback: Codex session files (taak 55i)

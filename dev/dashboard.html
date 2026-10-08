@@ -49,6 +49,9 @@
     --font-system: -apple-system, BlinkMacSystemFont, 'SF Pro Text', sans-serif;
     --font-mono: ui-monospace, 'SF Mono', Menlo, monospace;
     --text-face: 34px;         /* emoji in the donut */
+    --text-face-card: 25px;    /* emoji in a source card's ring */
+    --text-value-lg: 20px;     /* session % on a source card */
+    --text-name: 14px;         /* source name on its card */
     --text-title: 15px;        /* header title */
     --text-body: 13px;         /* body, row titles, values */
     --text-secondary: 12px;    /* session reset, row values, buttons */
@@ -88,6 +91,8 @@
     --popover-width: 360px;    /* fixed: another width makes the popover jump */
     --size-icon-button: 28px;
     --size-donut: 90px;
+    --size-donut-card: 64px;   /* ring on a source card (stroke 7, r 26) */
+    --size-segmented: 186px;   /* every segmented control: same width, equal segments */
     --size-bar: 6px;           /* week bar height */
     --size-tick: 2px;          /* week position tick */
     --size-dot: 7px;
@@ -222,10 +227,9 @@
   }
   .setting-row.has-preview { flex-direction: column; align-items: stretch; gap: var(--space-8); padding-bottom: var(--space-10); }
   .setting-main { display: flex; align-items: center; gap: var(--space-10); }
-  /* Preview: a strip of "menu bar" with the item as it will look */
+  /* Preview: the menu bar item as it will look, on a line of its own (taak 59) */
   .preview-box {
     display: flex; align-items: center; justify-content: space-between; gap: var(--space-10);
-    background: var(--bg); border-radius: var(--radius-inset); padding: var(--space-6) var(--space-6) var(--space-6) var(--space-10);
   }
   .preview-label { font-size: var(--text-caption); color: var(--muted); }
   .menubar-pill {
@@ -259,13 +263,14 @@
   .switch:disabled { opacity: var(--opacity-disabled); cursor: default; }
 
   .segmented {
-    display: flex; flex-shrink: 0; padding: var(--space-2); gap: var(--space-2);
+    display: grid; grid-auto-flow: column; grid-auto-columns: minmax(0, 1fr);
+    width: var(--size-segmented); flex-shrink: 0; padding: var(--space-2); gap: var(--space-2);
     background: var(--track); border-radius: var(--radius-control);
   }
   .segmented button {
     border: none; background: transparent; cursor: pointer;
     font: inherit; font-size: var(--text-caption); font-weight: var(--weight-semibold); color: var(--muted);
-    padding: var(--space-4) var(--space-8); border-radius: var(--radius-sm);
+    padding: var(--space-4) 0; border-radius: var(--radius-sm); white-space: nowrap;
     transition: background var(--dur-fast), color var(--dur-fast);
   }
   .segmented button[aria-checked="true"] {
@@ -300,21 +305,11 @@
     border-radius: var(--radius-card);
     padding: var(--space-14);
   }
-  .card-session {
-    background: color-mix(in srgb, var(--stress-color, var(--status-ok)) var(--stress-tint), var(--card-bg));
-    transition: background var(--dur-slow) ease;
-  }
-
   /* ---- Session donut ---- */
-  .session-inner {
-    display: flex;
-    align-items: center;
-    gap: var(--space-14);
-  }
   .donut-wrap {
     position: relative;
-    width: var(--size-donut);
-    height: var(--size-donut);
+    width: var(--size-donut-card);
+    height: var(--size-donut-card);
     flex-shrink: 0;
   }
   .donut-wrap svg {
@@ -329,7 +324,7 @@
     line-height: 1;
   }
   .donut-face {
-    font-size: var(--text-face);
+    font-size: var(--text-face-card);
     line-height: 1;
     display: block;
   }
@@ -344,13 +339,52 @@
   .donut-face.stressed {
     animation: skull-shake var(--dur-shake) ease-in-out infinite;
   }
-  #donutTrack {
+  .donut-track {
     stroke: color-mix(in srgb, var(--stress-color, var(--status-ok)) var(--stress-track), var(--card-bg));
     transition: stroke var(--dur-slow) ease;
   }
-  .session-info {
-    flex: 1;
+  .donut-fill {
+    transition: stroke-dasharray var(--dur-fill) var(--ease-out), stroke var(--dur-slow) ease;
   }
+
+  /* ---- Source card (taak 55f, design 55e "C1b"): one per source, tinted
+     with that source's session colour; the week as a card-bg strip inside ---- */
+  .source-card {
+    background: color-mix(in srgb, var(--stress-color, var(--status-ok)) var(--stress-tint), var(--card-bg));
+    padding: var(--space-12);
+    display: flex; flex-direction: column; gap: var(--space-10);
+    transition: background var(--dur-slow) ease;
+  }
+  .source-top { display: flex; align-items: center; gap: var(--space-12); }
+  .source-info { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: var(--space-4); }
+  .source-head { display: flex; justify-content: space-between; align-items: baseline; gap: var(--space-8); }
+  .source-name { font-size: var(--text-name); font-weight: var(--weight-bold); }
+  .source-plan { font-size: var(--text-caption); color: var(--muted); white-space: nowrap; }
+  .source-plan:empty { display: none; }
+  .source-session { display: flex; align-items: baseline; gap: var(--space-6); min-width: 0; }
+  .source-pct {
+    font-size: var(--text-value-lg); font-weight: var(--weight-bold); line-height: 1.1;
+    font-variant-numeric: tabular-nums;
+  }
+  .source-session-reset, .source-updated {
+    font-size: var(--text-secondary); color: var(--muted);
+    white-space: nowrap; overflow: hidden; text-overflow: ellipsis; min-width: 0;
+  }
+  .source-updated { font-size: var(--text-caption); }
+  .source-updated:empty { display: none; }
+  .week-strip {
+    background: var(--card-bg); border-radius: var(--radius-inset);
+    padding: var(--space-8) var(--space-10) var(--space-9);
+    display: flex; flex-direction: column; gap: var(--space-6);
+  }
+  .week-strip[hidden] { display: none; }
+  .week-line {
+    display: flex; justify-content: space-between; gap: var(--space-8);
+    font-size: var(--text-secondary); color: var(--muted); white-space: nowrap;
+  }
+  .week-pct { font-weight: var(--weight-bold); color: var(--accent-text); }
+  .week-elapsed[hidden] { display: none; }
+
   .label-sm {
     font-size: var(--text-label);
     font-weight: var(--weight-semibold);
@@ -358,15 +392,6 @@
     color: var(--muted);
     text-transform: uppercase;
     margin-bottom: var(--space-4);
-  }
-  .session-pct {
-    font-size: var(--text-body);
-    font-weight: var(--weight-semibold);
-  }
-  .session-reset {
-    font-size: var(--text-secondary);
-    color: var(--muted);
-    margin-top: var(--space-4);
   }
   /* Free limit reset(s) available: sits beside the donut, so no extra height */
   .resets-link {
@@ -377,31 +402,18 @@
     white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
   }
   .resets-link[hidden] { display: none; }
+  .source-head .resets-link { margin-top: 0; flex-shrink: 0; }
+  span.resets-link { cursor: default; }
   .resets-link:hover { text-decoration-thickness: var(--underline-strong); }
   .resets-link:focus-visible { outline: var(--focus-ring) solid var(--accent-text); outline-offset: var(--space-1); border-radius: var(--radius-bar); }
 
   /* ---- Weekly card ---- */
-  .weekly-header {
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
-    margin-bottom: var(--space-8);
-  }
-  .weekly-pct-label {
-    font-size: var(--text-body);
-    font-weight: var(--weight-bold);
-    color: var(--text);
-  }
-  #weeklyPctLabel {
-    color: var(--accent-text);
-  }
   .progress-bar-track {
     position: relative;
     height: var(--size-bar);
     background: var(--track);
     border-radius: var(--radius-bar);
     overflow: hidden;
-    margin-bottom: var(--space-5);
   }
   /* Two fills in one track: elapsed week time behind, usage in front */
   .progress-bar-fill, .progress-bar-time {
@@ -423,19 +435,10 @@
     transition: left var(--dur-fill) var(--ease-out);
   }
   .progress-bar-tick[hidden] { display: none; }
-  #donutFill {
-    transition: stroke-dasharray var(--dur-fill) var(--ease-out), stroke var(--dur-slow) ease;
-  }
   .no-transition, .no-transition * {
     transition: none !important;
   }
-  .weekly-footer { display: flex; justify-content: space-between; gap: var(--space-8); }
-  #weeklyElapsed[hidden] { display: none; }
   .time-num { color: var(--time-text); font-weight: var(--weight-semibold); }
-  .weekly-reset {
-    font-size: var(--text-caption);
-    color: var(--muted);
-  }
 
   /* ---- Footer ---- */
   .footer {
@@ -506,6 +509,52 @@
 </style>
 </head>
 <body>
+<template id="sourceCardTpl">
+  <div class="card source-card">
+    <div class="source-top">
+      <div class="donut-wrap">
+        <svg width="64" height="64" viewBox="0 0 64 64" aria-hidden="true">
+          <circle class="donut-track" cx="32" cy="32" r="26" fill="none" stroke-width="7"/>
+          <circle class="donut-fill" cx="32" cy="32" r="26" fill="none" stroke-width="7"
+                  stroke-linecap="round" stroke-dasharray="0 163.4"/>
+        </svg>
+        <div class="donut-center"><span class="donut-face"></span></div>
+      </div>
+      <div class="source-info">
+        <div class="source-head">
+          <span class="source-name"></span>
+          <button class="resets-link" hidden onclick="onOpenResets()"></button>
+          <span class="resets-link" hidden></span>
+          <span class="source-plan"></span>
+        </div>
+        <div class="source-session"><span class="source-pct"></span><span class="source-session-reset"></span></div>
+        <div class="source-updated"></div>
+      </div>
+    </div>
+    <div class="week-strip">
+      <div class="week-line">
+        <span class="week-text"><span class="week-pct"></span> <span class="week-reset"></span></span>
+        <span class="week-elapsed"><span class="time-num"></span><span data-i18n="elapsed_suffix">% verstreken</span></span>
+      </div>
+      <div class="progress-bar-track">
+        <div class="progress-bar-time" style="width:0%"></div>
+        <div class="progress-bar-fill" style="width:0%"></div>
+        <div class="progress-bar-tick" hidden></div>
+      </div>
+    </div>
+  </div>
+</template>
+
+<template id="sourceRowTpl">
+  <div class="setting-row source-row">
+    <div class="setting-text">
+      <div class="setting-title"></div>
+      <div class="setting-sub conn-line"><span class="status-dot"></span><span class="txt"></span></div>
+    </div>
+    <button class="switch" role="switch"></button>
+  </div>
+</template>
+
 <div class="container">
 
   <!-- Header -->
@@ -537,46 +586,8 @@
   </div>
 
   <div class="view" id="mainView">
-  <!-- Session card -->  <!-- Session card -->
-  <div class="card card-session">
-    <div class="session-inner">
-      <div class="donut-wrap">
-        <svg width="90" height="90" viewBox="0 0 90 90">
-          <circle id="donutTrack" cx="45" cy="45" r="36" fill="none" stroke-width="9"/>
-          <circle id="donutFill" cx="45" cy="45" r="36" fill="none"
-                  stroke-width="9"
-                  stroke-linecap="round"
-                  stroke-dasharray="0 226.2"/>
-        </svg>
-        <div class="donut-center">
-          <span class="donut-face" id="sessionFace">🚀</span>
-        </div>
-      </div>
-      <div class="session-info">
-        <div class="label-sm" data-i18n="session_label">Huidige sessie</div>
-        <div class="session-pct" id="sessionPctText">—%</div>
-        <div class="session-reset" id="sessionReset">—</div>
-        <button class="resets-link" id="resetsLink" hidden onclick="onOpenResets()"></button>
-      </div>
-    </div>
-  </div>
-
-  <!-- Weekly card -->
-  <div class="card">
-    <div class="weekly-header">
-      <div class="label-sm" data-i18n="weekly_label">Weeklimiet</div>
-      <div class="weekly-pct-label"><span id="weeklyPctLabel">—</span><span data-i18n="used_suffix">% gebruikt</span></div>
-    </div>
-    <div class="progress-bar-track" id="weeklyTrack">
-      <div class="progress-bar-time" id="weeklyTime" style="width:0%"></div>
-      <div class="progress-bar-fill" id="weeklyBar" style="width:0%"></div>
-      <div class="progress-bar-tick" id="weeklyTick" hidden></div>
-    </div>
-    <div class="weekly-footer">
-      <div class="weekly-reset" id="weeklyReset">—</div>
-      <div class="weekly-reset" id="weeklyElapsed" hidden><span class="time-num" id="weeklyElapsedPct"></span><span data-i18n="elapsed_suffix">% verstreken</span></div>
-    </div>
-  </div>
+  <!-- One card per source (taak 55f); built from #sourceCardTpl -->
+  <div class="view" id="sourceCards"></div>
 
   <!-- Footer -->
   <div class="footer">
@@ -607,7 +618,7 @@
             </div>
           </div>
           <div class="preview-box">
-            <span class="preview-label" data-i18n="set_preview">Voorbeeld</span>
+            <span class="preview-label" id="previewLabel" data-i18n="set_preview">Voorbeeld</span>
             <span class="menubar-pill" id="menubarPreview"></span>
           </div>
         </div>
@@ -663,8 +674,16 @@
       </div>
     </div>
     <div class="settings-group">
-      <div class="group-label" data-i18n="set_group_system">Status &amp; systeem</div>
+      <div class="group-label" id="systemGroupLabel" data-i18n="set_group_system">Status &amp; systeem</div>
       <div class="card settings-card">
+        <div class="setting-row conn">
+          <div class="setting-text">
+            <div class="setting-title" id="claudeRowTitle" data-i18n="set_connection">Verbinding</div>
+            <div class="setting-sub conn-line"><span class="status-dot" id="connDot"></span><span class="txt" id="connText" data-i18n="connecting">Verbinden…</span></div>
+            <div class="setting-sub conn-line" id="serviceLine"><button class="conn-link" id="serviceBtn" onclick="onOpenStatus()"><span class="status-dot neutral" id="serviceDot"></span><span class="txt" id="serviceText"></span></button></div>
+          </div>
+          <button class="switch" id="claudeSwitch" role="switch" hidden></button>
+        </div>
         <div class="setting-row version">
           <div class="setting-text">
             <div class="setting-title"><span data-i18n="set_version">Versie</span> <span class="version-chip" id="versionText"></span></div>
@@ -672,13 +691,6 @@
           <div class="version-status">
             <div class="setting-sub" id="updateText" data-i18n="up_to_date">Up-to-date</div>
             <button class="update-btn" id="updateBtn" hidden onclick="onStartUpdate()"></button>
-          </div>
-        </div>
-        <div class="setting-row conn">
-          <div class="setting-text">
-            <div class="setting-title" data-i18n="set_connection">Verbinding</div>
-            <div class="setting-sub conn-line"><span class="status-dot" id="connDot"></span><span class="txt" id="connText" data-i18n="connecting">Verbinden…</span></div>
-            <div class="setting-sub conn-line" id="serviceLine"><button class="conn-link" id="serviceBtn" onclick="onOpenStatus()"><span class="status-dot neutral" id="serviceDot"></span><span class="txt" id="serviceText"></span></button></div>
           </div>
         </div>
       </div>
@@ -694,7 +706,7 @@
 <script>
 'use strict';
 
-const CIRC = 2 * Math.PI * 36; // 226.2
+const CARD_CIRC = 2 * Math.PI * 26; // ring on a source card: 163.4
 
 let _currentData = null;
 
@@ -721,22 +733,16 @@ window.updateData = function(data) {
   render(data);
 };
 
-// Called on popover open: reset donut + bar to 0 without transition, then
-// fill them in with a smooth transition so the open feels alive every time.
+// Called on popover open: paint every card's ring and bar at 0 without a
+// transition, then fill them in, so the open feels alive every time.
 window.openWithAnimation = function(data) {
   toggleSettings(false, true);  // always open on the main view, no animation
-  const donut = document.getElementById('donutFill');
-  const bar = document.getElementById('weeklyBar');
-  const time = document.getElementById('weeklyTime');
-  const tick = document.getElementById('weeklyTick');
-  [donut, bar, time, tick].forEach(el => el.classList.add('no-transition'));
-  donut.setAttribute('stroke-dasharray', '0 226.2');
-  bar.style.width = '0%';
-  time.style.width = '0%';
-  tick.style.left = '0%';
-  void donut.getBoundingClientRect(); // force reflow so the 0% state actually paints
+  const cards = document.getElementById('sourceCards');
+  cards.classList.add('no-transition');
+  render(data, true);
+  void cards.getBoundingClientRect(); // force reflow so the 0% state actually paints
   setTimeout(() => {
-    [donut, bar, time, tick].forEach(el => el.classList.remove('no-transition'));
+    cards.classList.remove('no-transition');
     _currentData = data;
     render(data);
   }, 100);
@@ -797,7 +803,8 @@ function mixRgb(a, b, p) {  // p of a over b
 function readableStressColor(stressCss) {
   const stress = parseRgb(stressCss);
   const card = hexToRgb(getComputedStyle(document.documentElement).getPropertyValue('--card-bg'));
-  const bg = mixRgb(stress, card, 0.14);              // same tint as .card-session
+  const tint = parseFloat(getComputedStyle(document.documentElement).getPropertyValue('--stress-tint')) / 100;
+  const bg = mixRgb(stress, card, tint);              // same tint as .source-card
   const dark = luminance(card) < 0.2;
   const target = dark ? [255, 255, 255] : [0, 0, 0];
   for (let step = 0; step <= 20; step++) {
@@ -808,55 +815,10 @@ function readableStressColor(stressCss) {
   return dark ? '#FFFFFF' : '#000000';
 }
 
-function render(d) {
+function render(d, zeroGeometry) {
   applyI18n(d);  // first: static labels; dynamic text below overrides where needed
 
-  // Session donut
-  const pct = Math.max(0, Math.min(100, d.session_pct || 0));
-  const filled = (pct / 100) * CIRC;
-  const gap = CIRC - filled;
-  const color = colorForPct(pct);
-  const donutFill = document.getElementById('donutFill');
-  donutFill.setAttribute('stroke-dasharray', `${filled.toFixed(1)} ${gap.toFixed(1)}`);
-  donutFill.style.stroke = color;
-  document.querySelector('.card-session').style.setProperty('--stress-color', color);
-  const face = document.getElementById('sessionFace');
-  face.textContent = d.session_face || '';   // UsageCore faceIcon, incl. seasonal theme
-  face.classList.toggle('stressed', pct >= 100);
-  document.getElementById('sessionPctText').textContent = pct + '%';
-  document.getElementById('sessionPctText').style.color = readableStressColor(color);
-  document.getElementById('resetsLink').style.color = readableStressColor(color);   // ≥4.6:1 on the tinted card
-  document.getElementById('sessionReset').textContent = T('reset_prefix') + ' ' + (d.session_reset || '—');
-  const resets = document.getElementById('resetsLink');
-  resets.hidden = !d.limit_resets;
-  resets.textContent = d.limit_resets ? d.limit_resets.text : '';
-  resets.title = d.limit_resets ? d.limit_resets.tip : '';
-
-  // Weekly
-  const wpct = Math.max(0, Math.min(100, d.weekly_pct || 0));
-  document.getElementById('weeklyPctLabel').textContent = wpct;
-  document.getElementById('weeklyBar').style.width = wpct + '%';
-  // Elapsed share of the weekly window (time, not usage) behind the usage fill
-  const wp = d.week_progress;
-  const time = document.getElementById('weeklyTime');
-  const tick = document.getElementById('weeklyTick');
-  const track = document.getElementById('weeklyTrack');
-  if (wp) {
-    const tpct = Math.max(0, Math.min(100, wp.elapsed_pct));
-    time.style.width = tpct + '%';
-    tick.style.left = tpct + '%';
-    tick.hidden = !(wpct >= tpct && tpct > 0 && tpct < 100);
-    track.title = T('week_tooltip', { day: wp.day, days: wp.days, elapsed: Math.round(tpct), used: wpct });
-    document.getElementById('weeklyElapsedPct').textContent = Math.round(tpct);
-    document.getElementById('weeklyElapsed').hidden = false;
-    document.getElementById('weeklyElapsed').title = T('day_of', { day: wp.day, days: wp.days });
-  } else {
-    time.style.width = '0%';
-    tick.hidden = true;
-    track.title = '';
-    document.getElementById('weeklyElapsed').hidden = true;
-  }
-  document.getElementById('weeklyReset').textContent = T('reset_prefix') + ' ' + (d.weekly_reset || '—');
+  renderSources(d.sources || [], zeroGeometry);
 
   // Status: 'ok' | 'stale' | 'not_logged_in'. Only problems surface on the
   // main view (dot before the account); details live in settings.
@@ -896,6 +858,7 @@ function render(d) {
   renderSeason(d.season_theme, d.seasonal_faces !== false);
 
   renderService(d.service);
+  renderSourceRows(d);
 
   // Badge on the gear: own connection problem, Claude outage, or update available
   const badgeClass = problem || d.service_badge || (d.update && d.update.state !== 'working' ? 'update' : '');
@@ -904,6 +867,124 @@ function render(d) {
   // Fetching spinner
   window.setStatus(d.fetching ? 'fetching' : 'ready');
   reportHeight();
+}
+
+// ---- Source cards (taak 55f, design 55e "C1b") ----
+// One card per source, in the order the app sends them. Cards are reused
+// while the sources stay the same, so the ring and bar can animate.
+function renderSources(list, zeroGeometry) {
+  const box = document.getElementById('sourceCards');
+  const ids = list.map(s => s.id).join('|');
+  if (box.dataset.ids !== ids) {
+    box.textContent = '';
+    const tpl = document.getElementById('sourceCardTpl').content.firstElementChild;
+    list.forEach(() => box.appendChild(tpl.cloneNode(true)));
+    box.dataset.ids = ids;
+    box.querySelectorAll('[data-i18n]').forEach(el => { el.textContent = T(el.dataset.i18n); });
+  }
+  list.forEach((s, i) => renderSourceCard(box.children[i], s, zeroGeometry));
+}
+
+const has = v => v !== null && v !== undefined;
+
+function renderSourceCard(card, s, zero) {
+  const pct = has(s.session_pct) ? Math.max(0, Math.min(100, s.session_pct)) : 0;
+  const color = colorForPct(pct);
+  const readable = readableStressColor(color);   // ≥4.6:1 on the tinted card
+  card.style.setProperty('--stress-color', color);
+
+  const fill = card.querySelector('.donut-fill');
+  const filled = (zero ? 0 : pct) / 100 * CARD_CIRC;
+  fill.setAttribute('stroke-dasharray', `${filled.toFixed(1)} ${(CARD_CIRC - filled).toFixed(1)}`);
+  fill.style.stroke = color;
+  const face = card.querySelector('.donut-face');
+  face.textContent = s.session_face || '';   // UsageCore faceIcon, incl. seasonal theme
+  face.classList.toggle('stressed', pct >= 100);
+
+  card.querySelector('.source-name').textContent = s.name;
+  // Free resets: Claude's open claude.ai (button), others are only shown (span)
+  const [linkBtn, linkSpan] = card.querySelectorAll('.resets-link');
+  const r = s.resets;
+  [linkBtn, linkSpan].forEach(el => { el.hidden = true; el.textContent = ''; el.title = ''; });
+  if (r) {
+    const el = r.link ? linkBtn : linkSpan;
+    el.hidden = false; el.textContent = r.text; el.title = r.tip; el.style.color = readable;
+  }
+  card.querySelector('.source-plan').textContent = r ? '' : (s.plan || '');
+
+  const pctEl = card.querySelector('.source-pct');
+  pctEl.textContent = has(s.session_pct) ? s.session_pct + '%' : '—%';
+  pctEl.style.color = readable;
+  card.querySelector('.source-session-reset').textContent =
+    has(s.session_reset) ? T('card_session', { when: s.session_reset }) : T('card_session_plain');
+  card.querySelector('.source-updated').textContent = s.updated || '';
+
+  // Week: usage in front of the elapsed share of the window
+  const strip = card.querySelector('.week-strip');
+  strip.hidden = !has(s.weekly_pct);
+  if (strip.hidden) return;
+  const w = Math.max(0, Math.min(100, s.weekly_pct));
+  card.querySelector('.week-pct').textContent = w + '%';
+  card.querySelector('.week-reset').textContent =
+    has(s.weekly_reset) ? T('card_week', { when: s.weekly_reset }) : T('card_week_plain');
+  card.querySelector('.progress-bar-fill').style.width = (zero ? 0 : w) + '%';
+  const time = card.querySelector('.progress-bar-time');
+  const tick = card.querySelector('.progress-bar-tick');
+  const elapsed = card.querySelector('.week-elapsed');
+  if (has(s.week_elapsed)) {
+    const t = Math.max(0, Math.min(100, s.week_elapsed));
+    time.style.width = (zero ? 0 : t) + '%';
+    tick.style.left = (zero ? 0 : t) + '%';
+    tick.hidden = !(w >= t && t > 0 && t < 100);   // only when usage covers the time fill
+    elapsed.hidden = false;
+    elapsed.querySelector('.time-num').textContent = Math.round(t);
+  } else {
+    time.style.width = '0%';
+    tick.hidden = true;
+    elapsed.hidden = true;
+  }
+}
+
+// ---- Sources in settings (taak 59): a row per source with a show switch,
+// only when there is more than one; with one source the group is as before.
+function renderSourceRows(d) {
+  const rows = d.source_rows || [];
+  const multi = rows.length > 0;
+  document.getElementById('systemGroupLabel').textContent = T(multi ? 'set_group_sources' : 'set_group_system');
+  document.getElementById('claudeRowTitle').textContent = multi ? T('source_claude') : T('set_connection');
+  document.getElementById('previewLabel').textContent = T(multi ? 'menubar_tightest' : 'set_preview');
+  const visible = rows.filter(r => !r.hidden).length;
+  const setSwitch = (sw, r) => {
+    sw.hidden = !r;
+    if (!r) return;
+    sw.setAttribute('aria-checked', r.hidden ? 'false' : 'true');
+    sw.setAttribute('aria-label', T('set_show_source', { name: r.name }));
+    sw.disabled = !r.hidden && visible <= 1;   // the last visible source stays
+    sw.onclick = () => onToggleSource(sw, r.id);
+  };
+  const claudeRow = document.getElementById('claudeSwitch').closest('.setting-row');
+  setSwitch(document.getElementById('claudeSwitch'), rows.find(r => r.claude));
+  claudeRow.parentElement.querySelectorAll('.source-row').forEach(el => el.remove());
+  let after = claudeRow;
+  rows.filter(r => !r.claude).forEach(r => {
+    const row = document.getElementById('sourceRowTpl').content.firstElementChild.cloneNode(true);
+    row.querySelector('.setting-title').textContent = r.name;
+    row.querySelector('.txt').textContent = r.status;
+    // Live from the tool: green; from its own files (possibly old): grey
+    row.querySelector('.status-dot').classList.toggle('neutral', !r.live);
+    setSwitch(row.querySelector('.switch'), r);
+    after.after(row);
+    after = row;
+  });
+}
+
+function onToggleSource(sw, id) {
+  if (sw.disabled) return;
+  const show = sw.getAttribute('aria-checked') !== 'true';
+  sw.setAttribute('aria-checked', show ? 'true' : 'false');  // optimistic; the app pushes saved state back
+  if (window.webkit && window.webkit.messageHandlers && window.webkit.messageHandlers.setSourceHidden) {
+    window.webkit.messageHandlers.setSourceHidden.postMessage({ id: id, hidden: !show });
+  }
 }
 
 // Claude service status: our own labels via T(); the API's description and
@@ -1008,19 +1089,17 @@ function toggleSettings(show, instant) {
   };
 }
 
-// The popover is 296 px for the main view; the settings view reports its own
-// content height so rows can breathe (app.py clamps and resizes the popover).
-const MAIN_HEIGHT = 296;
+// Both views report their content height: the main view grows with the
+// number of source cards (taak 55f), settings with their rows. The app clamps
+// it and opens the popover at the main view's last height.
 let _reportedHeight = 0;
 function reportHeight() {
   const settingsOpen = !document.getElementById('settingsView').hidden;
-  const h = settingsOpen
-    ? Math.max(MAIN_HEIGHT, Math.ceil(document.querySelector('.container').scrollHeight))
-    : MAIN_HEIGHT;
+  const h = Math.ceil(document.querySelector('.container').scrollHeight);
   if (h === _reportedHeight) return;
   _reportedHeight = h;
   if (window.webkit && window.webkit.messageHandlers && window.webkit.messageHandlers.resize) {
-    window.webkit.messageHandlers.resize.postMessage(h);
+    window.webkit.messageHandlers.resize.postMessage({ height: h, main: !settingsOpen });
   }
 }
 

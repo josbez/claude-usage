@@ -356,8 +356,9 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSPopoverDelegate {
             // {id, hidden}: only ids of sources that exist
             guard let msg = body as? [String: Any], let id = msg["id"] as? String, isValidSourceId(id),
                   let hide = msg["hidden"] as? Bool else { return }
-            var hidden = hiddenSources(settings)
-            if hide { hidden.insert(id) } else { hidden.remove(id) }
+            let available = availableSources(claude: claudeSnapshot(limits: loadJSONObject(paths.limits), now: Date()),
+                                             others: otherSnapshots(), now: Date()).map(\.source.id)
+            let hidden = settingSourceHidden(hiddenSources(settings), id: id, hide: hide, available: available)
             updateSetting(hiddenSourcesKey, hidden.sorted())
             showCachedTitle()   // held until the popover closes (anchor)
             pushData()

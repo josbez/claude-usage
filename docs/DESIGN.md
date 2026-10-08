@@ -65,7 +65,7 @@ One family, `--font-system` (`-apple-system, BlinkMacSystemFont, 'SF Pro Text', 
 | `--text-name` | 14px | bold | Source name on its card |
 | `--text-title` | 15px | bold | Header title |
 | `--text-body` | 13px | regular / semibold / bold | Body, row titles, session %, week % |
-| `--text-secondary` | 12px | regular / semibold | Session reset, row values, account name, buttons |
+| `--text-secondary` | 12px | regular / semibold | Session reset, row values, footer status, buttons |
 | `--text-caption` | 11px | regular / semibold | Footer, week reset, sub lines, segmented, resets link |
 | `--text-group` | 10.5px | semibold, caps | Group label above a settings card |
 | `--text-label` | 10px | semibold, caps | Label inside a card ("CURRENT SESSION") |
@@ -91,7 +91,7 @@ The ones that carry the layout:
 
 ### Size
 
-`--popover-width` 360 · `--size-icon-button` 28 · `--size-donut` 90 (not used since 55f) · `--size-donut-card` 64 (stroke 7, r 26, in the SVG) · `--size-segmented` 186 (every segmented control, equal segments) · `--size-bar` 6 · `--size-tick` 2 · `--size-dot` 7 · `--size-dot-small` 6 · `--size-row` 46 · `--size-row-compact` 40 · `--size-pill` 22 · `--size-switch-w` 36 × `--size-switch-h` 21 with `--size-knob` 17 (knob travel is computed from these) · `--max-pill` 220 · `--max-account` 140 · `--focus-ring` 2 · `--underline-strong` 2.
+`--popover-width` 360 · `--size-icon-button` 28 · `--size-donut` 90 (not used since 55f) · `--size-donut-card` 64 (stroke 7, r 26, in the SVG) · `--size-segmented` 186 (every segmented control, equal segments) · `--size-bar` 6 · `--size-tick` 2 · `--size-dot` 7 · `--size-dot-small` 6 · `--size-row` 46 · `--size-row-compact` 40 · `--size-pill` 22 · `--size-switch-w` 36 × `--size-switch-h` 21 with `--size-knob` 17 (knob travel is computed from these) · `--max-pill` 220 · `--focus-ring` 2 · `--underline-strong` 2.
 
 ### Shadow, opacity, motion
 
@@ -109,8 +109,11 @@ These stay numbers in the CSS on purpose: optical baseline nudges (`vertical-ali
 All in `dev/dashboard.html`; the design-system artifact has a live preview and notes for each.
 
 - **Header**: title (`--text-title`) and 28 px icon buttons (refresh, settings with a 6 px status badge, close; back chevron in settings).
-- **Source card** (one per source, stacked; taak 55f): tinted with that source's stress colour (`--stress-tint` over `--card-bg`). Top: 64 px ring with the emoji face (`faceIcon`, seasonal themes in Swift), name, then resets (Claude: a link to claude.ai; others: text) or the plan; session % large with "session · resets in 2h 40m"; "updated 11:10" when the numbers are old. Below: the week as a `--card-bg` strip (radius 8): "61% week · resets Thu 09:00", "30% elapsed", one track with elapsed time behind usage and a 2 px tick when usage covers it. A window the source didn't report shows "—" or no strip, never 0. No numbers at all and a problem (not logged in, never fetched; taak 60): neutral card (`--muted` ring and tint, no fill, no face), the capitalised reason in place of the reset line; the footer shows a short status instead of an empty account, and Claude's resets are underlined only because they are a link. Data: `sourceCard()` in `UsageCore/SourceCards.swift`.
-- **Footer**: status dot (only when something is wrong), account name, org, plan, "Updated".
+- **Source card** (one per source, stacked; taak 55f): tinted with that source's stress colour (`--stress-tint` over `--card-bg`). Top: 64 px ring with the emoji face (`faceIcon`, seasonal themes in Swift), name, then resets (Claude: a link to claude.ai; others: text) or the plan; session % large with "session · resets in 2h 40m"; "Updated 11:10" when the numbers are old. Below: the week as a `--card-bg` strip (radius 8): "61% week · resets Thu 09:00", "30% elapsed", one track with elapsed time behind usage and a 2 px tick when usage covers it. A window the source didn't report shows "—" or no strip, never 0. No numbers at all and a problem (not logged in, never fetched; taak 60): neutral card (`--muted` ring and tint, no fill, no face), the capitalised reason in place of the reset line; the footer shows a short status, and Claude's resets are underlined only because they are a link. Data: `sourceCard()` in `UsageCore/SourceCards.swift`.
+- **Footer** (taak 61): status dot + short status only when something is wrong ("Claude: …" with more than one source); "Updated 2 min ago" only with one source and no problem; hidden when empty. The account (name · org · plan, e-mail in the tooltip) is on the Claude row in settings.
+- **Age of numbers** (taak 61): one notation everywhere, `ageText()` in `SourceCards.swift`: "just now", "1 min ago", "12 min ago" within the hour, then the time ("14:52") or date. Stand-alone lines start with a capital ("Updated 12:00").
+- **Segmented controls** are radio groups named by their row title: one Tab stop (the chosen option), arrow keys move the choice.
+- **At 0 %** neither the ring (round cap) nor the week bar draws a dot.
 - **Settings** (taak 59): group label above a card of rows. Menu bar row: title and control on one line, the preview on its own line below (no box in the card). With more than one source the last group is "Sources & system": a row per source (status, show switch; the last visible source can't be hidden), then the version. Row = title (`--text-body` semibold), optional sub line (`--text-caption`, `--muted`, ellipsis), control on the right. Controls: segmented control, switch, update button. Quiet text buttons below (uninstall, quit).
 - **Menu bar preview**: pill with the ring and the title text exactly as the menu bar shows it.
 

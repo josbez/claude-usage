@@ -31,6 +31,16 @@ public func availableSources(claude: SourceSnapshot?, others: [SourceSnapshot], 
     return out
 }
 
+/// The hidden set after the user flips one switch (taak 61). Hiding the last
+/// visible available source is refused: the set comes back unchanged.
+public func settingSourceHidden(_ hidden: Set<String>, id: String, hide: Bool,
+                                available: [String]) -> Set<String> {
+    var out = hidden
+    if hide { out.insert(id) } else { out.remove(id) }
+    if hide && available.contains(id) && !available.contains(where: { !out.contains($0) }) { return hidden }
+    return out
+}
+
 /// Available minus hidden. Never empty while something is available: hiding
 /// every source would leave nothing to show, so the first one stays.
 public func visibleSources(_ available: [SourceSnapshot], hidden: Set<String>) -> [SourceSnapshot] {
@@ -145,7 +155,7 @@ extension UsageFormatter {
 
         // Old numbers say so on the card (a session file can be hours old).
         if let f = s.fetchedAt, now.timeIntervalSince(f) / 60 > Double(staleAfterMinutes(refresh: refreshMinutes(settings))) {
-            card["updated"] = strings.t("card_updated", lang, ["when": whenText(f, lang)])
+            card["updated"] = strings.t("card_updated", lang, ["when": ageText(f, lang)])
         } else {
             card["updated"] = NSNull()
         }
@@ -154,6 +164,16 @@ extension UsageFormatter {
 
     func shortResets(_ n: Int, _ lang: String) -> String {
         n == 1 ? strings.t("resets_short_one", lang) : strings.t("resets_short_many", lang, ["n": n])
+    }
+
+    /// How old numbers are, the same everywhere (taak 61): "zojuist", "1 min
+    /// geleden", "12 min geleden" within the hour, then the time ("14:52") or date.
+    public func ageText(_ d: Date, _ lang: String) -> String {
+        let minutes = pyInt(now.timeIntervalSince(d) / 60)
+        if minutes < 1 { return strings.t("ago_now", lang) }
+        if minutes == 1 { return strings.t("ago_one_min", lang) }
+        if minutes < 60 { return strings.t("ago_min", lang, ["n": minutes]) }
+        return whenText(d, lang)
     }
 
     /// "14:52" today, else "do 9 okt".
@@ -167,7 +187,7 @@ extension UsageFormatter {
     public func sourceStatus(_ s: SourceSnapshot, lang: String) -> String {
         let origin = s.extras["origin"] as? String
         var text = strings.t(origin == "session-file" ? "source_from_file" : "source_connected_\(s.source.tool)", lang)
-        if let f = s.fetchedAt { text += " · " + whenText(f, lang) }
+        if let f = s.fetchedAt { text += " · " + ageText(f, lang) }
         return text
     }
 

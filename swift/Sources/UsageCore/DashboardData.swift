@@ -30,10 +30,7 @@ extension UsageFormatter {
             let age = now.timeIntervalSince(ft) / 60
             ageMinutes = age
             fetchedHHMM = LocalParts(ft, timeZone: timeZone).hhmm
-            let diff = pyInt(age)
-            lastUpdated = diff < 1 ? strings.t("ago_now", lang)
-                : diff == 1 ? strings.t("ago_one_min", lang)
-                : strings.t("ago_min", lang, ["n": diff])
+            lastUpdated = ageText(ft, lang)
         }
 
         var status = "ok", reason = ""

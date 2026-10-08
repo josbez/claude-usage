@@ -49,6 +49,17 @@ final class SourceCardsTests: XCTestCase {
         XCTAssertTrue(visibleSources([], hidden: []).isEmpty)
     }
 
+    func testTheLastVisibleSourceCannotBeHidden() {
+        let both = [claudeDesktopSource, codexSource]
+        XCTAssertEqual(settingSourceHidden([], id: codexSource, hide: true, available: both), [codexSource])
+        // Second switch off: refused, Claude stays
+        XCTAssertEqual(settingSourceHidden([codexSource], id: claudeDesktopSource, hide: true, available: both), [codexSource])
+        XCTAssertEqual(settingSourceHidden([codexSource], id: codexSource, hide: false, available: both), [])
+        // Only one source: it cannot be hidden; a source that isn't available can
+        XCTAssertEqual(settingSourceHidden([], id: claudeDesktopSource, hide: true, available: [claudeDesktopSource]), [])
+        XCTAssertEqual(settingSourceHidden([], id: codexSource, hide: true, available: [claudeDesktopSource]), [codexSource])
+    }
+
     func testHiddenSourcesSettingIsCleaned() {
         XCTAssertEqual(normalizeSettings(nil)["hidden_sources"] as? [String], [])
         XCTAssertEqual(normalizeSettings(["hidden_sources": ["codex", "../x", 3, "codex"]])["hidden_sources"] as? [String],
@@ -133,10 +144,25 @@ final class SourceCardsTests: XCTestCase {
 
     func testOldNumbersSaySo() {
         let card = f.sourceCard(codex(fetched: "2026-10-07T09:10:00Z", origin: "session-file"), settings: settings, lang: "nl")
-        XCTAssertEqual(card["updated"] as? String, "bijgewerkt 11:10")
+        XCTAssertEqual(card["updated"] as? String, "Bijgewerkt 11:10")
         XCTAssertEqual(f.sourceStatus(codex(fetched: "2026-10-05T09:10:00Z", origin: "session-file"), lang: "nl"),
                        "Uit de sessiebestanden van Codex · ma 5 okt")
-        XCTAssertEqual(f.sourceStatus(codex(), lang: "en"), "Connected through Codex · 13:58")
+        XCTAssertEqual(f.sourceStatus(codex(), lang: "en"), "Connected through Codex · 2 min ago")
+    }
+
+    /// Taak 61: one notation for how old numbers are.
+    func testAgeTextIsTheSameEverywhere() {
+        func at(_ iso: String) -> Date { parseDate(iso)! }
+        XCTAssertEqual(f.ageText(at("2026-10-07T11:59:30Z"), "nl"), "zojuist")
+        XCTAssertEqual(f.ageText(at("2026-10-07T12:00:30Z"), "nl"), "zojuist")   // clock skew
+        XCTAssertEqual(f.ageText(at("2026-10-07T11:59:00Z"), "en"), "1 min ago")
+        XCTAssertEqual(f.ageText(at("2026-10-07T11:01:00Z"), "nl"), "59 min geleden")
+        XCTAssertEqual(f.ageText(at("2026-10-07T11:00:00Z"), "nl"), "13:00")      // an hour: the time
+        XCTAssertEqual(f.ageText(at("2026-10-05T09:10:00Z"), "nl"), "ma 5 okt")
+        // Footer and settings use it too: no "120 min ago"
+        let old = f.dashboardData(limits: claudeLimits().merging(["fetched_at": "2026-10-07T10:00:00+00:00"]) { $1 },
+                                  settings: settings, state: AppState(), lang: "nl")
+        XCTAssertEqual(old["last_updated"] as? String, "12:00")
     }
 
     // MARK: - Dashboard data

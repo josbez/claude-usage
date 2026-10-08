@@ -7,24 +7,113 @@
 <style>
   * { box-sizing: border-box; margin: 0; padding: 0; }
 
+  /* ==== Design tokens (docs/DESIGN.md) ====
+     Every colour, size, space, radius, font and duration below comes from here.
+     Change a value here, not in a rule. Colour tokens get a dark value in the
+     media query; the other families are the same in both themes. */
   :root {
+    /* -- Colour: surfaces and text -- */
     --bg: #F0F0F0;
     --card-bg: #ffffff;
     --text: #1A1A1A;
     --muted: #636366;          /* ≥4.5:1 on card, page and tinted session card */
     --track: #EAEAEA;
+    --on-accent: #FFFFFF;      /* text on accent-blue, switch knob */
+    /* -- Colour: accent (the week) -- */
     --accent-blue: #4B7BEC;
     --time-fill: color-mix(in srgb, var(--accent-blue) 30%, var(--track));
     /* Text colours checked against WCAG 2.2 AA (4.5:1) on the white card;
        fills keep the lighter accent — their values are also given as text. */
     --accent-text: #3366D6;    /* 5.23:1 */
     --time-text: #4D6FB3;      /* 4.95:1, muted blue-grey of the time fill */
+    /* -- Colour: icons -- */
     --icon-color: #8A8A8A;
     --icon-hover-bg: rgba(0,0,0,0.07);
     --icon-hover-color: #1A1A1A;
+    /* -- Colour: status (same in both themes) -- */
     --status-ok: #34C759;
     --status-stale: #FF9500;
     --status-error: #FF3B30;
+    /* -- Colour: session stress ramp, read by colorForPct() (same in both themes) -- */
+    --stress-low: #2FA84A;     /* 0% */
+    --stress-mid: #FF9500;     /* 50% */
+    --stress-high: #FF3B30;    /* 100% */
+    --stress-tint: 14%;        /* session card: stress colour over card-bg */
+    --stress-track: 30%;       /* donut track: stress colour over card-bg */
+
+    /* -- Shadow -- */
+    --shadow-segment: 0 1px 2px rgba(0,0,0,0.15);
+    --shadow-knob: 0 1px 2px rgba(0,0,0,0.25);
+
+    /* -- Type -- */
+    --font-system: -apple-system, BlinkMacSystemFont, 'SF Pro Text', sans-serif;
+    --font-mono: ui-monospace, 'SF Mono', Menlo, monospace;
+    --text-face: 34px;         /* emoji in the donut */
+    --text-title: 15px;        /* header title */
+    --text-body: 13px;         /* body, row titles, values */
+    --text-secondary: 12px;    /* session reset, row values, buttons */
+    --text-caption: 11px;      /* footer, week reset, sub lines, segmented */
+    --text-group: 10.5px;      /* group label above a settings card */
+    --text-label: 10px;        /* small caps label inside a card */
+    --weight-regular: 400;
+    --weight-medium: 500;
+    --weight-semibold: 600;
+    --weight-bold: 700;
+    --tracking-caps: 0.06em;   /* uppercase labels */
+
+    /* -- Space (named by px; the popover is a fixed 360 px wide) -- */
+    --space-1: 1px;
+    --space-2: 2px;
+    --space-4: 4px;
+    --space-5: 5px;
+    --space-6: 6px;
+    --space-8: 8px;
+    --space-9: 9px;
+    --space-10: 10px;
+    --space-12: 12px;
+    --space-14: 14px;          /* popover edge and card padding */
+
+    /* -- Radius -- */
+    --radius-bar: 3px;         /* progress bar, focus ring */
+    --radius-chip: 4px;        /* version chip */
+    --radius-sm: 5px;          /* active segment, menu bar pill */
+    --radius-md: 6px;          /* icon button, update button */
+    --radius-control: 7px;     /* segmented control */
+    --radius-inset: 8px;       /* preview strip */
+    --radius-pill: 11px;       /* switch */
+    --radius-card: 12px;       /* cards */
+    --radius-round: 50%;       /* dots, knob */
+
+    /* -- Size -- */
+    --popover-width: 360px;    /* fixed: another width makes the popover jump */
+    --size-icon-button: 28px;
+    --size-donut: 90px;
+    --size-bar: 6px;           /* week bar height */
+    --size-tick: 2px;          /* week position tick */
+    --size-dot: 7px;
+    --size-dot-small: 6px;     /* connection row dots, gear badge */
+    --size-row: 46px;          /* settings row min height */
+    --size-row-compact: 40px;  /* version row */
+    --size-pill: 22px;         /* menu bar pill min height */
+    --size-switch-w: 36px;
+    --size-switch-h: 21px;
+    --size-knob: 17px;
+    --max-pill: 220px;         /* menu bar preview text */
+    --max-account: 140px;      /* account name gives way to the org name */
+    --focus-ring: 2px;
+    --underline-strong: 2px;   /* link underline on hover */
+    --opacity-disabled: 0.4;   /* switch that cannot be used */
+    --opacity-busy: 0.6;       /* update button while working */
+
+    /* -- Motion -- */
+    --ease-out: cubic-bezier(0.16, 1, 0.3, 1);
+    --dur-fast: 0.15s;         /* hover, segment switch */
+    --dur-base: 0.2s;          /* switch */
+    --dur-slow: 0.4s;          /* stress colour change */
+    --dur-fill: 0.6s;          /* donut and bar fill */
+    --dur-spin: 1s;
+    --dur-pulse: 1.5s;
+    --dur-shake: 3s;
   }
   @media (prefers-color-scheme: dark) {
     :root {
@@ -44,188 +133,188 @@
   }
 
   body {
-    font-family: -apple-system, BlinkMacSystemFont, 'SF Pro Text', sans-serif;
+    font-family: var(--font-system);
     background: var(--bg);
-    width: 360px;
+    width: var(--popover-width);
     color: var(--text);
-    font-size: 13px;
+    font-size: var(--text-body);
     overflow-x: hidden;
     -webkit-font-smoothing: antialiased;
   }
 
   .container {
-    padding: 14px 14px 12px;
+    padding: var(--space-14) var(--space-14) var(--space-12);
     display: flex;
     flex-direction: column;
-    gap: 10px;
+    gap: var(--space-10);
   }
 
   /* ---- Header ---- */
   .header {
     display: flex;
     align-items: center;
-    gap: 8px;
+    gap: var(--space-8);
   }
   .header-title {
-    font-weight: 700;
-    font-size: 15px;
+    font-weight: var(--weight-bold);
+    font-size: var(--text-title);
     flex: 1;
     color: var(--text);
   }
   .icon-btn {
-    width: 28px;
-    height: 28px;
+    width: var(--size-icon-button);
+    height: var(--size-icon-button);
     border: none;
     background: transparent;
     cursor: pointer;
-    border-radius: 6px;
+    border-radius: var(--radius-md);
     display: flex;
     align-items: center;
     justify-content: center;
     color: var(--icon-color);
-    transition: background 0.15s;
+    transition: background var(--dur-fast);
     flex-shrink: 0;
   }
   .icon-btn:hover { background: var(--icon-hover-bg); color: var(--icon-hover-color); }
-  .icon-btn.spinning svg { animation: spin 1s linear infinite; }
+  .icon-btn.spinning svg { animation: spin var(--dur-spin) linear infinite; }
   #settingsBtn { position: relative; }
   #settingsBtn .badge {
-    position: absolute; top: 4px; right: 4px;
-    width: 6px; height: 6px; border-radius: 50%;
+    position: absolute; top: var(--space-4); right: var(--space-4);
+    width: var(--size-dot-small); height: var(--size-dot-small); border-radius: var(--radius-round);
     display: none;
   }
   #settingsBtn .badge.update { display: block; background: var(--status-stale); }
   #settingsBtn .badge.stale { display: block; background: var(--status-stale); }
   #settingsBtn .badge.disconnected { display: block; background: var(--status-error); }
   .icon-btn[hidden] { display: none; }
-  #backBtn { margin-left: -6px; margin-right: -4px; }
+  #backBtn { margin-left: calc(-1 * var(--space-6)); margin-right: calc(-1 * var(--space-4)); }
 
   /* ---- Views: main (cards) and settings share the same space ---- */
-  .view { display: flex; flex-direction: column; gap: 10px; }
+  .view { display: flex; flex-direction: column; gap: var(--space-10); }
   .view[hidden] { display: none; }
 
   /* ---- Settings ---- */
-  .settings-card { padding: 4px 14px; }
+  .settings-card { padding: var(--space-4) var(--space-14); }
   .setting-row {
-    display: flex; align-items: center; gap: 10px;
-    padding: 8px 0; min-height: 46px;
+    display: flex; align-items: center; gap: var(--space-10);
+    padding: var(--space-8) 0; min-height: var(--size-row);
   }
   .setting-row[hidden] { display: none; }
   .setting-row.version {
-    min-height: 40px; flex-wrap: wrap;
+    min-height: var(--size-row-compact); flex-wrap: wrap;
   }
-  .setting-row + .setting-row { border-top: 1px solid var(--track); }
+  .setting-row + .setting-row { border-top: var(--space-1) solid var(--track); }
   .setting-text { flex: 1; min-width: 0; }
-  .setting-title { font-size: 13px; font-weight: 600; color: var(--text); }
+  .setting-title { font-size: var(--text-body); font-weight: var(--weight-semibold); color: var(--text); }
   .setting-sub {
-    font-size: 11px; color: var(--muted); margin-top: 2px;
+    font-size: var(--text-caption); color: var(--muted); margin-top: var(--space-2);
     white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
   }
   .setting-sub.error { color: var(--status-error); white-space: normal; }
-  .ring-preview { vertical-align: -2px; color: var(--text); }
-  .setting-value { font-size: 12px; color: var(--muted); white-space: nowrap; }
+  .ring-preview { vertical-align: -2px; color: var(--text); }   /* optical baseline nudge */
+  .setting-value { font-size: var(--text-secondary); color: var(--muted); white-space: nowrap; }
 
   /* Grouped settings: small caps label above each card */
-  .settings-group { display: flex; flex-direction: column; gap: 5px; }
+  .settings-group { display: flex; flex-direction: column; gap: var(--space-5); }
   .group-label {
-    font-size: 10.5px; font-weight: 600; letter-spacing: 0.06em;
-    text-transform: uppercase; color: var(--muted); padding: 0 14px;
+    font-size: var(--text-group); font-weight: var(--weight-semibold); letter-spacing: var(--tracking-caps);
+    text-transform: uppercase; color: var(--muted); padding: 0 var(--space-14);
   }
-  .setting-row.has-preview { flex-direction: column; align-items: stretch; gap: 8px; padding-bottom: 10px; }
-  .setting-main { display: flex; align-items: center; gap: 10px; }
+  .setting-row.has-preview { flex-direction: column; align-items: stretch; gap: var(--space-8); padding-bottom: var(--space-10); }
+  .setting-main { display: flex; align-items: center; gap: var(--space-10); }
   /* Preview: a strip of "menu bar" with the item as it will look */
   .preview-box {
-    display: flex; align-items: center; justify-content: space-between; gap: 10px;
-    background: var(--bg); border-radius: 8px; padding: 6px 6px 6px 10px;
+    display: flex; align-items: center; justify-content: space-between; gap: var(--space-10);
+    background: var(--bg); border-radius: var(--radius-inset); padding: var(--space-6) var(--space-6) var(--space-6) var(--space-10);
   }
-  .preview-label { font-size: 11px; color: var(--muted); }
+  .preview-label { font-size: var(--text-caption); color: var(--muted); }
   .menubar-pill {
-    display: inline-flex; align-items: center; gap: 4px; min-height: 22px;
-    padding: 2px 8px; border-radius: 5px; background: var(--card-bg);
-    border: 1px solid var(--track);
-    font-size: 12px; font-weight: 500; color: var(--text);
-    white-space: nowrap; overflow: hidden; text-overflow: ellipsis; max-width: 220px;
+    display: inline-flex; align-items: center; gap: var(--space-4); min-height: var(--size-pill);
+    padding: var(--space-2) var(--space-8); border-radius: var(--radius-sm); background: var(--card-bg);
+    border: var(--space-1) solid var(--track);
+    font-size: var(--text-secondary); font-weight: var(--weight-medium); color: var(--text);
+    white-space: nowrap; overflow: hidden; text-overflow: ellipsis; max-width: var(--max-pill);
   }
   .version-chip {
-    font: 11px ui-monospace, 'SF Mono', Menlo, monospace; color: var(--muted);
-    background: var(--track); border-radius: 4px; padding: 1px 5px; margin-left: 4px;
-    vertical-align: 1px;
+    font: var(--weight-regular) var(--text-caption) var(--font-mono); color: var(--muted);
+    background: var(--track); border-radius: var(--radius-chip); padding: var(--space-1) var(--space-5); margin-left: var(--space-4);
+    vertical-align: 1px;   /* optical baseline nudge */
   }
-  .version-status { display: flex; align-items: center; gap: 9px; }
+  .version-status { display: flex; align-items: center; gap: var(--space-9); }
   .version-status .setting-sub { margin-top: 0; }
 
   .switch {
-    position: relative; width: 36px; height: 21px; flex-shrink: 0;
-    border: none; border-radius: 11px; cursor: pointer; padding: 0;
-    background: var(--track); transition: background 0.2s;
+    position: relative; width: var(--size-switch-w); height: var(--size-switch-h); flex-shrink: 0;
+    border: none; border-radius: var(--radius-pill); cursor: pointer; padding: 0;
+    background: var(--track); transition: background var(--dur-base);
   }
   .switch::after {
-    content: ''; position: absolute; top: 2px; left: 2px;
-    width: 17px; height: 17px; border-radius: 50%;
-    background: #fff; box-shadow: 0 1px 2px rgba(0,0,0,0.25);
-    transition: transform 0.2s;
+    content: ''; position: absolute; top: var(--space-2); left: var(--space-2);
+    width: var(--size-knob); height: var(--size-knob); border-radius: var(--radius-round);
+    background: var(--on-accent); box-shadow: var(--shadow-knob);
+    transition: transform var(--dur-base);
   }
   .switch[aria-checked="true"] { background: var(--status-ok); }
-  .switch[aria-checked="true"]::after { transform: translateX(15px); }
-  .switch:disabled { opacity: 0.4; cursor: default; }
+  .switch[aria-checked="true"]::after { transform: translateX(calc(var(--size-switch-w) - var(--size-knob) - 2 * var(--space-2))); }
+  .switch:disabled { opacity: var(--opacity-disabled); cursor: default; }
 
   .segmented {
-    display: flex; flex-shrink: 0; padding: 2px; gap: 2px;
-    background: var(--track); border-radius: 7px;
+    display: flex; flex-shrink: 0; padding: var(--space-2); gap: var(--space-2);
+    background: var(--track); border-radius: var(--radius-control);
   }
   .segmented button {
     border: none; background: transparent; cursor: pointer;
-    font: inherit; font-size: 11px; font-weight: 600; color: var(--muted);
-    padding: 4px 8px; border-radius: 5px;
-    transition: background 0.15s, color 0.15s;
+    font: inherit; font-size: var(--text-caption); font-weight: var(--weight-semibold); color: var(--muted);
+    padding: var(--space-4) var(--space-8); border-radius: var(--radius-sm);
+    transition: background var(--dur-fast), color var(--dur-fast);
   }
   .segmented button[aria-checked="true"] {
     background: var(--card-bg); color: var(--text);
-    box-shadow: 0 1px 2px rgba(0,0,0,0.15);
+    box-shadow: var(--shadow-segment);
   }
 
   .update-btn {
-    border: none; border-radius: 6px; cursor: pointer;
-    padding: 5px 10px; font: inherit; font-size: 12px; font-weight: 600;
-    background: var(--accent-blue); color: #fff; white-space: nowrap;
+    border: none; border-radius: var(--radius-md); cursor: pointer;
+    padding: var(--space-5) var(--space-10); font: inherit; font-size: var(--text-secondary); font-weight: var(--weight-semibold);
+    background: var(--accent-blue); color: var(--on-accent); white-space: nowrap;
   }
-  .update-btn:disabled { opacity: 0.6; cursor: default; }
+  .update-btn:disabled { opacity: var(--opacity-busy); cursor: default; }
   .update-btn[hidden] { display: none; }
 
   /* Quiet text buttons under the settings card: uninstall left, quit right */
   .settings-actions {
-    display: flex; justify-content: space-between; gap: 8px; padding: 0 4px;
+    display: flex; justify-content: space-between; gap: var(--space-8); padding: 0 var(--space-4);
   }
   .text-btn {
-    border: none; background: none; padding: 2px 0; cursor: pointer;
-    font: inherit; font-size: 12px; color: var(--muted);   /* ≥4.5:1 on the page */
+    border: none; background: none; padding: var(--space-2) 0; cursor: pointer;
+    font: inherit; font-size: var(--text-secondary); color: var(--muted);   /* ≥4.5:1 on the page */
   }
-  .text-btn:hover { color: var(--text); text-decoration: underline; text-underline-offset: 2px; }
-  .text-btn:focus-visible { outline: 2px solid var(--accent-text); outline-offset: 1px; border-radius: 3px; }
+  .text-btn:hover { color: var(--text); text-decoration: underline; text-underline-offset: var(--space-2); }
+  .text-btn:focus-visible { outline: var(--focus-ring) solid var(--accent-text); outline-offset: var(--space-1); border-radius: var(--radius-bar); }
 
   @keyframes spin { to { transform: rotate(360deg); } }
 
   /* ---- Cards ---- */
   .card {
     background: var(--card-bg);
-    border-radius: 12px;
-    padding: 14px;
+    border-radius: var(--radius-card);
+    padding: var(--space-14);
   }
   .card-session {
-    background: color-mix(in srgb, var(--stress-color, #34C759) 14%, var(--card-bg));
-    transition: background 0.4s ease;
+    background: color-mix(in srgb, var(--stress-color, var(--status-ok)) var(--stress-tint), var(--card-bg));
+    transition: background var(--dur-slow) ease;
   }
 
   /* ---- Session donut ---- */
   .session-inner {
     display: flex;
     align-items: center;
-    gap: 14px;
+    gap: var(--space-14);
   }
   .donut-wrap {
     position: relative;
-    width: 90px;
-    height: 90px;
+    width: var(--size-donut);
+    height: var(--size-donut);
     flex-shrink: 0;
   }
   .donut-wrap svg {
@@ -240,7 +329,7 @@
     line-height: 1;
   }
   .donut-face {
-    font-size: 34px;
+    font-size: var(--text-face);
     line-height: 1;
     display: block;
   }
@@ -253,50 +342,54 @@
     97% { transform: translateX(0) rotate(0); }
   }
   .donut-face.stressed {
-    animation: skull-shake 3s ease-in-out infinite;
+    animation: skull-shake var(--dur-shake) ease-in-out infinite;
   }
   #donutTrack {
-    stroke: color-mix(in srgb, var(--stress-color, #34C759) 30%, var(--card-bg));
-    transition: stroke 0.4s ease;
+    stroke: color-mix(in srgb, var(--stress-color, var(--status-ok)) var(--stress-track), var(--card-bg));
+    transition: stroke var(--dur-slow) ease;
   }
   .session-info {
     flex: 1;
   }
   .label-sm {
-    font-size: 10px;
-    font-weight: 600;
-    letter-spacing: 0.06em;
+    font-size: var(--text-label);
+    font-weight: var(--weight-semibold);
+    letter-spacing: var(--tracking-caps);
     color: var(--muted);
     text-transform: uppercase;
-    margin-bottom: 4px;
+    margin-bottom: var(--space-4);
+  }
+  .session-pct {
+    font-size: var(--text-body);
+    font-weight: var(--weight-semibold);
   }
   .session-reset {
-    font-size: 12px;
+    font-size: var(--text-secondary);
     color: var(--muted);
-    margin-top: 4px;
+    margin-top: var(--space-4);
   }
   /* Free limit reset(s) available: sits beside the donut, so no extra height */
   .resets-link {
-    display: block; max-width: 100%; margin-top: 4px;
-    border: none; background: none; padding: 0; font: inherit; font-size: 11px; font-weight: 600;
+    display: block; max-width: 100%; margin-top: var(--space-4);
+    border: none; background: none; padding: 0; font: inherit; font-size: var(--text-caption); font-weight: var(--weight-semibold);
     color: var(--text); cursor: pointer; text-align: left; text-decoration: underline;
-    text-underline-offset: 2px;
+    text-underline-offset: var(--space-2);
     white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
   }
   .resets-link[hidden] { display: none; }
-  .resets-link:hover { text-decoration-thickness: 2px; }
-  .resets-link:focus-visible { outline: 2px solid var(--accent-text); outline-offset: 1px; border-radius: 3px; }
+  .resets-link:hover { text-decoration-thickness: var(--underline-strong); }
+  .resets-link:focus-visible { outline: var(--focus-ring) solid var(--accent-text); outline-offset: var(--space-1); border-radius: var(--radius-bar); }
 
   /* ---- Weekly card ---- */
   .weekly-header {
     display: flex;
     justify-content: space-between;
     align-items: center;
-    margin-bottom: 8px;
+    margin-bottom: var(--space-8);
   }
   .weekly-pct-label {
-    font-size: 13px;
-    font-weight: 700;
+    font-size: var(--text-body);
+    font-weight: var(--weight-bold);
     color: var(--text);
   }
   #weeklyPctLabel {
@@ -304,43 +397,43 @@
   }
   .progress-bar-track {
     position: relative;
-    height: 6px;
+    height: var(--size-bar);
     background: var(--track);
-    border-radius: 3px;
+    border-radius: var(--radius-bar);
     overflow: hidden;
-    margin-bottom: 5px;
+    margin-bottom: var(--space-5);
   }
   /* Two fills in one track: elapsed week time behind, usage in front */
   .progress-bar-fill, .progress-bar-time {
     position: absolute; left: 0; top: 0; bottom: 0;
-    border-radius: 3px;
-    transition: width 0.6s cubic-bezier(0.16, 1, 0.3, 1);
+    border-radius: var(--radius-bar);
+    transition: width var(--dur-fill) var(--ease-out);
   }
   .progress-bar-time {
     background: var(--time-fill);
   }
   .progress-bar-fill {
     background: var(--accent-blue);
-    min-width: 2px;
+    min-width: var(--size-tick);
   }
   /* Only when usage covers the time fill: mark where the week is */
   .progress-bar-tick {
-    position: absolute; top: 0; bottom: 0; width: 2px; margin-left: -1px;
+    position: absolute; top: 0; bottom: 0; width: var(--size-tick); margin-left: calc(-0.5 * var(--size-tick));
     background: var(--card-bg);
-    transition: left 0.6s cubic-bezier(0.16, 1, 0.3, 1);
+    transition: left var(--dur-fill) var(--ease-out);
   }
   .progress-bar-tick[hidden] { display: none; }
   #donutFill {
-    transition: stroke-dasharray 0.6s cubic-bezier(0.16, 1, 0.3, 1), stroke 0.4s ease;
+    transition: stroke-dasharray var(--dur-fill) var(--ease-out), stroke var(--dur-slow) ease;
   }
   .no-transition, .no-transition * {
     transition: none !important;
   }
-  .weekly-footer { display: flex; justify-content: space-between; gap: 8px; }
+  .weekly-footer { display: flex; justify-content: space-between; gap: var(--space-8); }
   #weeklyElapsed[hidden] { display: none; }
-  .time-num { color: var(--time-text); font-weight: 600; }
+  .time-num { color: var(--time-text); font-weight: var(--weight-semibold); }
   .weekly-reset {
-    font-size: 11px;
+    font-size: var(--text-caption);
     color: var(--muted);
   }
 
@@ -349,21 +442,21 @@
     display: flex;
     justify-content: space-between;
     align-items: center;
-    font-size: 11px;
+    font-size: var(--text-caption);
     color: var(--muted);
-    padding: 0 2px;
+    padding: 0 var(--space-2);
   }
   .footer-left {
     display: flex;
     align-items: center;
-    gap: 5px;
+    gap: var(--space-5);
     min-width: 0;
     flex-shrink: 1;
   }
   .account-name {
-    color: var(--text); font-size: 12px; font-weight: 600;
+    color: var(--text); font-size: var(--text-secondary); font-weight: var(--weight-semibold);
     overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
-    flex-shrink: 0; max-width: 140px;   /* the org name gives way first */
+    flex-shrink: 0; max-width: var(--max-account);   /* the org name gives way first */
   }
   .account-plan { white-space: nowrap; flex-shrink: 0; }
   /* Shared org (Team): gives way first when the footer gets tight */
@@ -374,12 +467,12 @@
   .account-org:empty { display: none; }
   #lastUpdated {
     flex-shrink: 0;
-    margin-left: 8px;
+    margin-left: var(--space-8);
   }
   .status-dot {
-    width: 7px;
-    height: 7px;
-    border-radius: 50%;
+    width: var(--size-dot);
+    height: var(--size-dot);
+    border-radius: var(--radius-round);
     background: var(--status-ok);
     display: inline-block;
     flex-shrink: 0;
@@ -391,20 +484,20 @@
   .status-dot.neutral { background: var(--muted); }
 
   /* Connection row: own connection and Claude service status, one dot each */
-  .conn-line { display: flex; align-items: center; gap: 6px; }
-  .conn-line .status-dot { width: 6px; height: 6px; }
+  .conn-line { display: flex; align-items: center; gap: var(--space-6); }
+  .conn-line .status-dot { width: var(--size-dot-small); height: var(--size-dot-small); }
   .conn-line span.txt { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; min-width: 0; }
   button.conn-link {
-    border: none; background: none; padding: 0; font: inherit; font-size: 11px;
+    border: none; background: none; padding: 0; font: inherit; font-size: var(--text-caption);
     color: var(--muted); cursor: pointer; text-align: left;
-    display: flex; align-items: center; gap: 6px; min-width: 0; max-width: 100%;
+    display: flex; align-items: center; gap: var(--space-6); min-width: 0; max-width: 100%;
   }
   button.conn-link:hover span.txt { text-decoration: underline; }
-  button.conn-link:focus-visible { outline: 2px solid var(--accent-text); outline-offset: 1px; border-radius: 3px; }
+  button.conn-link:focus-visible { outline: var(--focus-ring) solid var(--accent-text); outline-offset: var(--space-1); border-radius: var(--radius-bar); }
 
   /* Fetching overlay pulse */
   .fetching-pulse {
-    animation: pulse 1.5s ease-in-out infinite;
+    animation: pulse var(--dur-pulse) ease-in-out infinite;
   }
   @keyframes pulse {
     0%, 100% { opacity: 1; }
@@ -461,7 +554,7 @@
       </div>
       <div class="session-info">
         <div class="label-sm" data-i18n="session_label">Huidige sessie</div>
-        <div style="font-size:13px; font-weight:600;" id="sessionPctText">—%</div>
+        <div class="session-pct" id="sessionPctText">—%</div>
         <div class="session-reset" id="sessionReset">—</div>
         <button class="resets-link" id="resetsLink" hidden onclick="onOpenResets()"></button>
       </div>
@@ -661,10 +754,13 @@ window.setStatus = function(status) {
 // ---- Render ----
 
 // Green -> orange -> red as the session fills up (two-stage lerp).
+// Stops come from the --stress-low/-mid/-high tokens.
 function colorForPct(pct) {
+  const css = getComputedStyle(document.documentElement);
+  const [low, mid, high] = ['--stress-low', '--stress-mid', '--stress-high'].map(n => hexToRgb(css.getPropertyValue(n)));
   const stops = pct <= 50
-    ? [[0, 47, 168, 74], [50, 255, 149, 0]]
-    : [[50, 255, 149, 0], [100, 255, 59, 48]];
+    ? [[0, ...low], [50, ...mid]]
+    : [[50, ...mid], [100, ...high]];
   const [p0, r0, g0, b0] = stops[0];
   const [p1, r1, g1, b1] = stops[1];
   const t = p1 === p0 ? 0 : (pct - p0) / (p1 - p0);

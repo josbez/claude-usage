@@ -49,6 +49,10 @@ openssl pkey -in ~/.config/claude-usage/release-signing-key.pem -pubout -outform
 
 The second command prints the public key for `updatePublicKeyHex`. A new key in an existing app means every user has to update once by hand.
 
+## UI and design system
+
+The popover is `dev/dashboard.html`. Its look is defined by design tokens in the `:root` block at the top of that file and documented in [DESIGN.md](DESIGN.md): use tokens only, keep text contrast at WCAG 2.2 AA in light and dark, and put all user text in `swift/Resources/strings.json` (Dutch and English).
+
 ## Logs and pitfalls
 
 - Log: `~/Library/Logs/ClaudeUsage.log`; fetched data: one file per source in `~/.claude/usage-limits/` (`claude-desktop.json`; up to 2.1 this was `~/.claude/usage-limits.json`, moved on first launch).

@@ -56,6 +56,8 @@ extension AppDelegate {
     func applyStatusTitle(_ text: String) {
         guard let button = statusItem.button else { return }
         appliedTitle = text
+        // Digits of equal width: 9% → 10% or 59m → 1u00m doesn't make the item jump
+        button.font = .monospacedDigitSystemFont(ofSize: NSFont.menuBarFont(ofSize: 0).pointSize, weight: .regular)
         if menubarIcon == "ring" {
             let rest = titleWithoutFace(text)
             button.image = menubarRingImage(menubarRing(sessionPct: menubarPct),

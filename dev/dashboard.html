@@ -1076,7 +1076,8 @@ function toggleSettings(show, instant) {
   const title = document.getElementById('headerTitle');
   const from = open ? main : settings;
   const to = open ? settings : main;
-  const swap = () => {
+  // resize: false = the popover keeps its height for now (see below)
+  const swap = (resize) => {
     from.hidden = true;
     to.hidden = false;
     // In settings the gear becomes a back chevron, so the way back is obvious.
@@ -1084,32 +1085,39 @@ function toggleSettings(show, instant) {
     document.getElementById('settingsBtn').hidden = open;
     document.getElementById('backBtn').hidden = !open;
     title.textContent = T(open ? 'settings_title' : 'app_title');
-    reportHeight();
+    if (resize !== false) reportHeight();
   };
 
   const reduced = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
   if (instant || reduced || !from.animate) { swap(); return; }
 
+  // Soft cross-fade with a small slide (taak 61: the old one felt abrupt).
+  // To settings the popover grows at the swap, while the new view fades in;
+  // back to the dashboard it shrinks only once the dashboard is visible, so
+  // the native resize never cuts through a fading view.
   _viewAnimating = true;
   const dir = open ? 1 : -1;
-  const ease = 'cubic-bezier(0.16, 1, 0.3, 1)';
+  const ease = 'cubic-bezier(0.16, 1, 0.3, 1)';    // = --ease-out
   const out = from.animate(
     [{ opacity: 1, transform: 'translateX(0)' },
-     { opacity: 0, transform: `translateX(${-12 * dir}px)` }],
-    { duration: 110, easing: 'ease-in', fill: 'forwards' });
-  const titleOut = title.animate([{ opacity: 1 }, { opacity: 0 }], { duration: 110, fill: 'forwards' });
+     { opacity: 0, transform: `translateX(${-6 * dir}px)` }],
+    { duration: 140, easing: 'cubic-bezier(0.4, 0, 1, 1)', fill: 'forwards' });
+  const titleOut = title.animate([{ opacity: 1 }, { opacity: 0 }], { duration: 140, fill: 'forwards' });
   out.onfinish = () => {
-    swap();
+    swap(open);
     // Cancel the filled fade-outs, otherwise they keep holding opacity 0
     // once the fade-ins below have finished.
     out.cancel();
     titleOut.cancel();
-    title.animate([{ opacity: 0 }, { opacity: 1 }], { duration: 200, easing: ease });
+    title.animate([{ opacity: 0 }, { opacity: 1 }], { duration: 280, easing: ease });
     const inn = to.animate(
-      [{ opacity: 0, transform: `translateX(${16 * dir}px)` },
+      [{ opacity: 0, transform: `translateX(${10 * dir}px)` },
        { opacity: 1, transform: 'translateX(0)' }],
-      { duration: 240, easing: ease });
-    inn.onfinish = () => { _viewAnimating = false; };
+      { duration: 320, easing: ease });
+    inn.onfinish = () => {
+      _viewAnimating = false;
+      if (!open) reportHeight();
+    };
   };
 }
 
@@ -1222,7 +1230,9 @@ function onMenubarIcon(icon) {
 function renderSeason(theme, enabled) {
   document.getElementById('seasonRow').hidden = !theme;
   if (!theme) return;
-  document.getElementById('seasonSub').textContent = T('theme_' + theme.id) + ' ' + theme.faces;
+  // "Seasonal emoji (Halloween)" / "until Oct 31": the faces themselves show in the menu bar
+  document.getElementById('seasonTitle').textContent = T('set_seasonal') + ' (' + T('theme_' + theme.id) + ')';
+  document.getElementById('seasonSub').textContent = T('theme_' + theme.id + '_until');
   document.getElementById('seasonSwitch').setAttribute('aria-checked', enabled ? 'true' : 'false');
 }
 

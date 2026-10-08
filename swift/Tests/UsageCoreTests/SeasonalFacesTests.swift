@@ -91,7 +91,14 @@ final class SeasonalFacesTests: XCTestCase {
                                  state: AppState(), lang: "nl")
         XCTAssertEqual(on["session_face"] as? String, "🪦")   // the popover donut follows the theme
         XCTAssertEqual((on["menubar_previews"] as? JSONObject)?["emoji"] as? String, "🪦")
-        XCTAssertEqual(strings.t("theme_halloween", "nl"), "Halloween, t/m 31 okt:")
+        XCTAssertEqual(strings.t("theme_halloween", "nl"), "Halloween")
+        // Every theme has a name and an end date in both languages (settings row)
+        for theme in faceThemes {
+            for lang in ["nl", "en"] {
+                XCTAssertNotEqual(strings.t("theme_\(theme.id)", lang), "theme_\(theme.id)")
+                XCTAssertNotEqual(strings.t("theme_\(theme.id)_until", lang), "theme_\(theme.id)_until")
+            }
+        }
     }
 
     func testInvalidSettingFallsBackToOn() {

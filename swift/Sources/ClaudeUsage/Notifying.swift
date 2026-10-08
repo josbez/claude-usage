@@ -51,10 +51,11 @@ extension AppDelegate {
         guard notifyCenter != nil else { return }
         var (notes, newState) = formatter.dueNotifications(limits, state: loadJSONObject(paths.notifyState),
                                                            lang: lang)
-        if !notificationsEnabled {
+        if !notificationsEnabled || !isSourceVisible(claudeDesktopSource) {
             // Still record crossed thresholds, so switching back on doesn't
             // replay warnings for this window.
-            notes.forEach { log("notificatie onderdrukt (meldingen uit): \($0.title)") }
+            let why = notificationsEnabled ? "bron verborgen" : "meldingen uit"
+            notes.forEach { log("notificatie onderdrukt (\(why)): \($0.title)") }
             notes = []
         }
         for note in notes {
@@ -64,6 +65,52 @@ extension AppDelegate {
             try saveJSONObject(newState, to: paths.notifyState)
         } catch {
             log("notificatie-check mislukt: \(error)")
+        }
+    }
+
+    /// Whether a source is shown (55f): switched-off sources get no
+    /// notifications. Same rule as the popover: the last visible one stays.
+    func isSourceVisible(_ id: String) -> Bool {
+        let now = Date()
+        let claude = claudeSnapshot(limits: loadJSONObject(paths.limits), now: now)
+        let available = availableSources(claude: claude, others: otherSnapshots(), now: now)
+        return visibleSources(available, hidden: hiddenSources(settings)).contains { $0.source.id == id }
+    }
+
+    /// Notifications for a source other than Claude (taak 55g): same thresholds,
+    /// its name in front. The state shares the file with Claude's (own keys).
+    func notifySource(_ snapshot: SourceSnapshot) {
+        guard notifyCenter != nil else { return }
+        let id = snapshot.source.id
+        let (alerts, newState) = dueSourceAlerts(snapshot, stateKey: id, state: loadJSONObject(paths.notifyState),
+                                                 now: Date())
+        let name = formatter.sourceName(snapshot, lang)
+        let quiet = !notificationsEnabled ? "meldingen uit" : (!isSourceVisible(id) ? "bron verborgen" : nil)
+        for a in alerts {
+            let text = formatter.alertText(a, sourceName: name, lang: lang)
+            if let quiet {
+                log("notificatie onderdrukt (\(quiet)): \(text.title)")
+            } else {
+                post(id: a.id, title: text.title, body: text.body, pct: a.isReset ? -1 : a.pct)
+            }
+        }
+        do {
+            try saveJSONObject(newState, to: paths.notifyState)
+        } catch {
+            log("notificatie-check mislukt: \(error)")
+        }
+    }
+
+    /// History for a source other than Claude: usage-history/<source>/, one line
+    /// per new snapshot (the session-file fallback can repeat an event).
+    func recordSourceHistory(_ snapshot: SourceSnapshot, lastRecorded: inout Date?) {
+        guard isNewHistoryRecord(snapshot, lastRecorded: lastRecorded),
+              let rec = sourceHistoryRecord(snapshot) else { return }
+        do {
+            try appendHistory(rec, base: historyDir(for: snapshot.source.id, paths: paths))
+            lastRecorded = snapshot.fetchedAt
+        } catch {
+            log("geschiedenis opslaan mislukt (\(snapshot.source.id)): \(error)")
         }
     }
 

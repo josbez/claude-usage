@@ -111,3 +111,28 @@ final class SourceAlertsTests: FixtureCase {
         XCTAssertTrue(isNewHistoryRecord(s, lastRecorded: now.addingTimeInterval(-60)))
     }
 }
+
+final class SourceAlertTextTests: FixtureCase {
+    func testTexts() {
+        let resets = parseDate("2026-10-07T18:16:09Z")!
+        let warn = SourceAlert(id: "x", sourceId: "codex", window: .session, threshold: 80, pct: 81, resetsAt: resets)
+        let nl = formatter.alertText(warn, sourceName: "ChatGPT", lang: "nl")
+        XCTAssertEqual(nl.title, "ChatGPT: 5-uurslimiet op 81%")
+        XCTAssertTrue(nl.body.hasPrefix("Reset "), nl.body)
+        XCTAssertEqual(formatter.alertText(warn, sourceName: "ChatGPT", lang: "en").title, "ChatGPT: 5-hour limit at 81%")
+        let week = SourceAlert(id: "y", sourceId: "codex", window: .weekly, threshold: 90, pct: 90, resetsAt: resets)
+        XCTAssertEqual(formatter.alertText(week, sourceName: "ChatGPT", lang: "en").title, "ChatGPT: Weekly limit at 90%")
+        let reset = SourceAlert(id: "z", sourceId: "codex", window: .session, threshold: nil, pct: 2, resetsAt: resets)
+        let r = formatter.alertText(reset, sourceName: "ChatGPT", lang: "nl")
+        XCTAssertEqual(r.title, "ChatGPT: 5-uurslimiet is gereset")
+        XCTAssertEqual(r.body, "Je kunt weer verder. Nu op 2%.")
+    }
+
+    func testEveryKeyInBothLanguages() {
+        for key in ["notif_source_limit_title", "notif_source_reset_title"] {
+            for lang in ["nl", "en"] {
+                XCTAssertNotEqual(Self.strings.t(key, lang, ["source": "S", "limit": "L", "pct": 1]), key, "\(lang) \(key)")
+            }
+        }
+    }
+}

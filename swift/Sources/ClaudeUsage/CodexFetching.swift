@@ -12,6 +12,8 @@ struct CodexFetchState {
     var loggedUnknown: Set<String> = []
     /// Session-file fallback: the file and mtime already read (taak 55i).
     var lastSessionFile: (url: URL, mtime: Date)?
+    /// Last snapshot written to usage-history/codex/ (taak 55g).
+    var lastHistory: Date?
 }
 
 /// Codex as a second source (taak 55c): ask `codex app-server` at most every
@@ -106,6 +108,9 @@ extension AppDelegate {
             if codex.lastProblem != nil { log("codex: weer bereikbaar") }
             codex.lastProblem = nil
         }
+        // Notifications and history per source (55g); an old fallback event alerts nothing.
+        notifySource(snapshot)
+        recordSourceHistory(snapshot, lastRecorded: &codex.lastHistory)
         // New numbers: menu bar (held while the popover is open) and popover
         showCachedTitle()
         if popover.isShown { pushData() }

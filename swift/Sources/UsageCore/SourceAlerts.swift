@@ -104,3 +104,19 @@ public func isNewHistoryRecord(_ s: SourceSnapshot, lastRecorded: Date?) -> Bool
     guard let last = lastRecorded else { return true }
     return fetched > last
 }
+
+extension UsageFormatter {
+    /// Title and body of a source alert, with the source's name in front
+    /// ("ChatGPT: 5-hour limit at 80%"). Claude itself keeps its existing
+    /// notifications (dueNotifications), whose texts already say "Claude:".
+    public func alertText(_ a: SourceAlert, sourceName: String, lang: String) -> (title: String, body: String) {
+        let limit = strings.t("limit_\(alertLimitName(a.window) ?? "five_hour")", lang)
+        if a.isReset {
+            return (strings.t("notif_source_reset_title", lang, ["source": sourceName, "limit": limit]),
+                    strings.t("notif_reset_body", lang, ["pct": a.pct]))
+        }
+        let when = a.resetsAt.map { resetTime(isoString($0), lang) } ?? ""
+        return (strings.t("notif_source_limit_title", lang, ["source": sourceName, "limit": limit, "pct": a.pct]),
+                strings.t("notif_limit_body", lang, ["when": when]))
+    }
+}

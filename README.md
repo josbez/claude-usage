@@ -1,24 +1,24 @@
-# ClaudeUsage
+# Usage Meter
 
 🇬🇧 English · 🇳🇱 [Nederlands](README.nl.md)
 
-A small macOS menu bar app that shows how much of your Claude plan you have left: the 5-hour session limit and the weekly limit, with a notification when you get close.
+A small macOS menu bar app that shows how much of your plan you have left: the 5-hour session limit and the weekly limit of Claude, and of ChatGPT if you use Codex, with a notification when you get close. Formerly called ClaudeUsage.
 
-- A ring (or emoji) in the menu bar fills up with your session usage.
-- Click it for both limits and when they reset.
-- Notifications at 80% and 95% of the session limit and 90% of the weekly limit.
+- A ring (or emoji) in the menu bar fills up with your session usage. With more than one source it shows the one closest to a limit.
+- Click it for a card per source: both limits and when they reset.
+- Notifications at 80% and 95% of the session limit and 90% of the weekly limit, per source.
 - Updates itself (signed updates only). English and Dutch, follows your macOS language.
 
-Requires macOS 11 or later (Apple Silicon or Intel) and the [Claude desktop app](https://claude.ai/download), signed in. ClaudeUsage uses that account; there is nothing to log in to.
+Requires macOS 11 or later (Apple Silicon or Intel) and the [Claude desktop app](https://claude.ai/download), signed in. Usage Meter uses that account; there is nothing to log in to. ChatGPT appears automatically while the ChatGPT app (with Codex) or Codex is installed and signed in on your Mac; you can hide any source in settings.
 
 ## Install
 
 1. **[Download ClaudeUsage.dmg](https://github.com/josbez/claude-usage/releases/latest/download/ClaudeUsage.dmg)** and open it.
-2. Drag **ClaudeUsage.app** to **Applications**.
+2. Drag **Usage Meter** to **Applications**.
 3. Open Terminal and run:
 
    ```bash
-   bash /Volumes/ClaudeUsage/install.sh
+   bash "/Volumes/Usage Meter/install.sh"
    ```
 
    This starts the app at login and lets it past Gatekeeper (see below).
@@ -33,7 +33,7 @@ The app checks for a new version daily, and when you click refresh. When one is 
 
 ## Privacy
 
-The app talks only to claude.ai (your usage), status.claude.com (service status) and GitHub (updates). Nothing is sent anywhere else. Your usage history stays on your Mac (`~/.claude/usage-history/`).
+The app talks only to claude.ai (your usage), status.claude.com (service status) and GitHub (updates). For ChatGPT it asks the Codex program on your Mac for your limits (Codex itself talks to OpenAI); it never reads your Codex sign-in. Nothing is sent anywhere else. Your usage history stays on your Mac (`~/.claude/usage-history/`).
 
 ## Uninstall
 
@@ -45,8 +45,10 @@ rm ~/Library/LaunchAgents/com.jos.claude-usage.plist
 rm -rf /Applications/ClaudeUsage.app
 ```
 
+The app file is still called `ClaudeUsage.app` so that updates keep working; Finder shows it as Usage Meter.
+
 ## More
 
 - [Development, building and releases](docs/DEVELOPMENT.md)
-- Not affiliated with Anthropic. Claude is a trademark of Anthropic.
+- Not affiliated with Anthropic or OpenAI. Claude is a trademark of Anthropic; ChatGPT and Codex are trademarks of OpenAI.
 - License: [MIT](LICENSE)

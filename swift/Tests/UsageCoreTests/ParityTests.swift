@@ -128,9 +128,13 @@ final class ParityTests: FixtureCase {
     }
 
     func testT() {
+        // The app's visible name changed after the Python app (taak 57b); these
+        // cases test the lookup and language fallback, not the name itself.
+        let renamed = ["Claude Stats": "Usage Meter"]
         for c in list("t") {
+            let out = c["out"] as! String
             XCTAssertEqual(Self.strings.t(c["key"] as! String, c["lang"] as! String, c["kw"] as! JSONObject),
-                           c["out"] as! String, "\(c)")
+                           renamed[out] ?? out, "\(c)")
         }
     }
 

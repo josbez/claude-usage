@@ -17,10 +17,12 @@ MODE=dev
 [ "${1:-}" = "--release" ] && MODE=release
 
 if [ "$MODE" = dev ]; then
-    NAME="ClaudeUsage Dev"; BUNDLE_ID="com.jos.claude-usage.dev"; DISPLAY="Claude Usage (dev)"
+    NAME="ClaudeUsage Dev"; BUNDLE_ID="com.jos.claude-usage.dev"; DISPLAY="Usage Meter Dev"
 else
-    NAME="ClaudeUsage"; BUNDLE_ID="com.jos.claude-usage"; DISPLAY="Claude Usage"
+    NAME="ClaudeUsage"; BUNDLE_ID="com.jos.claude-usage"; DISPLAY="Usage Meter"
 fi
+# NAME = the .app file and stays (the updater expects ClaudeUsage.app in the DMG);
+# DISPLAY = what users see: menu bar tooltip, notifications, Finder (taak 57b).
 APP="$OUT_DIR/$NAME.app"
 BUILD=$(date +%Y%m%d.%H%M%S)
 
@@ -40,14 +42,21 @@ rm -rf "$APP"
 mkdir -p "$APP/Contents/MacOS" "$APP/Contents/Resources"
 cp "$BIN" "$APP/Contents/MacOS/ClaudeUsage"
 cp dev/dashboard.html swift/Resources/strings.json swift/Resources/fetch.js icon/ClaudeUsage.icns "$APP/Contents/Resources/"
+# Finder shows the display name instead of the file name only through a localized name
+for lang in en nl; do
+    mkdir -p "$APP/Contents/Resources/$lang.lproj"
+    printf '"CFBundleDisplayName" = "%s";\n"CFBundleName" = "%s";\n' "$DISPLAY" "$DISPLAY" \
+        > "$APP/Contents/Resources/$lang.lproj/InfoPlist.strings"
+done
 
 cat > "$APP/Contents/Info.plist" <<EOF
 <?xml version="1.0" encoding="UTF-8"?>
 <!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
 <plist version="1.0">
 <dict>
-    <key>CFBundleName</key><string>$NAME</string>
+    <key>CFBundleName</key><string>$DISPLAY</string>
     <key>CFBundleDisplayName</key><string>$DISPLAY</string>
+    <key>LSHasLocalizedDisplayName</key><true/>
     <key>CFBundleIdentifier</key><string>$BUNDLE_ID</string>
     <key>CFBundleExecutable</key><string>ClaudeUsage</string>
     <key>CFBundlePackageType</key><string>APPL</string>

@@ -21,7 +21,7 @@ ln -s /Applications "$STAGE/Applications"
 
 DMG=ClaudeUsage.dmg
 rm -f "$DMG" "$DMG.sig"
-hdiutil create -volname "ClaudeUsage" -srcfolder "$STAGE" -ov -format UDZO "$DMG"
+hdiutil create -volname "Usage Meter" -srcfolder "$STAGE" -ov -format UDZO "$DMG"
 rm -rf "$STAGE"
 
 echo "✓ $DMG klaar ($(du -h "$DMG" | cut -f1))"

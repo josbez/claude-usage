@@ -1076,8 +1076,7 @@ function toggleSettings(show, instant) {
   const title = document.getElementById('headerTitle');
   const from = open ? main : settings;
   const to = open ? settings : main;
-  // resize: false = the popover keeps its height for now (see below)
-  const swap = (resize) => {
+  const swap = () => {
     from.hidden = true;
     to.hidden = false;
     // In settings the gear becomes a back chevron, so the way back is obvious.
@@ -1085,39 +1084,53 @@ function toggleSettings(show, instant) {
     document.getElementById('settingsBtn').hidden = open;
     document.getElementById('backBtn').hidden = !open;
     title.textContent = T(open ? 'settings_title' : 'app_title');
-    if (resize !== false) reportHeight();
+    reportHeight();
   };
 
   const reduced = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
   if (instant || reduced || !from.animate) { swap(); return; }
 
-  // Soft cross-fade with a small slide (taak 61: the old one felt abrupt).
-  // To settings the popover grows at the swap, while the new view fades in;
-  // back to the dashboard it shrinks only once the dashboard is visible, so
-  // the native resize never cuts through a fading view.
+  // Cross-fade (taak 61): both views are visible at once, the new one laid
+  // over the old one, so there is never an empty popover in between. The
+  // popover resizes to the new view in the same time, from the first frame.
   _viewAnimating = true;
+  from.hidden = true; to.hidden = false;            // measure the new view, no paint in between
+  const target = Math.ceil(document.querySelector('.container').scrollHeight);
+  to.style.position = 'absolute';                   // out of the flow first, then read where the old view sits
+  from.hidden = false;
+  reportHeight(target);
+  const r = from.getBoundingClientRect();
+  Object.assign(to.style, { left: (r.left + window.scrollX) + 'px', top: (r.top + window.scrollY) + 'px',
+                            width: r.width + 'px' });
   const dir = open ? 1 : -1;
-  const ease = 'cubic-bezier(0.16, 1, 0.3, 1)';    // = --ease-out
+  const ease = 'cubic-bezier(0.45, 0, 0.55, 1)';    // ease-in-out
+  const dur = 300;
+  // Slightly staggered: the old view is gone at 60%, the new one starts at
+  // 35%, so they barely overlap and the middle never looks crowded.
   const out = from.animate(
-    [{ opacity: 1, transform: 'translateX(0)' },
-     { opacity: 0, transform: `translateX(${-6 * dir}px)` }],
-    { duration: 140, easing: 'cubic-bezier(0.4, 0, 1, 1)', fill: 'forwards' });
-  const titleOut = title.animate([{ opacity: 1 }, { opacity: 0 }], { duration: 140, fill: 'forwards' });
-  out.onfinish = () => {
-    swap(open);
-    // Cancel the filled fade-outs, otherwise they keep holding opacity 0
-    // once the fade-ins below have finished.
-    out.cancel();
+    [{ opacity: 1, transform: 'translateX(0)', easing: ease },
+     { opacity: 0, transform: `translateX(${-8 * dir}px)`, offset: 0.6 },
+     { opacity: 0, transform: `translateX(${-8 * dir}px)` }],
+    { duration: dur, fill: 'forwards' });
+  to.animate(
+    [{ opacity: 0, transform: `translateX(${8 * dir}px)` },
+     { opacity: 0, transform: `translateX(${8 * dir}px)`, offset: 0.35, easing: ease },
+     { opacity: 1, transform: 'translateX(0)' }],
+    { duration: dur, fill: 'backwards' });
+  // Title and header buttons: out in the first half, swapped, in the second
+  const titleOut = title.animate([{ opacity: 1 }, { opacity: 0 }], { duration: dur / 2, easing: ease, fill: 'forwards' });
+  titleOut.onfinish = () => {
+    document.getElementById('settingsBtn').hidden = open;
+    document.getElementById('backBtn').hidden = !open;
+    title.textContent = T(open ? 'settings_title' : 'app_title');
     titleOut.cancel();
-    title.animate([{ opacity: 0 }, { opacity: 1 }], { duration: 280, easing: ease });
-    const inn = to.animate(
-      [{ opacity: 0, transform: `translateX(${10 * dir}px)` },
-       { opacity: 1, transform: 'translateX(0)' }],
-      { duration: 320, easing: ease });
-    inn.onfinish = () => {
-      _viewAnimating = false;
-      if (!open) reportHeight();
-    };
+    title.animate([{ opacity: 0 }, { opacity: 1 }], { duration: dur / 2, easing: ease });
+  };
+  out.onfinish = () => {
+    to.style.position = to.style.left = to.style.top = to.style.width = '';
+    swap();
+    out.cancel();
+    _viewAnimating = false;
   };
 }
 
@@ -1125,9 +1138,11 @@ function toggleSettings(show, instant) {
 // number of source cards (taak 55f), settings with their rows. The app clamps
 // it and opens the popover at the main view's last height.
 let _reportedHeight = 0;
-function reportHeight() {
-  const settingsOpen = !document.getElementById('settingsView').hidden;
-  const h = Math.ceil(document.querySelector('.container').scrollHeight);
+// height: the view about to appear (toggleSettings measures it ahead)
+function reportHeight(height) {
+  const settingsOpen = height !== undefined ? document.getElementById('settingsView').hidden
+                                            : !document.getElementById('settingsView').hidden;
+  const h = height !== undefined ? height : Math.ceil(document.querySelector('.container').scrollHeight);
   if (h === _reportedHeight) return;
   _reportedHeight = h;
   if (window.webkit && window.webkit.messageHandlers && window.webkit.messageHandlers.resize) {

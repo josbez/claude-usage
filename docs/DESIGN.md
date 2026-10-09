@@ -98,7 +98,7 @@ The ones that carry the layout:
 - `--shadow-segment` `0 1px 2px rgba(0,0,0,.15)`, `--shadow-knob` `0 1px 2px rgba(0,0,0,.25)`. Cards have no shadow.
 - `--opacity-disabled` 0.4 (switch), `--opacity-busy` 0.6 (update button while working).
 - `--ease-out` `cubic-bezier(0.16, 1, 0.3, 1)`; `--dur-fast` 0.15s (hover, segment), `--dur-base` 0.2s (switch), `--dur-slow` 0.4s (stress colour), `--dur-fill` 0.6s (donut and bar fill on open), `--dur-spin` 1s, `--dur-pulse` 1.5s, `--dur-shake` 3s (skull at 100%).
-- The view switch (main ↔ settings) is animated in JavaScript: 140 ms out (ease-in, 6 px slide), 320 ms in (`--ease-out`, 10 px slide), title 280 ms. To settings the popover grows at the swap; back to the dashboard it shrinks only after the dashboard has faded in. Respect `prefers-reduced-motion`.
+- The view switch (main ↔ settings) is animated in JavaScript: a 300 ms cross-fade, ease-in-out, 8 px slide: the new view lies over the old one (never an empty popover), the old one is gone at 60 %, the new one starts at 35 %; the title swaps halfway. The new view is measured first and the popover resizes from the first frame, so resize and fade are one movement. Respect `prefers-reduced-motion`.
 
 ### Deliberate literals
 

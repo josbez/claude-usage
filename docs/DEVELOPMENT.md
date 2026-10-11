@@ -2,6 +2,8 @@
 
 For users: see the [README](../README.md).
 
+Windows version in progress: decisions and sync rules in [PLATFORMS.md](PLATFORMS.md), work in [MAC-BACKLOG.md](MAC-BACKLOG.md) and [WINDOWS-BACKLOG.md](WINDOWS-BACKLOG.md), parity in [FEATURES.md](FEATURES.md). `python3 scripts/check-backlogs.py` checks that the two backlogs point at each other.
+
 ## Building from source
 
 Requirements: macOS 11 or later and **Xcode** (not just the command line tools: the tests need XCTest).

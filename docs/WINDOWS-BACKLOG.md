@@ -1,30 +1,21 @@
 # Usage Meter for Windows — backlog
 
 Goal: a released Windows version of Usage Meter next to the Mac app, same features, same release.
-Stack: **Tauri** (Rust + the existing `dev/dashboard.html`), in `windows/` in this repo. The Mac app stays Swift.
-First releases are **unsigned** (SmartScreen warning).
+Decisions (D1–D8), sync rules and dependencies: [PLATFORMS.md](PLATFORMS.md). Counterpart: [MAC-BACKLOG.md](MAC-BACKLOG.md). What each platform can do: [FEATURES.md](FEATURES.md).
+
+Layout: the shared Rust core in `core/`, the Tauri shell in `windows/`, shared files in `shared/`.
+
+`↔` marks a paired item in the Mac backlog (sync rule 2).
 
 Legend: 🟢 can be built and verified without Windows · 🟡 builds in CI, needs a Windows machine to verify · 🔴 blocked until a Windows machine exists.
 
 ---
 
-## Open decisions (before or during W0)
-
-| # | Decision | Recommendation |
-|---|---|---|
-| D1 | **Test machine.** There is none. Cookie reading, tray, notifications and the installer can't be verified without one. | Windows 11 ARM in UTM/Parallels on the Mac, with the Claude app signed in. Blocks W1 and everything 🔴. |
-| D2 | **Fallback if the cookies can't be read** (see W1: file lock, app-bound encryption, MSIX path). | Sign in once in the app's own WebView2 window and keep that session. Breaks the "nothing to log in to" promise, so only as a fallback. Decide after W1. |
-| D3 | **Versions and releases.** The Mac updater reads `releases/latest`. A Windows-only release would offer Mac users an update that changes nothing. | One version number for both. Every release ships the dmg and the Windows installer (with `.sig` files). A platform-only fix bumps both. |
-| D4 | **Update signature.** The Tauri updater wants its own minisign key format. | Don't use the Tauri updater plugin. Verify with our own Ed25519 code using the existing `updatePublicKeyHex` and `.sig` format: one key, one signing step (`--sign-release`). |
-| D5 | **Language of the Rust core vs. Swift.** Two implementations of the same logic will drift. | Every pure function is tested against the same fixtures (`core.json`, `Fixtures/`). Move the fixtures to a shared folder. A logic change isn't done until both pass. |
-
----
-
 ## W0 — Foundation 🟢
 
-- **W0.1** `windows/` Tauri project skeleton (Rust workspace: `usage-core` lib crate + `app` crate). Builds on Linux; `cargo test` runs.
-- **W0.2** Move the shared files to one place both builds read from: `dev/dashboard.html`, `swift/Resources/strings.json`, `swift/Resources/fetch.js`, `swift/Tests/UsageCoreTests/Fixtures/`. Update `build-swift.sh`, `Package.swift` and DEVELOPMENT.md. Mac build and tests stay green.
-- **W0.3** GitHub Actions: `windows-latest` builds the installer for every push to the branch and uploads it as an artifact. The Swift tests run on `macos-latest` as before (or stay local, as now).
+- **W0.1** Rust workspace: `core/` (lib crate, platform-free) and `windows/` (Tauri app). Builds on Linux; `cargo test` runs.
+- **W0.2** ↔ M0 The Windows build reads the shared files from `shared/`; nothing copied into `windows/`.
+- **W0.3** ↔ M1 GitHub Actions: `cargo test` for `core/` on every push; `windows-latest` builds the installer and uploads it as an artifact. Same workflow as the Swift tests.
 - **W0.4** DEVELOPMENT.md: a Windows section (build, test, layout, where things live).
 
 ## W1 — Probe: can we read the Claude session at all? 🟡 → 🔴 (do this first)
@@ -41,7 +32,7 @@ The biggest risk is here, and it decides D2. Don't build W3–W6 before this ans
 - **W1.2** Run the probe with Claude closed and running, on the classic and (if it exists) the MSIX install. Record the result here.
 - **W1.3** Decide D2 based on W1.2.
 
-## W2 — Port the pure logic to Rust (`usage-core`) 🟢
+## W2 — Port the pure logic to the shared Rust core (`core/`) 🟢
 
 One task per Swift file in `UsageCore`. Each: same behaviour, same fixtures, the tests ported to `cargo test`.
 
@@ -56,10 +47,10 @@ One task per Swift file in `UsageCore`. Each: same behaviour, same fixtures, the
 - **W2.9** Settings and paths. Windows paths: `%USERPROFILE%\.claude\…` for data (same as Mac, Claude Code uses it too), log in `%LOCALAPPDATA%\UsageMeter\Logs`. Dev build gets its own files, like on Mac (`Settings`)
 - **W2.10** Dashboard data assembly (`DashboardData`)
 - **W2.11** Codex: snapshot parsing, session-file fallback, app-server JSON-RPC lines. Windows binary candidates (`%APPDATA%\npm\codex.cmd`, ChatGPT app bundle if it ships one, `~\.local\bin`) (`Codex`, `CodexAppServer`)
-- **W2.12** Update: version compare, release parsing (pick the Windows asset), Ed25519 verify with `updatePublicKeyHex` (`Update`, see D4)
+- **W2.12** Update: version compare, release parsing (pick the asset for the platform), Ed25519 verify with `updatePublicKeyHex` (`Update`, see D4)
 - **W2.13** Seasonal faces (`SeasonalFacesTests`)
 
-**Done when:** every Swift test has a Rust counterpart and passes against the same fixtures.
+**Done when:** every Swift test has a Rust counterpart and passes against the same fixtures in `shared/fixtures/`. Keep `core/` free of Windows code: the Mac will use it too (M5).
 
 ## W3 — Reading the session on Windows 🟡 (depends on W1)
 
@@ -85,7 +76,7 @@ One task per Swift file in `UsageCore`. Each: same behaviour, same fixtures, the
 - **W5.2** Tooltip instead of menu bar text: "Usage Meter — session 42%, week 18%" (the Windows tray has no room for text)
 - **W5.3** Left click: popover window (360×296, frameless, rounded, positioned next to the tray, at the taskbar's edge wherever it is, closes on focus loss). Right click: menu (Refresh, Settings, Quit)
 - **W5.4** Bridge: `dashboard.html` calls `webkit.messageHandlers…` (line ~1009). Add a small shim that sends it to Tauri `invoke` when on Windows. Handle the same messages: refresh, close, quit, uninstall, setNotifications, setMenubarStyle, setMenubarIcon, setSeasonalFaces, setAppearance, setRefresh, startUpdate, resize, setSourceHidden, openResetsPage, openStatusPage, fetchResult
-- **W5.5** Settings the Mac has that don't apply (menu bar style) are hidden on Windows; texts that say "menu bar" become "taskbar" (new keys in `strings.json`, nl + en)
+- **W5.5** ↔ M2, M3 Settings the Mac has that don't apply (menu bar style) are hidden on Windows; texts that say "menu bar" use the `_win` keys ("taskbar"), nl + en
 - **W5.6** Light/dark follows Windows, plus the existing manual choice
 - **W5.7** First launch: Windows 11 hides new tray icons in the overflow. Show once how to pin it
 
@@ -106,10 +97,11 @@ One task per Swift file in `UsageCore`. Each: same behaviour, same fixtures, the
 
 ## W8 — Release 🔴
 
-- **W8.1** Release workflow: tag `vX.Y` → CI builds the Windows installer → sign with `--sign-release` (local, key never in CI unless you decide to put it in a secret) → attach next to the dmg
-- **W8.2** README: Windows requirements, install steps (including "SmartScreen → More info → Run anyway"), privacy (DPAPI, nothing leaves the PC except to claude.ai/status/GitHub)
-- **W8.3** Test round on a clean Windows 11 (x64 and ARM): install, first fetch, notification, update from the previous version, uninstall
-- **W8.4** Antivirus check: upload the installer to VirusTotal before every release (see risk R2)
+- **W8.1** ↔ M4 Release workflow: tag `vX.Y` → CI builds the Windows installer → sign with `--sign-release` (local, key never in CI unless you decide to put it in a secret) → attach next to the dmg
+- **W8.2** FEATURES.md: every Windows row ✅, ⏳ with an item, or — with a reason (sync rule 1)
+- **W8.3** README: Windows requirements, install steps (including "SmartScreen → More info → Run anyway"), privacy (DPAPI, nothing leaves the PC except to claude.ai/status/GitHub)
+- **W8.4** Test round on a clean Windows 11 (x64 and ARM): install, first fetch, notification, update from the previous version, uninstall
+- **W8.5** Antivirus check: upload the installer to VirusTotal before every release (see risk R2)
 
 ---
 
@@ -117,9 +109,9 @@ One task per Swift file in `UsageCore`. Each: same behaviour, same fixtures, the
 
 - **R1 — Locked cookie file / app-bound encryption.** The core idea (read the Claude app's session) may not work on Windows. W1 tells us, before we invest in the rest.
 - **R2 — Antivirus false positives.** Opening another app's cookie DB and decrypting it with DPAPI is exactly what infostealers do. An unsigned exe that does this has a real chance of being flagged or quarantined by Defender. Mitigation: VirusTotal every release, submit false positives to Microsoft, and signing (Azure Trusted Signing) as soon as this hits users.
-- **R3 — Two codebases drift.** Mitigated by shared fixtures (D5). It still costs time: every feature is built twice.
+- **R3 — Two codebases drift** until the Mac uses the Rust core (M5). Mitigated by the sync rules in PLATFORMS.md.
 - **R4 — No Windows machine (D1).** Without one, nothing marked 🟡 or 🔴 is verified.
 
 ## Order
 
-D1 → W0 → **W1 (go/no-go)** → W2 (can run in parallel with W1) → W3 → W4 → W5 → W6 → W7 → W8.
+D1 → W0 → **W1 (go/no-go)** ∥ W2 → W3 → W4 → W5 → W6 → W7 → W8. Cross-backlog dependencies: see PLATFORMS.md.

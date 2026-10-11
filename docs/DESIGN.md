@@ -1,6 +1,6 @@
 # Usage Meter — design system
 
-How the popover looks and why. The popover is one page, [`dev/dashboard.html`](../dev/dashboard.html), shown in a WKWebView at a fixed width of 360 px. Its tokens live in the `:root` block at the top of that file; this document explains them. The same system is published as a browsable Claude Design artifact (private): <https://claude.ai/artifact/XiqpxqouWriHsupojDQAyL>.
+How the popover looks and why. The popover is one page, [`dev/dashboard.html`](../dev/dashboard.html), shown in a WKWebView at a fixed width of 360 px. Its tokens live in the `:root` block at the top of that file; this document explains them. The same system is published as a browsable Claude Design artifact (private): <https://claude.ai/artifact/YXYFx4aQeGdwM7nHP78vCa>.
 
 ## Principles
 
@@ -59,7 +59,6 @@ One family, `--font-system` (`-apple-system, BlinkMacSystemFont, 'SF Pro Text', 
 
 | Token | Size | Typical weight | Use |
 |---|---|---|---|
-| `--text-face` | 34px | — | Emoji in the large donut (not used since 55f) |
 | `--text-face-card` | 25px | — | Emoji in a source card's ring |
 | `--text-value-lg` | 20px | bold | Session % on a source card |
 | `--text-name` | 14px | bold | Source name on its card |
@@ -91,7 +90,7 @@ The ones that carry the layout:
 
 ### Size
 
-`--popover-width` 360 · `--size-icon-button` 28 · `--size-donut` 90 (not used since 55f) · `--size-donut-card` 64 (stroke 7, r 26, in the SVG) · `--size-segmented` 186 (every segmented control, equal segments) · `--size-bar` 6 · `--size-tick` 2 · `--size-dot` 7 · `--size-dot-small` 6 · `--size-row` 46 · `--size-row-compact` 40 · `--size-pill` 22 · `--size-switch-w` 36 × `--size-switch-h` 21 with `--size-knob` 17 (knob travel is computed from these) · `--max-pill` 220 · `--focus-ring` 2 · `--underline-strong` 2.
+`--size-popover-width` 360 · `--size-icon-button` 28 · `--size-donut-card` 64 (stroke 7, r 26, in the SVG) · `--size-segmented` 186 (every segmented control, equal segments) · `--size-bar` 6 · `--size-tick` 2 · `--size-dot` 7 · `--size-dot-small` 6 · `--size-row` 46 · `--size-row-compact` 40 · `--size-pill` 22 · `--size-switch-w` 36 × `--size-switch-h` 21 with `--size-knob` 17 (knob travel is computed from these) · `--max-pill` 220 · `--size-focus-ring` 2 · `--underline-strong` 2.
 
 ### Shadow, opacity, motion
 

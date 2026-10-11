@@ -18,7 +18,7 @@
     --text: #1A1A1A;
     --muted: #636366;          /* ≥4.5:1 on card, page and tinted session card */
     --track: #EAEAEA;
-    --on-accent: #FFFFFF;      /* text on accent-blue, switch knob */
+    --on-accent: #FFFFFF;      /* text on accent-fill-strong, switch knob */
     /* -- Colour: accent (the week) -- */
     --accent-blue: #4B7BEC;
     --time-fill: color-mix(in srgb, var(--accent-blue) 30%, var(--track));
@@ -50,7 +50,6 @@
     /* -- Type -- */
     --font-system: -apple-system, BlinkMacSystemFont, 'SF Pro Text', sans-serif;
     --font-mono: ui-monospace, 'SF Mono', Menlo, monospace;
-    --text-face: 34px;         /* emoji in the donut */
     --text-face-card: 25px;    /* emoji in a source card's ring */
     --text-value-lg: 20px;     /* session % on a source card */
     --text-name: 14px;         /* source name on its card */
@@ -90,9 +89,8 @@
     --radius-round: 50%;       /* dots, knob */
 
     /* -- Size -- */
-    --popover-width: 360px;    /* fixed: another width makes the popover jump */
+    --size-popover-width: 360px; /* fixed: another width makes the popover jump */
     --size-icon-button: 28px;
-    --size-donut: 90px;
     --size-donut-card: 64px;   /* ring on a source card (stroke 7, r 26) */
     --size-segmented: 186px;   /* every segmented control: same width, equal segments */
     --size-bar: 6px;           /* week bar height */
@@ -106,7 +104,7 @@
     --size-switch-h: 21px;
     --size-knob: 17px;
     --max-pill: 220px;         /* menu bar preview text */
-    --focus-ring: 2px;
+    --size-focus-ring: 2px;
     --underline-strong: 2px;   /* link underline on hover */
     --opacity-disabled: 0.4;   /* switch that cannot be used */
     --opacity-busy: 0.6;       /* update button while working */
@@ -142,7 +140,7 @@
   body {
     font-family: var(--font-system);
     background: var(--bg);
-    width: var(--popover-width);
+    width: var(--size-popover-width);
     color: var(--text);
     font-size: var(--text-body);
     overflow-x: hidden;
@@ -300,7 +298,7 @@
     font: inherit; font-size: var(--text-secondary); color: var(--muted);   /* ≥4.5:1 on the page */
   }
   .text-btn:hover { color: var(--text); text-decoration: underline; text-underline-offset: var(--space-2); }
-  .text-btn:focus-visible { outline: var(--focus-ring) solid var(--accent-text); outline-offset: var(--space-1); border-radius: var(--radius-bar); }
+  .text-btn:focus-visible { outline: var(--size-focus-ring) solid var(--accent-text); outline-offset: var(--space-1); border-radius: var(--radius-bar); }
 
   @keyframes spin { to { transform: rotate(360deg); } }
 
@@ -414,7 +412,7 @@
   button.resets-link { text-decoration: underline; text-underline-offset: var(--space-2); }
   button.resets-link:hover { text-decoration-thickness: var(--underline-strong); }
   span.resets-link { cursor: default; }
-  .resets-link:focus-visible { outline: var(--focus-ring) solid var(--accent-text); outline-offset: var(--space-1); border-radius: var(--radius-bar); }
+  .resets-link:focus-visible { outline: var(--size-focus-ring) solid var(--accent-text); outline-offset: var(--space-1); border-radius: var(--radius-bar); }
 
   /* ---- Weekly card ---- */
   .progress-bar-track {
@@ -498,7 +496,7 @@
     display: flex; align-items: center; gap: var(--space-6); min-width: 0; max-width: 100%;
   }
   button.conn-link:hover span.txt { text-decoration: underline; }
-  button.conn-link:focus-visible { outline: var(--focus-ring) solid var(--accent-text); outline-offset: var(--space-1); border-radius: var(--radius-bar); }
+  button.conn-link:focus-visible { outline: var(--size-focus-ring) solid var(--accent-text); outline-offset: var(--space-1); border-radius: var(--radius-bar); }
 
   /* Fetching overlay pulse */
   .fetching-pulse {

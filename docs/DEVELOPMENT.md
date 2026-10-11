@@ -51,7 +51,7 @@ The second command prints the public key for `updatePublicKeyHex`. A new key in 
 
 ## UI and design system
 
-The popover is `dev/dashboard.html`. Its look is defined by design tokens in the `:root` block at the top of that file and documented in [DESIGN.md](DESIGN.md): use tokens only, keep text contrast at WCAG 2.2 AA in light and dark, and put all user text in `swift/Resources/strings.json` (Dutch and English).
+The popover is `dev/dashboard.html`. Its look is defined by the [Usage Meter design system](https://claude.ai/artifact/YXYFx4aQeGdwM7nHP78vCa) (private Claude Design artifact), implemented as design tokens in the `:root` block at the top of that file and documented in [DESIGN.md](DESIGN.md). Work from the design system; when the UI needs something it doesn't have, update the design system in the same PR (see [Design system first](DESIGN.md#design-system-first)). Also: use tokens only, keep text contrast at WCAG 2.2 AA in light and dark, and put all user text in `swift/Resources/strings.json` (Dutch and English).
 
 ## Logs and pitfalls
 

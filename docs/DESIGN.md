@@ -1,7 +1,8 @@
 # Usage Meter — design system
 
-How the popover looks and why. The popover is one page, [`dev/dashboard.html`](../dev/dashboard.html), shown in a WKWebView at a fixed width of 360 px. Its tokens live in the `:root` block at the top of that file; this document explains them. The same system is published as a browsable Claude Design artifact (private): <https://claude.ai/artifact/YXYFx4aQeGdwM7nHP78vCa>.
+How the popover looks and why. The popover is one page, [`dev/dashboard.html`](../dev/dashboard.html), shown in a WKWebView at a fixed width of 360 px.
 
+**The design system leads.** It is published as a Claude Design artifact (private): <https://claude.ai/artifact/YXYFx4aQeGdwM7nHP78vCa>. Its tokens are implemented in the `:root` block at the top of `dashboard.html`; this document explains them. The artifact, `:root` and this document must always say the same thing (see [Design system first](#design-system-first)).
 ## Principles
 
 - **One job.** Show at a glance how much room is left. Anything that does not serve that stays out.
@@ -11,9 +12,19 @@ How the popover looks and why. The popover is one page, [`dev/dashboard.html`](.
 - **Quiet.** Few borders, no shadows on cards, no coloured side bars. Hierarchy comes from size, weight and `--muted`.
 - **Light and dark are equal.** Every colour token has both values.
 
+## Design system first
+
+Every UI change starts from the design system and leaves it up to date.
+
+1. **Look it up first.** Read the artifact's README, tokens and the guide of the component you touch before you change the UI. Build with what is there.
+2. **Missing or wrong? Change the design system.** A new token, a changed value, a new or changed component, a new rule: add it to the artifact in the same piece of work, then implement it in `:root` and the CSS, then document it here. Never let the code get ahead of the design system.
+3. **Every UI PR updates the design system.** A PR that touches `dev/dashboard.html`, `MenubarIcon.swift`, the app icon, or user-facing copy rules also republishes the artifact (tokens, README, component guides and previews it affects) and says so in its description. A pure refactor with no visible change still syncs renamed or removed tokens.
+4. **Names are identical.** A token is `name` in the artifact and `--name` in `:root`. Values the artifact cannot hold as a token (`color-mix()`, motion) are given as computed values or described in its README.
+5. **One artifact.** There is one design system for Usage Meter. Don't create a second one; revise this one.
+
 ## Rules for changing the UI
 
-1. **Use tokens only.** No colour, size, space, radius, font size, weight or duration as a literal in a rule. Need a new value? Add a token to `:root` (and its dark value if it is a colour), then document it here.
+1. **Use tokens only.** No colour, size, space, radius, font size, weight or duration as a literal in a rule. Need a new value? Add it to the design system, then as a token to `:root` (and its dark value if it is a colour), then document it here.
 2. **Contrast WCAG 2.2 AA.** Text ≥ 4.5:1 on every background it can sit on: card, page, and the tinted session card, in light and dark. Work it out before adding a colour. Fills (`--accent-blue`, `--time-fill`, the stress colours) are never text colours.
 3. **All user text through `swift/Resources/strings.json`**, Dutch and English, every key in both.
 4. **Prove "no visible change".** A refactor must leave every computed style and box identical; compare before and after in the browser with fake data (see Verifying).

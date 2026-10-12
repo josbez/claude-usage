@@ -133,7 +133,7 @@ All in `dev/dashboard.html`; the design-system artifact has a live preview and n
 
 ## Multiple sources (designed in 55e, built in 55f/59)
 
-Mock-ups: <https://claude.ai/artifact/AePS2L7t15pFoEZKBuvP7C> (private).
+The early mock-ups are retired; this is built. Every screen and state, on the design system: <https://claude.ai/artifact/PvWKEk3s6bBekSh4cEKwK9> (private Claude Design canvas).
 
 - **Popover (C1b):** no picker. One card per source, stacked. The card is tinted with that source's stress colour (`--stress-tint` over `--card-bg`); top: ring with face, name, plan or resets, session % large; below: the week as a `--card-bg` strip inside the tinted card (radius 8). One source = the same card once. The main view grows with the number of sources.
 - **Source names:** "Claude" and "ChatGPT" (not "Codex": the limit covers the whole ChatGPT plan).

@@ -845,7 +845,8 @@ function render(d, zeroGeometry) {
   document.getElementById('lastUpdated').textContent = updated;
   document.getElementById('footer').hidden = !footerStatus && !updated;
 
-  // Settings view
+  // Settings view. Only ChatGPT (Claude never had numbers): no Claude row at all
+  document.getElementById('claudeSwitch').closest('.setting-row').hidden = !!d.claude_absent;
   const connDot = document.getElementById('connDot');
   connDot.className = 'status-dot' + (problem ? ' ' + problem : '');
   document.getElementById('connText').textContent =

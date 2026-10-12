@@ -7,7 +7,7 @@ How the popover looks and why. The popover is one page, [`dev/dashboard.html`](.
 
 - **One job.** Show at a glance how much room is left. Anything that does not serve that stays out.
 - **Native macOS.** System font, system-like greys, Apple status colours. The only brand element is the app icon.
-- **Data first.** Show only what the source demonstrably returns. Unknown means show nothing; never invent values, marks or copy.
+- **Data first.** Show only what the source demonstrably returns. Unknown means show nothing; never invent values, marks or copy. 0% only when the source reports 0 (a window that just reset); no numbers (never fetched, not logged in) is "—", never 0, in the menu bar too.
 - **Colour means load.** The only expressive colour is the session stress ramp. Blue is the week. Everything else is neutral.
 - **Quiet.** Few borders, no shadows on cards, no coloured side bars. Hierarchy comes from size, weight and `--muted`.
 - **Light and dark are equal.** Every colour token has both values.
@@ -120,12 +120,12 @@ All in `dev/dashboard.html`; the design-system artifact has a live preview and n
 
 - **Header**: title (`--text-title`) and 28 px icon buttons (refresh, settings with a 6 px status badge, close; back chevron in settings).
 - **Source card** (one per source, stacked; taak 55f): tinted with that source's stress colour (`--stress-tint` over `--card-bg`). Top: 64 px ring with the emoji face (`faceIcon`, seasonal themes in Swift), name, then resets (Claude: a link to claude.ai; others: text) or the plan; session % large with "session · resets in 2h 40m"; "Updated 11:10" when the numbers are old. Below: the week as a `--card-bg` strip (radius 8): "61% week · resets Thu 09:00", "30% elapsed", one track with elapsed time behind usage and a 2 px tick when usage covers it. A window the source didn't report shows "—" or no strip, never 0. No numbers at all and a problem (not logged in, never fetched; taak 60): neutral card (`--muted` ring and tint, no fill, no face), the capitalised reason in place of the reset line; the footer shows a short status, and Claude's resets are underlined only because they are a link. Data: `sourceCard()` in `UsageCore/SourceCards.swift`.
-- **Footer** (taak 61): status dot + short status only when something is wrong ("Claude: …" with more than one source); "Updated 2 min ago" only with one source and no problem; hidden when empty. The account (name · org · plan, e-mail in the tooltip) is on the Claude row in settings.
+- **Footer** (taak 61): status dot + short status only when something is wrong ("Claude: …" with more than one source); "Updated 2 min ago" only with one source and no problem; hidden when empty. The account (name · org · plan, e-mail in the tooltip) is on the Claude row in settings. Only ChatGPT: no Claude status; "Updated …" is ChatGPT's, and only while its card doesn't say "Updated" itself.
 - **Age of numbers** (taak 61): one notation everywhere, `ageText()` in `SourceCards.swift`: "just now", "1 min ago", "12 min ago" within the hour, then the time ("14:52") or date. Stand-alone lines start with a capital ("Updated 12:00").
 - **Segmented controls** are radio groups named by their row title: one Tab stop (the chosen option), arrow keys move the choice.
 - **At 0 %** neither the ring (round cap) nor the week bar draws a dot.
 - **Settings** (taak 59): group label above a card of rows. Menu bar row: title and control on one line, the preview on its own line below (no box in the card). With more than one source the last group is "Sources & system": a row per source (status, show switch; the last visible source can't be hidden), then the version. Row = title (`--text-body` semibold), optional sub line (`--text-caption`, `--muted`, ellipsis), control on the right. Controls: segmented control, switch, update button. Quiet text buttons below (uninstall, quit).
-- **Menu bar preview**: pill with the ring and the title text exactly as the menu bar shows it.
+- **Menu bar preview**: pill with the ring and the title text exactly as the menu bar shows it. No numbers from any source: "—" in every style, no face, an empty ring (`noDataTitle` in `Formatting.swift`).
 
 ## App icon
 
@@ -138,6 +138,7 @@ The early mock-ups are retired; this is built. Every screen and state, on the de
 - **Popover (C1b):** no picker. One card per source, stacked. The card is tinted with that source's stress colour (`--stress-tint` over `--card-bg`); top: ring with face, name, plan or resets, session % large; below: the week as a `--card-bg` strip inside the tinted card (radius 8). One source = the same card once. The main view grows with the number of sources.
 - **Source names:** "Claude" and "ChatGPT" (not "Codex": the limit covers the whole ChatGPT plan).
 - **Menu bar:** the source closest to a limit, with its name when it is not Claude.
+- **Only ChatGPT:** when Claude never had numbers (nothing fetched) and another source has, Claude is not there: no card, no footer status, no Claude row in settings, no badge for a Claude outage (`claudeAbsent()` in `SourceCards.swift`, `claude_absent` in the data). Once Claude had numbers it stays and reports its problems ("Claude: Not logged in"). With no numbers anywhere, Claude's neutral card stays.
 - **Notifications:** source name first ("ChatGPT: 5-hour limit at 80%"), same thresholds per source, one switch.
 - **Settings:** current layout with equal-width segmented controls and the menu bar preview as a line inside the Menu bar row; sources (status per source, show/hide switch) at the bottom where Connection is now; then version; then Uninstall / Send feedback / Quit. Settings are about 705 px high with two sources. Notifications per source follow in 55g.
 

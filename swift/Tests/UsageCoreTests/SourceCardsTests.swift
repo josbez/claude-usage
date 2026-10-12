@@ -199,6 +199,46 @@ final class SourceCardsTests: XCTestCase {
         XCTAssertTrue(cards[0]["session_pct"] is NSNull)
     }
 
+    /// No numbers from any source: "—", not "🚀 0% / 0% · —" (a real 0% stays 0%).
+    func testNoNumbersShowADashNotZero() {
+        let none = f.menubarTitle(limits: [:], others: [], settings: settings, lang: "nl")
+        XCTAssertEqual(none.title, "—")
+        XCTAssertEqual(none.sessionPct, 0)
+        XCTAssertEqual(titleWithoutFace(noDataTitle), "—")
+        var state = AppState()
+        state.loggedIn = false
+        let d = f.dashboardData(limits: [:], settings: settings, state: state, lang: "nl")
+        XCTAssertEqual((d["menubar_previews"] as? JSONObject)?["full"] as? String, "—")
+        XCTAssertEqual((d["menubar_previews"] as? JSONObject)?["emoji"] as? String, "—")
+        XCTAssertEqual(d["status"] as? String, "not_logged_in")
+        XCTAssertEqual(d["claude_absent"] as? Bool, false)
+        let zero = f.menubarTitle(limits: claudeLimits(session: 0, weekly: 0), others: [], settings: settings, lang: "nl")
+        XCTAssertTrue(zero.title.contains("0% / 0%"))
+    }
+
+    /// Only ChatGPT: Claude never had numbers, so it isn't there at all.
+    func testOnlyChatGPTLeavesClaudeOut() {
+        var state = AppState()
+        state.loggedIn = false
+        state.service = ["level": "major"]
+        let d = f.dashboardData(limits: [:], settings: settings, state: state, lang: "nl", others: [codex()])
+        XCTAssertEqual((d["sources"] as? [JSONObject])?.map { $0["id"] as? String }, [codexSource])
+        XCTAssertEqual((d["source_rows"] as? [Any])?.count, 0)
+        XCTAssertEqual(d["claude_absent"] as? Bool, true)
+        XCTAssertEqual(d["status"] as? String, "ok")
+        XCTAssertEqual(d["status_reason"] as? String, "")
+        XCTAssertEqual(d["service_badge"] as? String, "")
+        XCTAssertEqual(d["last_updated"] as? String, "2 min geleden")
+        // Old ChatGPT numbers: the card says "Bijgewerkt …", the footer doesn't repeat it
+        let old = f.dashboardData(limits: [:], settings: settings, state: state, lang: "nl",
+                                  others: [codex(fetched: "2026-10-07T09:00:00Z")])
+        XCTAssertEqual(old["last_updated"] as? String, "")
+        // Claude had numbers once: it stays and reports its problem
+        let had = f.dashboardData(limits: claudeLimits(), settings: settings, state: state, lang: "nl", others: [codex()])
+        XCTAssertEqual(had["claude_absent"] as? Bool, false)
+        XCTAssertEqual(had["status"] as? String, "not_logged_in")
+    }
+
     func testMenubarTitle() {
         let both = f.menubarTitle(limits: claudeLimits(session: 10, weekly: 20), others: [codex(session: 81, weekly: 40)],
                                   settings: settings, lang: "nl")

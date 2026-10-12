@@ -123,6 +123,11 @@ public func activeFaceTheme(_ date: Date, timeZone: TimeZone) -> FaceTheme? {
 public let menubarStyles = ["full", "session", "emoji"]
 public let appearanceStyles = ["system", "light", "dark"]
 
+/// The menu bar title without numbers from any source (never fetched, not
+/// logged in): a dash in every style, no face and no made-up 0%. A real 0%
+/// (a source that reports 0) is a normal title.
+public let noDataTitle = "—"
+
 /// core.status_title(): 'full': 😅 45% / 82% · 2u10m, 'session': 😅 45%, 'emoji': 😅.
 public func statusTitle(session: Int, weekly: Int, compact: String, style: String,
                         theme: FaceTheme? = nil) -> String {

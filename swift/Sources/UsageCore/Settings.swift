@@ -129,7 +129,9 @@ public func sessionPct(_ limits: JSONObject) -> Int {
 }
 
 /// The text next to the ring: the status title without its leading face.
+/// The no-data title has no face: the dash stays.
 public func titleWithoutFace(_ title: String) -> String {
+    if title == noDataTitle { return title }
     let parts = title.split(separator: " ", maxSplits: 1)
     return parts.count > 1 ? String(parts[1]) : ""
 }

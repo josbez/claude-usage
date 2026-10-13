@@ -74,13 +74,28 @@ extension UsageFormatter {
              "live": (s.extras["origin"] as? String) == "app-server"]
         }
         let tight = tightestSource(visible, now: now) ?? claude
-        if usesSourceTitle(available) {
+        if available.isEmpty {
+            // No numbers from any source: "—", never a made-up 0%
+            for style in menubarStyles { previews[style] = noDataTitle }
+        } else if usesSourceTitle(available) {
             // Previews follow the source the menu bar shows
             for style in menubarStyles {
                 let title = sourceTitle(tight, style: style, lang: lang, theme: theme)
                 previews[style] = ring ? titleWithoutFace(title) : title
             }
         }
+        // Only ChatGPT: Claude never had numbers, so it has no status here. The
+        // footer's age is the shown source's, and only while its card doesn't
+        // say "Updated" itself.
+        let noClaude = claudeAbsent(available)
+        if noClaude {
+            status = "ok"; reason = ""
+            let card = cards.first { $0["id"] as? String == tight.source.id }
+            let fresh = card.map { $0["updated"] is NSNull } ?? false
+            lastUpdated = fresh ? tight.fetchedAt.map { ageText($0, lang) } ?? "" : ""
+        }
+        // A Claude outage is no reason for a badge when Claude isn't there
+        let serviceBadge = noClaude ? "" : statusBadgeClass(state.service)
         let mr = menubarRing(sessionPct: usesSourceTitle(available) ? sourceSessionPct(tight) : sessionPct)
         var ringData: JSONObject = ["fraction": mr.fraction]
         if let (r, g, b) = mr.rgb { ringData["color"] = "rgb(\(r), \(g), \(b))" }
@@ -105,7 +120,8 @@ extension UsageFormatter {
             "update": state.update ?? NSNull(),
             "limit_resets": limitResetsView(limits, lang) ?? NSNull(),
             "service": state.service ?? NSNull(),
-            "service_badge": statusBadgeClass(state.service),
+            "service_badge": serviceBadge,
+            "claude_absent": noClaude,
             "menubar_style": settings["menubar_style"] ?? "full",
             "appearance": settings["appearance"] ?? "system",
             "refresh_minutes": refreshMinutes(settings),

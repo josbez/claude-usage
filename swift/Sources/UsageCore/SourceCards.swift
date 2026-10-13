@@ -193,17 +193,25 @@ extension UsageFormatter {
 
     /// The menu bar title and ring percentage. Claude alone: exactly the old
     /// title. Several sources (or only another one): the tightest visible source.
+    /// No source with numbers: "—" and an empty ring.
     public func menubarTitle(limits: JSONObject, others: [SourceSnapshot], settings: JSONObject,
                              lang: String) -> (title: String, sessionPct: Int) {
         let style = settings["menubar_style"] as? String ?? "full"
         let theme = faceTheme(settings)
         let available = availableSources(claude: claudeSnapshot(limits: limits, now: now), others: others, now: now)
+        if available.isEmpty { return (noDataTitle, 0) }
         if usesSourceTitle(available),
            let s = tightestSource(visibleSources(available, hidden: hiddenSources(settings)), now: now) {
             return (sourceTitle(s, style: style, lang: lang, theme: theme), sourceSessionPct(s))
         }
         return (titleFromLimits(limits, style: style, lang: lang, theme: theme), sessionPct(limits))
     }
+}
+
+/// Only other sources have numbers: Claude never had any (nothing fetched),
+/// so it isn't shown at all, not as a card, footer status or settings row.
+public func claudeAbsent(_ available: [SourceSnapshot]) -> Bool {
+    !available.isEmpty && !available.contains { $0.source.id == claudeDesktopSource }
 }
 
 /// Claude on its own keeps the title it always had.

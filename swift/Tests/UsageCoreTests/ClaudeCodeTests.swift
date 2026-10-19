@@ -199,4 +199,15 @@ final class ClaudeCodeTests: XCTestCase {
         XCTAssertEqual((only["menubar_previews"] as? JSONObject)?["full"] as? String, "—")
         XCTAssertEqual(f.menubarTitle(limits: [:], others: [api], settings: settings, lang: "en").title, "—")
     }
+
+    func testCardWithoutLimitsComesLast() {
+        let codex = SourceSnapshot(
+            source: UsageSource(id: codexSource, tool: "codex", accountLabel: ""),
+            windows: [UsageWindow(id: "primary", kind: .session, utilization: 18, resetsAt: nil)],
+            fetchedAt: now, plan: nil, resetCredits: nil, extras: ["origin": "app-server"])
+        let d = f.dashboardData(limits: desktop(), settings: settings, state: AppState(), lang: "en",
+                                others: [claudeCodeAPISnapshot(now: now), codex])
+        XCTAssertEqual((d["sources"] as? [JSONObject])?.map { $0["id"] as? String },
+                       [claudeDesktopSource, codexSource, claudeCodeSource])
+    }
 }

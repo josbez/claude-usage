@@ -368,6 +368,11 @@
   /* No numbers at all (not logged in, never fetched): neutral, the reason in the card */
   .source-card.no-data { --stress-color: var(--muted); }
   .source-card.no-data .donut-fill { visibility: hidden; }
+  /* No limits (API key, taak 66): the neutral tint, no ring: nothing to measure */
+  .source-card.no-limits .donut-wrap { display: none; }
+  /* Nothing found (taak 66): no tint, the universal empty ring; it's no problem state */
+  .source-card.empty { background: var(--card-bg); }
+  .source-card.empty .donut-track { stroke: var(--track); }
   .source-top { display: flex; align-items: center; gap: var(--space-12); }
   .source-info { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: var(--space-4); }
   .source-head { display: flex; justify-content: space-between; align-items: baseline; gap: var(--space-8); }
@@ -969,6 +974,8 @@ function renderSourceCard(card, s, zero, problemText) {
   const noData = !!s.note || (!!problemText && !has(s.session_pct) && !has(s.weekly_pct));
   const why = s.note || problemText;
   card.classList.toggle('no-data', noData);
+  card.classList.toggle('no-limits', !!s.note && s.id !== 'none');
+  card.classList.toggle('empty', s.id === 'none');
   const color = colorForPct(pct);
   const readable = noData ? 'var(--muted)' : readableStressColor(color);   // ≥4.6:1 on the tinted card
   if (noData) card.style.removeProperty('--stress-color');

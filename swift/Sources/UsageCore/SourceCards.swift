@@ -21,11 +21,12 @@ public func currentUtilization(_ w: UsageWindow, now: Date) -> Double {
 /// week window; another source when its snapshot is younger than a week
 /// (older means the tool isn't in use). A hidden source isn't fetched (taak 43b),
 /// so its age says nothing: it stays, so it can be switched back on.
+/// Sources without limits (API key) come last, below every card with numbers (taak 66).
 public func availableSources(claude: SourceSnapshot?, others: [SourceSnapshot], now: Date,
                              hidden: Set<String> = []) -> [SourceSnapshot] {
     var out: [SourceSnapshot] = []
     if let c = claude, hasLimits(c) { out.append(c) }
-    for s in others where hasLimits(s) || isPayPerUse(s) {
+    for s in others.filter(hasLimits) + others.filter({ !hasLimits($0) && isPayPerUse($0) }) {
         guard hidden.contains(s.source.id)
               || s.fetchedAt.map({ now.timeIntervalSince($0) < codexSessionMaxAge }) == true else { continue }
         out.append(s)

@@ -202,6 +202,9 @@
 
   /* ---- Settings ---- */
   .settings-card { padding: var(--space-4) var(--space-14); }
+  /* Small cards below the main groups (version, Show {name}, hidden sources; taak 65): compact, not 14 px round */
+  .card.compact { padding: var(--space-6) var(--space-14); }
+  .compact .setting-row { min-height: var(--size-row-compact); }
   .setting-row {
     display: flex; align-items: center; gap: var(--space-10);
     padding: var(--space-8) 0; min-height: var(--size-row);
@@ -696,10 +699,10 @@
     <!-- Only while a source is hidden (taak 65, D5): the way back to it -->
     <div class="settings-group" id="hiddenGroup" hidden>
       <div class="group-label" data-i18n="set_group_sources">Bronnen</div>
-      <div class="card settings-card" id="hiddenRows"></div>
+      <div class="card settings-card compact" id="hiddenRows"></div>
     </div>
     <div class="settings-group">
-      <div class="card settings-card">
+      <div class="card settings-card compact">
         <div class="setting-row version">
           <div class="setting-text">
             <div class="setting-title"><span data-i18n="set_version">Versie</span> <span class="version-chip" id="versionText"></span></div>
@@ -732,7 +735,7 @@
       </div>
     </div>
     <div class="settings-group">
-      <div class="card settings-card">
+      <div class="card settings-card compact">
         <div class="setting-row">
           <div class="setting-text">
             <div class="setting-title" id="svShowTitle"></div>

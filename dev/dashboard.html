@@ -202,7 +202,7 @@
 
   /* ---- Settings ---- */
   .settings-card { padding: var(--space-4) var(--space-14); }
-  /* Small cards below the main groups (version, Show {name}, hidden sources; taak 65): compact, not 14 px round */
+  /* Small cards below the main groups (version, Show on overview, hidden sources; taak 65): compact, not 14 px round */
   .card.compact { padding: var(--space-6) var(--space-14); }
   .compact .setting-row { min-height: var(--size-row-compact); }
   .setting-row {
@@ -1054,7 +1054,7 @@ function renderSourceView(d, problem, statusText) {
   }
   title.hidden = !title.textContent;   // no account label: the status line starts the row
   document.getElementById('serviceLine').hidden = !info.claude;
-  document.getElementById('svShowTitle').textContent = T('set_show_source', { name: info.name });
+  document.getElementById('svShowTitle').textContent = T('set_show_source');
   const sw = document.getElementById('svSwitch');
   sw.setAttribute('aria-checked', info.hidden ? 'false' : 'true');
   sw.closest('.settings-group').hidden = (d.source_rows || []).length < 2;   // one source can't be hidden: no switch

@@ -183,14 +183,16 @@
   .icon-btn:hover { background: var(--icon-hover-bg); color: var(--icon-hover-color); }
   .icon-btn.spinning svg { animation: spin var(--dur-spin) linear infinite; }
   #settingsBtn { position: relative; }
-  #settingsBtn .badge {
+  #settingsBtn .badge, .chevron-wrap .badge {
     position: absolute; top: var(--space-4); right: var(--space-4);
     width: var(--size-dot-small); height: var(--size-dot-small); border-radius: var(--radius-round);
     display: none;
   }
-  #settingsBtn .badge.update { display: block; background: var(--status-stale); }
-  #settingsBtn .badge.stale { display: block; background: var(--status-stale); }
-  #settingsBtn .badge.disconnected { display: block; background: var(--status-error); }
+  /* On a model card the badge sits on the chevron's top right (taak 65) */
+  .chevron-wrap { position: relative; display: inline-flex; }
+  .chevron-wrap .badge { top: calc(-1 * var(--space-2)); right: calc(-1 * var(--space-4)); }
+  .badge.update, .badge.stale { display: block; background: var(--status-stale); }
+  .badge.disconnected { display: block; background: var(--status-error); }
   .icon-btn[hidden] { display: none; }
   #backBtn { margin-left: calc(-1 * var(--space-6)); margin-right: calc(-1 * var(--space-4)); }
 
@@ -534,9 +536,12 @@
         <div class="source-head">
           <button class="source-open">
             <span class="source-name"></span>
-            <svg class="source-chevron" width="11" height="11" viewBox="0 0 15 15" fill="none" aria-hidden="true">
-              <path d="M5.5 3L10 7.5 5.5 12" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/>
-            </svg>
+            <span class="chevron-wrap">
+              <svg class="source-chevron" width="11" height="11" viewBox="0 0 15 15" fill="none" aria-hidden="true">
+                <path d="M5.5 3L10 7.5 5.5 12" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/>
+              </svg>
+              <span class="badge"></span>
+            </span>
           </button>
           <button class="resets-link" hidden onclick="event.stopPropagation(); onOpenResets()"></button>
           <span class="resets-link" hidden></span>
@@ -897,8 +902,16 @@ function render(d, zeroGeometry) {
   renderHiddenSources(d);
 
   // Badge on the gear: own connection problem, Claude outage, or update available
-  const badgeClass = problem || d.service_badge || (d.update && d.update.state !== 'working' ? 'update' : '');
-  document.getElementById('settingsBadge').className = 'badge' + (badgeClass ? ' ' + badgeClass : '');
+  // Badges (taak 65): Claude's own problem or a Claude outage on the Claude
+  // model card's chevron (the detail is on its screen); the gear only for an update
+  const claudeBadge = problem || d.service_badge || '';
+  document.querySelectorAll('#sourceCards .source-card').forEach((card, i) => {
+    const s = (d.sources || [])[i];
+    const cls = s && s.id === 'claude-desktop' ? claudeBadge : '';
+    card.querySelector('.chevron-wrap .badge').className = 'badge' + (cls ? ' ' + cls : '');
+  });
+  const gearBadge = d.update && d.update.state !== 'working' ? 'update' : '';
+  document.getElementById('settingsBadge').className = 'badge' + (gearBadge ? ' ' + gearBadge : '');
 
   syncRoving();
 

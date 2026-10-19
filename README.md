@@ -4,6 +4,7 @@ macOS menu bar app: how much of your Claude (and ChatGPT) plan is left.
 
 - 5-hour and weekly limit, per source, with reset times
 - Menu bar shows the source closest to a limit
+- Click a card for its connection status, or to hide it
 - Notifications at 80% / 95% session and 90% weekly
 - Signed self-updates; English and Dutch
 

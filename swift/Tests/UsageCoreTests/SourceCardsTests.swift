@@ -167,10 +167,10 @@ final class SourceCardsTests: XCTestCase {
 
     // MARK: - Dashboard data
 
-    func testOneSourceKeepsOldMenubarPreviewAndHasNoRows() {
+    func testOneSourceKeepsOldMenubarPreviewAndHasOneRow() {
         let d = f.dashboardData(limits: claudeLimits(), settings: settings, state: AppState(), lang: "nl")
         XCTAssertEqual((d["sources"] as? [JSONObject])?.count, 1)
-        XCTAssertEqual((d["source_rows"] as? [Any])?.count, 0)
+        XCTAssertEqual((d["source_rows"] as? [JSONObject])?.map { $0["id"] as? String }, [claudeDesktopSource])
         XCTAssertEqual((d["menubar_previews"] as? JSONObject)?["full"] as? String, "42% / 61% · 2u40m")
     }
 
@@ -223,7 +223,10 @@ final class SourceCardsTests: XCTestCase {
         state.service = ["level": "major"]
         let d = f.dashboardData(limits: [:], settings: settings, state: state, lang: "nl", others: [codex()])
         XCTAssertEqual((d["sources"] as? [JSONObject])?.map { $0["id"] as? String }, [codexSource])
-        XCTAssertEqual((d["source_rows"] as? [Any])?.count, 0)
+        // One row, with the status its model screen shows
+        let rows = d["source_rows"] as? [JSONObject]
+        XCTAssertEqual(rows?.map { $0["id"] as? String }, [codexSource])
+        XCTAssertEqual(rows?.first?["status"] as? String == "", false)
         XCTAssertEqual(d["claude_absent"] as? Bool, true)
         XCTAssertEqual(d["status"] as? String, "ok")
         XCTAssertEqual(d["status_reason"] as? String, "")

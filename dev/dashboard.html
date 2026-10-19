@@ -191,8 +191,8 @@
   /* On a model card the badge sits on the chevron's top right (taak 65) */
   .chevron-wrap { position: relative; display: inline-flex; }
   .chevron-wrap .badge { top: calc(-1 * var(--space-2)); right: calc(-1 * var(--space-4)); }
-  .badge.update, .badge.stale { display: block; background: var(--status-stale); }
-  .badge.disconnected { display: block; background: var(--status-error); }
+  :is(#settingsBtn, .chevron-wrap) .badge:is(.update, .stale) { display: block; background: var(--status-stale); }
+  :is(#settingsBtn, .chevron-wrap) .badge.disconnected { display: block; background: var(--status-error); }
   .icon-btn[hidden] { display: none; }
   #backBtn { margin-left: calc(-1 * var(--space-6)); margin-right: calc(-1 * var(--space-4)); }
 
@@ -503,6 +503,7 @@
 
   /* Connection row: own connection and Claude service status, one dot each */
   .conn-line { display: flex; align-items: center; gap: var(--space-6); }
+  .conn-line[hidden] { display: none; }   /* the service line is Claude's only */
   .conn-line .status-dot { width: var(--size-dot-small); height: var(--size-dot-small); }
   .conn-line span.txt { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; min-width: 0; }
   button.conn-link {
@@ -724,7 +725,7 @@
   <div class="view" id="sourceView" hidden>
     <div class="settings-group">
       <div class="group-label" data-i18n="set_connection">Verbinding</div>
-      <div class="card settings-card">
+      <div class="card settings-card compact">
         <div class="setting-row conn">
           <div class="setting-text">
             <div class="setting-title" id="svTitle"></div>
@@ -1045,7 +1046,7 @@ function renderSourceView(d, problem, statusText) {
     dot.className = 'status-dot' + (problem ? ' ' + problem : '');
     text.textContent = statusText + (d.last_updated ? ' · ' + d.last_updated : '');
   } else {
-    title.textContent = info.plan ? info.name + ' · ' + info.plan : info.name;
+    title.textContent = info.plan ? info.name + ' · ' + info.plan : '';   // no plan: the header already names it
     title.title = '';
     // Live from the tool: green; from its own files (possibly old): grey
     dot.className = 'status-dot' + (info.live ? '' : ' neutral');

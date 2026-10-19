@@ -136,7 +136,9 @@ extension UsageFormatter {
             "i18n": strings.table[lang] ?? [:],
             "menubar_previews": previews,
             "sources": cards,
-            "source_rows": available.count > 1 ? rows : [],
+            // Always, also with one source: its model screen shows the status (taak 65);
+            // the page offers the show switch only with two or more
+            "source_rows": rows,
         ]
     }
 }

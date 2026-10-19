@@ -190,6 +190,7 @@
   }
   /* On a model card the badge sits on the chevron's top right (taak 65) */
   .chevron-wrap { position: relative; display: inline-flex; }
+  .chevron-wrap[hidden] { display: none; }
   .chevron-wrap .badge { top: calc(-1 * var(--space-2)); right: calc(-1 * var(--space-4)); }
   :is(#settingsBtn, .chevron-wrap) .badge:is(.update, .stale) { display: block; background: var(--status-stale); }
   :is(#settingsBtn, .chevron-wrap) .badge.disconnected { display: block; background: var(--status-error); }
@@ -383,6 +384,9 @@
     white-space: nowrap; overflow: hidden; text-overflow: ellipsis; min-width: 0;
   }
   .source-updated { font-size: var(--text-caption); }
+  /* No numbers: no empty % in front, and the reason may wrap instead of being cut off */
+  .source-pct:empty { display: none; }
+  .source-card.no-data .source-session-reset { white-space: normal; }
   .source-updated:empty { display: none; }
   .week-strip {
     background: var(--card-bg); border-radius: var(--radius-inset);

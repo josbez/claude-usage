@@ -1,21 +1,21 @@
 #!/bin/bash
-# Herbouwt de app, rolt uit naar /Applications, herstart de LaunchAgent
-# en verifieert dat de nieuwe build echt draait én data ophaalt.
+# Rebuilds the app, deploys it to /Applications, restarts the LaunchAgent
+# and verifies that the new build actually runs and fetches data.
 #   ./scripts/deploy.sh
-# (--swift mag nog als argument; sinds taak 47 is er alleen de Swift-versie)
+# (--swift is still accepted as an argument; since task 47 there is only the Swift version)
 set -euo pipefail
 cd "$(dirname "$0")/.."
 
 APP=/Applications/ClaudeUsage.app
 BIN="$APP/Contents/MacOS/ClaudeUsage"
 PLIST="$HOME/Library/LaunchAgents/com.jos.claude-usage.plist"
-LIMITS="$HOME/.claude/usage-limits/claude-desktop.json"   # taak 55d; tot 2.1: usage-limits.json
+LIMITS="$HOME/.claude/usage-limits/claude-desktop.json"   # taak 55d; until 2.1: usage-limits.json
 LOG="$HOME/Library/Logs/ClaudeUsage.log"
 FETCH_WAIT_SEC=60
 
 fail() {
     echo "✗ $*" >&2
-    echo "--- laatste regels $LOG" >&2
+    echo "--- last lines of $LOG" >&2
     tail -15 "$LOG" 2>/dev/null >&2 || true
     echo "--- /tmp/claude-usage-error.log" >&2
     tail -15 /tmp/claude-usage-error.log 2>/dev/null >&2 || true
@@ -24,13 +24,13 @@ fail() {
 
 case "${1:-}" in
     ""|--swift) ;;
-    *) echo "✗ onbekende optie: $1" >&2; exit 1 ;;
+    *) echo "✗ unknown option: $1" >&2; exit 1 ;;
 esac
 
 ./scripts/build-swift.sh --release
 SRC=dist-swift/ClaudeUsage.app
 
-[ -f "$PLIST" ] || { echo "✗ LaunchAgent ontbreekt — draai eerst ./install.sh" >&2; exit 1; }
+[ -f "$PLIST" ] || { echo "✗ LaunchAgent missing — run ./install.sh first" >&2; exit 1; }
 
 fetched_at() {
     plutil -extract fetched_at raw -o - "${1:-$LIMITS}" 2>/dev/null || true
@@ -49,27 +49,27 @@ rm -rf "$APP"
 cp -R "$SRC" /Applications/
 launchctl load "$PLIST"
 
-# 1. Draait het proces?
+# 1. Is the process running?
 for _ in $(seq 1 10); do
     pgrep -f "$BIN" >/dev/null && break
     sleep 1
 done
-pgrep -f "$BIN" >/dev/null || fail "app-proces draait niet na start"
+pgrep -f "$BIN" >/dev/null || fail "app process not running after start"
 VERSION=$(/usr/libexec/PlistBuddy -c "Print CFBundleVersion" "$APP/Contents/Info.plist")
-echo "✓ Build $VERSION draait"
+echo "✓ Build $VERSION running"
 
-# 2. Haalt het nieuwe proces data op? (eerste fetch duurt ~10–20 s)
-printf "⏳ Wachten op verse fetch (max %ss)" "$FETCH_WAIT_SEC"
+# 2. Does the new process fetch data? (first fetch takes ~10–20 s)
+printf "⏳ Waiting for fresh fetch (max %ss)" "$FETCH_WAIT_SEC"
 for _ in $(seq 1 "$FETCH_WAIT_SEC"); do
     NOW=$(fetched_at)
     if [ -n "$NOW" ] && [ "$NOW" != "$BEFORE" ]; then
         echo
-        echo "✓ fetch geverifieerd ($NOW)"
+        echo "✓ fetch verified ($NOW)"
         exit 0
     fi
-    pgrep -f "$BIN" >/dev/null || { echo; fail "app is gecrasht tijdens eerste fetch"; }
+    pgrep -f "$BIN" >/dev/null || { echo; fail "app crashed during first fetch"; }
     printf "."
     sleep 1
 done
 echo
-fail "geen nieuwe fetched_at binnen ${FETCH_WAIT_SEC}s (was: ${BEFORE:-leeg})"
+fail "no new fetched_at within ${FETCH_WAIT_SEC}s (was: ${BEFORE:-empty})"

@@ -31,7 +31,7 @@ extension AppDelegate {
             codex.checking = false
             if !codex.missingLogged {
                 codex.missingLogged = true
-                log("codex: niet geïnstalleerd of niet ingelogd — geen bron")
+                log("codex: not installed or not signed in — no source")
             }
             return
         }
@@ -56,7 +56,7 @@ extension AppDelegate {
             let parse = codexSnapshot(rateLimits: response, fetchedAt: Date(), now: Date())
             logCodexUnknown(parse.unknown)
             guard let snapshot = parse.snapshot else {
-                codexProblem("geen limieten in het antwoord")
+                codexProblem("no limits in the response")
                 return codexFallback()
             }
             saveCodex(snapshot, origin: "app-server")
@@ -103,10 +103,10 @@ extension AppDelegate {
         do {
             try saveJSONObject(snapshotJSON(snapshot, origin: origin), to: paths.snapshotFile(codexSource))
         } catch {
-            return codexProblem("opslaan mislukt: \(error)")
+            return codexProblem("saving failed: \(error)")
         }
         if origin == "app-server" {
-            if codex.lastProblem != nil { log("codex: weer bereikbaar") }
+            if codex.lastProblem != nil { log("codex: reachable again") }
             codex.lastProblem = nil
         }
         // Notifications and history per source (55g); an old fallback event alerts nothing.
@@ -115,7 +115,7 @@ extension AppDelegate {
         // New numbers: menu bar (held while the popover is open) and popover
         showCachedTitle()
         if popover.isShown { pushData() }
-        let summary = codexSummary(snapshot) + (origin == "app-server" ? "" : " (sessiebestand)")
+        let summary = codexSummary(snapshot) + (origin == "app-server" ? "" : " (session file)")
         if summary != codex.lastSummary {
             codex.lastSummary = summary
             log("codex: \(summary)")
@@ -125,7 +125,7 @@ extension AppDelegate {
     func logCodexUnknown(_ unknown: [String]) {
         for u in unknown where !codex.loggedUnknown.contains(u) {
             codex.loggedUnknown.insert(u)
-            log("codex: onbekend: \(u)")
+            log("codex: unknown: \(u)")
         }
     }
 

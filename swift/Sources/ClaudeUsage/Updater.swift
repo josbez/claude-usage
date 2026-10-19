@@ -31,7 +31,7 @@ extension AppDelegate {
         }
         let interval = manual ? manualUpdateCheckInterval : updateCheckInterval
         if !updateCheckDue(stored, now: Date(), interval: interval) {
-            if manual { log("update-check overgeslagen: vorige check < \(Int(interval / 60)) min geleden") }
+            if manual { log("update check skipped: previous check < \(Int(interval / 60)) min ago") }
             return
         }
         updateChecking = true
@@ -60,14 +60,14 @@ extension AppDelegate {
         var stored = loadJSONObject(paths.updateState)
         stored["last_check"] = pyIsoformatUTC(Date())
         if let error {
-            log("update-check mislukt: \(error)")
+            log("update check failed: \(error)")
         } else {
             stored["latest"] = release ?? NSNull()
             if let release, let version = release["version"], isNewer(version, than: state.version) {
                 update = release
                 if stored["notified_version"] as? String != version {
                     stored["notified_version"] = version
-                    log("update beschikbaar: \(version)")
+                    log("update available: \(version)")
                     if notificationsEnabled {
                         post(id: "update-\(version)",
                              title: strings.t("notif_update_title", lang, ["version": version]),
@@ -81,7 +81,7 @@ extension AppDelegate {
         do {
             try saveJSONObject(stored, to: paths.updateState)
         } catch {
-            log("update-status opslaan mislukt: \(error)")
+            log("saving update status failed: \(error)")
         }
         pushData()
     }
@@ -110,7 +110,7 @@ extension AppDelegate {
         }
         guard choice == .alertFirstButtonReturn else { return }
 
-        log("update naar \(version) gestart")
+        log("update to \(version) started")
         updateInstalling = true
         updateError = nil
         pushData()
@@ -137,7 +137,7 @@ extension AppDelegate {
             let message = e.message(lang)
             updateInstalling = false
             updateError = message
-            log("update mislukt: \(e)")
+            log("update failed: \(e)")
             pushData()
             NSApp.activate(ignoringOtherApps: true)
             let alert = NSAlert()
@@ -147,7 +147,7 @@ extension AppDelegate {
             return
         }
         let target = Bundle.main.bundleURL
-        log("update klaargezet, vervangen van \(target.path) en herstarten")
+        log("update staged, replacing \(target.path) and restarting")
         do {
             try Self.launchSwap(staged: staged, target: target, pid: getpid(),
                                 label: Bundle.main.bundleIdentifier ?? "", logFile: paths.log)
@@ -168,7 +168,7 @@ extension AppDelegate {
         let out = Pipe(), err = Pipe()
         p.standardOutput = out
         p.standardError = err
-        guard (try? p.run()) != nil else { return (-1, Data(), "kan \(tool) niet starten") }
+        guard (try? p.run()) != nil else { return (-1, Data(), "cannot start \(tool)") }
         let o = out.fileHandleForReading.readDataToEndOfFile()
         let e = err.fileHandleForReading.readDataToEndOfFile()
         p.waitUntilExit()
@@ -275,11 +275,11 @@ extension AppDelegate {
     if mv "$TARGET" "$BACKUP" && /usr/bin/ditto "$NEW" "$TARGET"; then
         /usr/bin/xattr -dr com.apple.quarantine "$TARGET" 2>/dev/null
         rm -rf "$BACKUP"
-        log "nieuwe versie geïnstalleerd"
+        log "new version installed"
     else
         rm -rf "$TARGET"
         mv "$BACKUP" "$TARGET"
-        log "vervangen mislukt, oude versie teruggezet"
+        log "replace failed, old version restored"
     fi
     if /bin/launchctl print "gui/$(id -u)/$LABEL" >/dev/null 2>&1; then
         /bin/launchctl kickstart -k "gui/$(id -u)/$LABEL"

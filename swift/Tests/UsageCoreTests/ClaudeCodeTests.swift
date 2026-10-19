@@ -88,9 +88,9 @@ final class ClaudeCodeTests: XCTestCase {
         XCTAssertEqual(claudeCodeOutcome(status: 429, body: nil, plan: nil, now: now), .rateLimited)
         XCTAssertEqual(claudeCodeOutcome(status: 500, body: nil, plan: nil, now: now), .failed("HTTP 500"))
         XCTAssertEqual(claudeCodeOutcome(status: 200, body: Data("x".utf8), plan: nil, now: now),
-                       .failed("antwoord onleesbaar"))
+                       .failed("response unreadable"))
         XCTAssertEqual(claudeCodeOutcome(status: 200, body: Data(#"{"limits":[]}"#.utf8), plan: nil, now: now),
-                       .failed("geen limieten in het antwoord"))
+                       .failed("no limits in the response"))
         let s = stored()
         XCTAssertEqual(s["source"] as? String, claudeCodeSource)
         XCTAssertEqual(s["origin"] as? String, "oauth")

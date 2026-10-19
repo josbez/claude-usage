@@ -61,18 +61,18 @@ public func codexSnapshot(rateLimits result: JSONObject, fetchedAt: Date, now: D
     var unknown: [String] = []
     let byId = result["rateLimitsByLimitId"] as? JSONObject
     guard let limits = (byId?[codexSource] as? JSONObject) ?? (result["rateLimits"] as? JSONObject) else {
-        return CodexParse(snapshot: nil, unknown: ["geen rateLimits in het antwoord"])
+        return CodexParse(snapshot: nil, unknown: ["no rateLimits in the response"])
     }
 
     var windows: [UsageWindow] = []
     for key in ["primary", "secondary"] {
         guard let w = limits[key] as? JSONObject else { continue }
         guard let used = jsonNumber(w["usedPercent"]), let minutes = jsonInt(w["windowDurationMins"]) else {
-            unknown.append("venster \(key) zonder usedPercent/windowDurationMins")
+            unknown.append("window \(key) without usedPercent/windowDurationMins")
             continue
         }
         let kind = windowKind(durationMinutes: minutes)
-        if kind == .other { unknown.append("venster \(key) van \(minutes) min") }
+        if kind == .other { unknown.append("window \(key) of \(minutes) min") }
         let resets = jsonNumber(w["resetsAt"]).map { Date(timeIntervalSince1970: $0) }
         windows.append(UsageWindow(id: key, kind: kind, utilization: used, resetsAt: resets))
     }
@@ -189,11 +189,11 @@ public func codexSessionSnapshot(event: JSONObject, now: Date) -> CodexParse {
     for key in ["primary", "secondary"] {
         guard let w = limits[key] as? JSONObject else { continue }
         guard let used = jsonNumber(w["used_percent"]), let minutes = jsonInt(w["window_minutes"]) else {
-            unknown.append("venster \(key) zonder used_percent/window_minutes")
+            unknown.append("window \(key) without used_percent/window_minutes")
             continue
         }
         let kind = windowKind(durationMinutes: minutes)
-        if kind == .other { unknown.append("venster \(key) van \(minutes) min") }
+        if kind == .other { unknown.append("window \(key) of \(minutes) min") }
         let resets = jsonNumber(w["resets_at"]).map { Date(timeIntervalSince1970: $0) }
         if let r = resets, r <= now {
             windows.append(UsageWindow(id: key, kind: kind, utilization: 0, resetsAt: nil))

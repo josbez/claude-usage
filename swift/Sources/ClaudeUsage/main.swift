@@ -63,17 +63,17 @@ if args.count == 3, args[1] == "--sign-release" {
     let keyFile = FileManager.default.homeDirectoryForCurrentUser
         .appendingPathComponent(".config/claude-usage/release-signing-key.pem")
     guard let pem = try? String(contentsOf: keyFile, encoding: .utf8) else {
-        print("✗ geen signing key in \(keyFile.path)")
+        print("✗ no signing key in \(keyFile.path)")
         exit(1)
     }
     guard let data = FileManager.default.contents(atPath: args[2]) else {
-        print("✗ \(args[2]) niet gevonden")
+        print("✗ \(args[2]) not found")
         exit(1)
     }
     do {
         let sig = try signRelease(data, pem: pem)
         try (sig + "\n").write(toFile: args[2] + ".sig", atomically: true, encoding: .utf8)
-        print("✓ \((args[2] as NSString).lastPathComponent).sig aangemaakt en geverifieerd")
+        print("✓ \((args[2] as NSString).lastPathComponent).sig created and verified")
         exit(0)
     } catch {
         print("✗ \(error)")
@@ -86,7 +86,7 @@ if args.count == 3, args[1] == "--sign-release" {
 // paths of the usage response (names and types only, no values).
 //   ClaudeUsage --probe-native-fetch
 if args.count == 2, args[1] == "--probe-native-fetch" {
-    guard let key = try? claudeSessionKey(), !key.isEmpty else { print("geen sessionKey"); exit(1) }
+    guard let key = try? claudeSessionKey(), !key.isEmpty else { print("no sessionKey"); exit(1) }
     let agents = ["default": nil,
                   "safari": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/18.0 Safari/605.1.15"]
     func get(_ path: String, _ ua: String?) -> (Int, String, Any?) {

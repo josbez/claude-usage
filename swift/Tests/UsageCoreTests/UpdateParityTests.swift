@@ -56,6 +56,6 @@ final class UpdateParityTests: FixtureCase {
     func testUpdateErrorMessages() {
         let e = UpdateError("version_mismatch", ["got": "2.0", "expected": "2.1"], strings: Self.strings)
         XCTAssertEqual(e.message("en"), "version in DMG (2.0) doesn't match release (2.1)")
-        XCTAssertEqual(e.description, "versie in DMG (2.0) klopt niet met release (2.1)")
+        XCTAssertEqual(e.description, "version in DMG (2.0) doesn't match release (2.1)")
     }
 }

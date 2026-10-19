@@ -172,10 +172,10 @@ public func claudeCodeOutcome(status: Int, body: Data?, plan: String?, now: Date
     default: return .failed("HTTP \(status)")
     }
     guard let body, var obj = (try? JSONSerialization.jsonObject(with: body)) as? JSONObject else {
-        return .failed("antwoord onleesbaar")
+        return .failed("response unreadable")
     }
     guard obj["five_hour"] is JSONObject || obj["seven_day"] is JSONObject else {
-        return .failed("geen limieten in het antwoord")
+        return .failed("no limits in the response")
     }
     obj["source"] = claudeCodeSource
     obj["origin"] = "oauth"

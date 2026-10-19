@@ -152,8 +152,8 @@ public enum CookieError: Error, CustomStringConvertible {
     case noPassword, noDatabase
     public var description: String {
         switch self {
-        case .noPassword: return "geen 'Claude Safe Storage' sleutel in keychain"
-        case .noDatabase: return "cookie-database niet gevonden"
+        case .noPassword: return "no 'Claude Safe Storage' key in keychain"
+        case .noDatabase: return "cookie database not found"
         }
     }
 }
@@ -172,7 +172,7 @@ public enum SessionKeyResult: Equatable {
 
 /// Why the Keychain password was requested (for the log).
 public enum KeychainReadReason: String {
-    case start = "start", keyChanged = "sleutel gewijzigd", retry = "opnieuw"
+    case start = "start", keyChanged = "key changed", retry = "retry"
 }
 
 /// Keeps the cookie key in memory, so the Keychain is asked once per app start

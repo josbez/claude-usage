@@ -49,7 +49,7 @@ final class CodexTests: XCTestCase {
         let parse = codexSnapshot(rateLimits: r, fetchedAt: fetched, now: now)
         XCTAssertNil(parse.snapshot?.plan)
         XCTAssertEqual(parse.snapshot?.windows.map(\.kind), [.other])
-        XCTAssertEqual(parse.unknown, ["venster primary van 60 min", "venster secondary zonder usedPercent/windowDurationMins",
+        XCTAssertEqual(parse.unknown, ["window primary of 60 min", "window secondary without usedPercent/windowDurationMins",
                                        "planType team"])
     }
 

@@ -1,13 +1,13 @@
 #!/bin/bash
-# Bouwt de app als .app en faalt luid als er iets mis is.
+# Builds the app as a .app and fails loudly if anything goes wrong.
 #
 #   ./scripts/build-swift.sh          → dist-swift/ClaudeUsage Dev.app
-#                                       (bundle-id com.jos.claude-usage.dev; draait
-#                                       naast de gewone app, eigen instellingen en log)
+#                                       (bundle id com.jos.claude-usage.dev; runs
+#                                       next to the regular app, own settings and log)
 #   ./scripts/build-swift.sh --release → dist-swift/ClaudeUsage.app
-#                                       (bundle-id com.jos.claude-usage)
+#                                       (bundle id com.jos.claude-usage)
 #   VERSION=2.1 OUT_DIR=/tmp/x ./scripts/build-swift.sh
-#                                     → andere versie/map, bv. voor een update-test
+#                                     → other version/folder, e.g. for an update test
 set -euo pipefail
 cd "$(dirname "$0")/.."
 
@@ -28,15 +28,15 @@ BUILD=$(date +%Y%m%d.%H%M%S)
 
 fail() { echo "✗ $*" >&2; exit 1; }
 
-echo "🧪 Swift-tests..."
-(cd swift && swift test -q 2>&1 | tail -5) || fail "Swift-tests falen — niet gebouwd"
+echo "🧪 Swift tests..."
+(cd swift && swift test -q 2>&1 | tail -5) || fail "Swift tests failed — not built"
 
 echo "📦 Building $NAME.app..."
 # Universal (Apple Silicon + Intel): an update is one-way, Intel Macs must keep working.
 ARCHS=(--arch arm64 --arch x86_64)
-(cd swift && swift build -c release "${ARCHS[@]}" -q) || fail "swift build faalde"
+(cd swift && swift build -c release "${ARCHS[@]}" -q) || fail "swift build failed"
 BIN="$(cd swift && swift build -c release "${ARCHS[@]}" --show-bin-path)/ClaudeUsage"
-[ -x "$BIN" ] || fail "$BIN ontbreekt na build"
+[ -x "$BIN" ] || fail "$BIN missing after build"
 
 rm -rf "$APP"
 mkdir -p "$APP/Contents/MacOS" "$APP/Contents/Resources"
@@ -70,6 +70,6 @@ cat > "$APP/Contents/Info.plist" <<EOF
 </plist>
 EOF
 
-codesign --force --sign - "$APP" || fail "codesign faalde"
-codesign --verify "$APP" || fail "code-signature ongeldig"
+codesign --force --sign - "$APP" || fail "codesign failed"
+codesign --verify "$APP" || fail "code signature invalid"
 echo "✓ $APP ($(du -sh "$APP" | cut -f1), build $BUILD)"

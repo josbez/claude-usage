@@ -14,11 +14,11 @@ public enum CodexAppServerError: Error, Equatable, CustomStringConvertible {
 
     public var description: String {
         switch self {
-        case .launch(let why): return "starten mislukt: \(why)"
-        case .timeout: return "geen antwoord binnen de tijd"
-        case .exited(let status): return "proces stopte (status \(status))"
-        case .rpc(let code, let message): return "fout \(code): \(message)"
-        case .badResponse: return "onleesbaar antwoord"
+        case .launch(let why): return "launch failed: \(why)"
+        case .timeout: return "no response in time"
+        case .exited(let status): return "process exited (status \(status))"
+        case .rpc(let code, let message): return "error \(code): \(message)"
+        case .badResponse: return "unreadable response"
         }
     }
 }

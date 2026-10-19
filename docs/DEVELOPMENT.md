@@ -15,7 +15,7 @@ Requirements: macOS 11 or later and **Xcode** (not just the command line tools: 
 (cd swift && swift test)            # tests only
 ```
 
-`deploy.sh` ends with `✓ fetch geverifieerd` or fails with the last log lines. `CFBundleVersion` is the build time (`YYYYMMDD.HHMMSS`), so you can see which build is running. Script output is in Dutch.
+`deploy.sh` ends with `✓ fetch verified` or fails with the last log lines. `CFBundleVersion` is the build time (`YYYYMMDD.HHMMSS`), so you can see which build is running.
 
 The **dev build** runs next to the installed app for side-by-side testing: it has its own bundle id, a `β` before the menu bar title and notification titles, and its own files (`~/.claude/*.dev.json`, `~/.claude/usage-history-dev/`, `~/Library/Logs/ClaudeUsage-Dev.log`).
 

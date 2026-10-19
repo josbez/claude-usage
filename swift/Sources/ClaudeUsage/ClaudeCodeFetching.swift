@@ -49,7 +49,7 @@ extension AppDelegate {
         claudeCode.api = !claudeCodeDisabled && claudeCode.account == nil
             && claudeCodeUsesAPIKey(claudeJSON: config, keychainItemExists: claudeCodeAPIKeyItemExists())
         if claudeCode.api != beforeAPI {
-            log(claudeCode.api ? "claude-code: API-key, geen planlimieten" : "claude-code: geen API-key meer")
+            log(claudeCode.api ? "claude-code: API key, no plan limits" : "claude-code: no API key anymore")
             showCachedTitle()
             if popover.isShown { pushData() }
         }
@@ -60,7 +60,7 @@ extension AppDelegate {
         guard claudeCodeIsSource(desktopLimits: loadJSONObject(paths.limits)) else {
             if claudeCode.account != nil && !claudeCode.loggedSame {
                 claudeCode.loggedSame = true
-                log("claude-code: zelfde account als de desktop-app — geen aparte bron")
+                log("claude-code: same account as the desktop app — no separate source")
             }
             if before != claudeCode.account { showCachedTitle(); if popover.isShown { pushData() } }
             return
@@ -82,14 +82,14 @@ extension AppDelegate {
                 switch readClaudeCodeKeychain() {
                 case .value(let v):
                     token = claudeCodeToken(keychainValue: v)
-                    keychain = token == nil ? "keychain-item onleesbaar" : nil
-                    DispatchQueue.main.async { self?.log("keychain: Claude Code-token opgevraagd") }
-                case .missing: token = nil; keychain = "geen keychain-item"
-                case .refused: token = nil; keychain = "keychain geweigerd"
+                    keychain = token == nil ? "keychain item unreadable" : nil
+                    DispatchQueue.main.async { self?.log("keychain: Claude Code token requested") }
+                case .missing: token = nil; keychain = "no keychain item"
+                case .refused: token = nil; keychain = "keychain denied"
                 }
             }
             guard let token, token.isUsable(now: now) else {
-                let problem = keychain ?? "token verlopen — gebruik Claude Code om het te verversen"
+                let problem = keychain ?? "token expired — use Claude Code to refresh it"
                 DispatchQueue.main.async { self?.onClaudeCodeNoToken(problem, refused: keychain != nil) }
                 return
             }
@@ -118,16 +118,16 @@ extension AppDelegate {
         claudeCode.expiredConfigMtime = nil
         if let p = token.unknownPlan, !claudeCode.loggedUnknownPlan {
             claudeCode.loggedUnknownPlan = true
-            log("claude-code: onbekend abonnement: \(p)")
+            log("claude-code: unknown plan: \(p)")
         }
         switch outcome {
         case .limits(let limits):
             do {
                 try saveJSONObject(limits, to: paths.snapshotFile(claudeCodeSource))
             } catch {
-                return claudeCodeProblem("opslaan mislukt: \(error)")
+                return claudeCodeProblem("saving failed: \(error)")
             }
-            if claudeCode.lastProblem != nil { log("claude-code: weer bereikbaar") }
+            if claudeCode.lastProblem != nil { log("claude-code: reachable again") }
             claudeCode.lastProblem = nil
             guard let snapshot = claudeCodeSnapshot(limits: limits, now: Date()) else { return }
             notifySource(snapshot)
@@ -143,9 +143,9 @@ extension AppDelegate {
         case .unauthorized:
             // Claude Code refreshed (or logged out): the next check reads the Keychain again.
             claudeCode.token = nil
-            claudeCodeProblem("token geweigerd (401/403)")
+            claudeCodeProblem("token rejected (401/403)")
         case .rateLimited:
-            claudeCodeProblem("te veel verzoeken (429) — volgende poging bij de volgende ronde")
+            claudeCodeProblem("too many requests (429) — next attempt next round")
         case .failed(let why):
             claudeCodeProblem(why)
         }

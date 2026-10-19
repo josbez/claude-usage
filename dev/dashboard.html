@@ -221,6 +221,7 @@
 
   /* Grouped settings: small caps label above each card */
   .settings-group { display: flex; flex-direction: column; gap: var(--space-5); }
+  .settings-group[hidden] { display: none; }
   .group-label {
     font-size: var(--text-group); font-weight: var(--weight-semibold); letter-spacing: var(--tracking-caps);
     text-transform: uppercase; color: var(--muted); padding: 0 var(--space-14);
@@ -414,7 +415,11 @@
   span.resets-link { cursor: default; }
   /* Clickable source card and hidden-source row (taak 65): the whole card is one button */
   .source-card { cursor: pointer; }
-  .source-card:focus-visible, .source-row:focus-visible { outline: var(--size-focus-ring) solid var(--accent-text); outline-offset: var(--space-1); }
+  .source-open {
+    display: inline-flex; align-items: center; gap: var(--space-4); min-width: 0;
+    border: none; background: none; padding: 0; font: inherit; color: inherit; cursor: pointer;
+  }
+  .source-open:focus-visible, .source-row:focus-visible { outline: var(--size-focus-ring) solid var(--accent-text); outline-offset: var(--space-1); }
   .source-chevron, .row-chevron { color: var(--icon-color); flex-shrink: 0; align-self: center; margin-left: var(--space-2); }
   .source-row { cursor: pointer; border-radius: var(--radius-bar); }
   .resets-link:focus-visible { outline: var(--size-focus-ring) solid var(--accent-text); outline-offset: var(--space-1); border-radius: var(--radius-bar); }
@@ -515,7 +520,7 @@
 </head>
 <body>
 <template id="sourceCardTpl">
-  <div class="card source-card" role="button" tabindex="0">
+  <div class="card source-card">
     <div class="source-top">
       <div class="donut-wrap">
         <svg width="64" height="64" viewBox="0 0 64 64" aria-hidden="true">
@@ -527,13 +532,15 @@
       </div>
       <div class="source-info">
         <div class="source-head">
-          <span class="source-name"></span>
+          <button class="source-open">
+            <span class="source-name"></span>
+            <svg class="source-chevron" width="11" height="11" viewBox="0 0 15 15" fill="none" aria-hidden="true">
+              <path d="M5.5 3L10 7.5 5.5 12" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/>
+            </svg>
+          </button>
           <button class="resets-link" hidden onclick="event.stopPropagation(); onOpenResets()"></button>
           <span class="resets-link" hidden></span>
           <span class="source-plan"></span>
-          <svg class="source-chevron" width="11" height="11" viewBox="0 0 15 15" fill="none" aria-hidden="true">
-            <path d="M5.5 3L10 7.5 5.5 12" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/>
-          </svg>
         </div>
         <div class="source-session"><span class="source-pct"></span><span class="source-session-reset"></span></div>
         <div class="source-updated"></div>
@@ -919,10 +926,7 @@ function renderSources(list, zeroGeometry, problemText) {
   list.forEach((s, i) => {
     const card = box.children[i];
     card.onclick = () => showView('source', s.id);
-    card.onkeydown = e => {
-      if (e.target === card && (e.key === 'Enter' || e.key === ' ')) { e.preventDefault(); showView('source', s.id); }
-    };
-    card.setAttribute('aria-label', T('source_details', { name: s.name }));
+    card.querySelector('.source-open').setAttribute('aria-label', T('source_details', { name: s.name }));
     renderSourceCard(card, s, zeroGeometry, problemText);
   });
 }
@@ -1020,7 +1024,7 @@ function renderSourceView(d, problem, statusText) {
   if (info.claude) {
     const acc = d.account_label || { name: d.account || '', org: '', plan: '', email: d.account || '' };
     const full = [acc.name, acc.org, acc.plan].filter(Boolean).join(' · ');
-    title.textContent = full || info.name;
+    title.textContent = full;
     title.title = acc.email && acc.email !== acc.name ? full + ' — ' + acc.email : full;
     dot.className = 'status-dot' + (problem ? ' ' + problem : '');
     text.textContent = statusText + (d.last_updated ? ' · ' + d.last_updated : '');
@@ -1031,10 +1035,12 @@ function renderSourceView(d, problem, statusText) {
     dot.className = 'status-dot' + (info.live ? '' : ' neutral');
     text.textContent = info.status;
   }
+  title.hidden = !title.textContent;   // no account label: the status line starts the row
   document.getElementById('serviceLine').hidden = !info.claude;
   document.getElementById('svShowTitle').textContent = T('set_show_source', { name: info.name });
   const sw = document.getElementById('svSwitch');
   sw.setAttribute('aria-checked', info.hidden ? 'false' : 'true');
+  sw.closest('.settings-group').hidden = (d.source_rows || []).length < 2;   // one source can't be hidden: no switch
   sw.disabled = !info.hidden && info.visible <= 1;   // the last visible source stays
   sw.onclick = () => onToggleSource(sw, id);
 }

@@ -51,6 +51,8 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSPopoverDelegate {
     var loggedWeekWindows = Set<String>()
     /// Codex as a second source (CodexFetching.swift, taak 55c).
     var codex = CodexFetchState()
+    /// Claude Code with another account (ClaudeCodeFetching.swift, taak 43b).
+    var claudeCode = ClaudeCodeFetchState()
 
     // Notifications (Notifying.swift)
     var notifyCenter: UNUserNotificationCenter?
@@ -192,17 +194,28 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSPopoverDelegate {
         setStatusTitle(t.title)
     }
 
-    /// Sources other than Claude, as last stored (usage-limits/<id>.json),
+    /// Sources other than the desktop app, as last stored (usage-limits/<id>.json),
     /// only while the tool is installed and logged in on this Mac.
+    /// Order: Claude Code, then Codex.
     func otherSnapshots() -> [SourceSnapshot] {
-        guard codexAvailable else { return [] }
-        return [codexSource].compactMap { snapshot(fromJSON: loadJSONObject(paths.snapshotFile($0)), sourceId: $0) }
+        var out: [SourceSnapshot] = []
+        if claudeCodeIsSource(desktopLimits: loadJSONObject(paths.limits)),
+           let s = claudeCodeSnapshot(limits: loadJSONObject(paths.snapshotFile(claudeCodeSource)), now: Date()) {
+            out.append(s)
+        }
+        if codexAvailable, let s = snapshot(fromJSON: loadJSONObject(paths.snapshotFile(codexSource)), sourceId: codexSource) {
+            out.append(s)
+        }
+        return out
     }
 
     func tick() {
         checkAccountSwitch()
         maybeCheckUpdates()
         maybeCheckServiceStatus()
+        // Every source at the refresh setting, also without the desktop app
+        maybeFetchCodex()
+        maybeFetchClaudeCode()
         if !limitsAreFresh(loadJSONObject(paths.limits), now: Date(), maxAgeMinutes: refreshMinutes(settings)) {
             startFetch()
         } else if popover.isShown {
@@ -249,6 +262,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSPopoverDelegate {
             checkAccountSwitch()
             maybeCheckUpdates()
             maybeFetchCodex()
+            maybeFetchClaudeCode()
             pushData(animated: true)
             // Never show stale numbers on open (e.g. right after waking from sleep).
             if !limitsAreFresh(loadJSONObject(paths.limits), now: Date(), maxAgeMinutes: refreshMinutes(settings)) {
@@ -344,6 +358,8 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSPopoverDelegate {
             updateSetting("refresh_minutes", n)
             // Shorter than the data's age: fetch now instead of at the next tick.
             if !limitsAreFresh(loadJSONObject(paths.limits), now: Date(), maxAgeMinutes: n) { startFetch() }
+            maybeFetchCodex()
+            maybeFetchClaudeCode()
             pushData()
         case "startUpdate":
             startUpdate()
@@ -357,9 +373,18 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSPopoverDelegate {
             guard let msg = body as? [String: Any], let id = msg["id"] as? String, isValidSourceId(id),
                   let hide = msg["hidden"] as? Bool else { return }
             let available = availableSources(claude: claudeSnapshot(limits: loadJSONObject(paths.limits), now: Date()),
-                                             others: otherSnapshots(), now: Date()).map(\.source.id)
+                                             others: otherSnapshots(), now: Date(),
+                                             hidden: hiddenSources(settings)).map(\.source.id)
             let hidden = settingSourceHidden(hiddenSources(settings), id: id, hide: hide, available: available)
             updateSetting(hiddenSourcesKey, hidden.sorted())
+            // Switched back on: fresh numbers now (it wasn't fetched while hidden)
+            if !hide {
+                if !limitsAreFresh(loadJSONObject(paths.limits), now: Date(), maxAgeMinutes: refreshMinutes(settings)) {
+                    startFetch()
+                }
+                maybeFetchCodex()
+                maybeFetchClaudeCode()
+            }
             showCachedTitle()   // held until the popover closes (anchor)
             pushData()
         case "openResetsPage":

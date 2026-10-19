@@ -73,8 +73,15 @@ extension AppDelegate {
     func isSourceVisible(_ id: String) -> Bool {
         let now = Date()
         let claude = claudeSnapshot(limits: loadJSONObject(paths.limits), now: now)
-        let available = availableSources(claude: claude, others: otherSnapshots(), now: now)
-        return visibleSources(available, hidden: hiddenSources(settings)).contains { $0.source.id == id }
+        let hidden = hiddenSources(settings)
+        let available = availableSources(claude: claude, others: otherSnapshots(), now: now, hidden: hidden)
+        return visibleSources(available, hidden: hidden).contains { $0.source.id == id }
+    }
+
+    /// A source the user switched off isn't fetched at all (taak 43b). The last
+    /// visible source never counts as off, also when its id is in the hidden list.
+    func isSourceOff(_ id: String) -> Bool {
+        hiddenSources(settings).contains(id) && !isSourceVisible(id)
     }
 
     /// Notifications for a source other than Claude (taak 55g): same thresholds,

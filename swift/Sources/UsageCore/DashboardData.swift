@@ -59,19 +59,21 @@ extension UsageFormatter {
         }
         // Sources (taak 55f): one card each; the menu bar shows the tightest.
         let claude = claudeSnapshot(limits: limits, now: now)
-        let available = availableSources(claude: claude, others: others, now: now)
         let hidden = hiddenSources(settings)
+        let available = availableSources(claude: claude, others: others, now: now, hidden: hidden)
         var visible = visibleSources(available, hidden: hidden)
         if visible.isEmpty { visible = [claude] }   // nothing fetched yet: Claude's card with "—"
         let cards = visible.map { s in
             sourceCard(s, settings: settings, lang: lang,
-                       claudeLimits: s.source.id == claudeDesktopSource ? limits : nil)
+                       claudeLimits: usesClaudeFormat(s) ? s.extras : nil)
         }
         let rows: [JSONObject] = available.map { s in
             ["id": s.source.id, "name": sourceName(s, lang), "hidden": hidden.contains(s.source.id),
              "claude": s.source.id == claudeDesktopSource,
              "status": s.source.id == claudeDesktopSource ? "" : sourceStatus(s, lang: lang),
-             "live": (s.extras["origin"] as? String) == "app-server"]
+             // Claude's service status applies to every Claude tool
+             "service": usesClaudeFormat(s),
+             "live": ["app-server", "oauth"].contains(s.extras["origin"] as? String ?? "")]
         }
         let tight = tightestSource(visible, now: now) ?? claude
         if available.isEmpty {
@@ -88,6 +90,10 @@ extension UsageFormatter {
         // footer's age is the shown source's, and only while its card doesn't
         // say "Updated" itself.
         let noClaude = claudeAbsent(available)
+        // Claude switched off: not fetched (taak 43b), so its old numbers are no warning
+        if !noClaude && !visible.contains(where: { $0.source.id == claudeDesktopSource }) {
+            status = "ok"; reason = ""
+        }
         if noClaude {
             status = "ok"; reason = ""
             let card = cards.first { $0["id"] as? String == tight.source.id }

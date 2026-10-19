@@ -16,14 +16,15 @@ struct CodexFetchState {
     var lastHistory: Date?
 }
 
-/// Codex as a second source (taak 55c): ask `codex app-server` at most every
-/// 5 minutes (after a Claude fetch, or when the popover opens) and write
+/// Codex as a second source (taak 55c): ask `codex app-server` every refresh
+/// interval (the minute tick, a Claude fetch, or when the popover opens) and write
 /// usage-limits/codex.json. The call fails: fall back to the last event in
 /// Codex's own session files (taak 55i). Not installed or not logged in
 /// (codexInstalled): nothing at all, and no card (55f).
 extension AppDelegate {
     func maybeFetchCodex() {
-        guard !codex.checking, codexCheckDue(lastCheck: codex.lastCheck, now: Date()) else { return }
+        guard !codex.checking, !isSourceOff(codexSource),
+              codexCheckDue(lastCheck: codex.lastCheck, now: Date(), interval: sourceCheckInterval(settings)) else { return }
         codex.checking = true
         codex.lastCheck = Date()
         guard codexAvailable, let binary = findCodexBinary() else {

@@ -116,7 +116,7 @@ extension AppDelegate {
     }
 
     func startFetch() {
-        if state.fetching { return }
+        if state.fetching || isSourceOff(claudeDesktopSource) { return }
         attemptMode = devFetchPath == nil ? fetchMode : .webLight
         beginFetch()
     }
@@ -281,7 +281,8 @@ extension AppDelegate {
         showCachedTitle()
         pushData()
         teardownFetchWebViewSoon()
-        maybeFetchCodex()   // rides along with the Claude fetch, at most every 5 min
+        maybeFetchCodex()   // rides along with the Claude fetch, at most every refresh interval
+        maybeFetchClaudeCode()
     }
 
     func pushStatus(_ status: String) {

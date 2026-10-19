@@ -85,10 +85,15 @@ final class CodexTests: XCTestCase {
         XCTAssertNil(snapshot(fromJSON: ["source": "codex"], sourceId: "codex"))
     }
 
-    func testCheckDue() {
-        XCTAssertTrue(codexCheckDue(lastCheck: nil, now: now))
-        XCTAssertFalse(codexCheckDue(lastCheck: now.addingTimeInterval(-299), now: now))
-        XCTAssertTrue(codexCheckDue(lastCheck: now.addingTimeInterval(-300), now: now))
+    func testCheckDueFollowsTheRefreshSetting() {
+        // Every source at the refresh setting (taak 43b), a few seconds early for timer drift
+        let five = sourceCheckInterval(normalizeSettings([:]))
+        XCTAssertEqual(five, 295)
+        XCTAssertEqual(sourceCheckInterval(normalizeSettings(["refresh_minutes": 1])), 55)
+        XCTAssertEqual(sourceCheckInterval(normalizeSettings(["refresh_minutes": 15])), 895)
+        XCTAssertTrue(codexCheckDue(lastCheck: nil, now: now, interval: five))
+        XCTAssertFalse(codexCheckDue(lastCheck: now.addingTimeInterval(-294), now: now, interval: five))
+        XCTAssertTrue(codexCheckDue(lastCheck: now.addingTimeInterval(-295), now: now, interval: five))
     }
 
     func testBinaryCandidates() {

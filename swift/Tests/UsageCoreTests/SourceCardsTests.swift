@@ -84,14 +84,14 @@ final class SourceCardsTests: XCTestCase {
         XCTAssertEqual(tightestSource([claude, reset], now: now)?.source.id, claudeDesktopSource)
     }
 
-    func testMenubarTitleNamesOtherSources() {
+    func testMenubarTitleNeverNamesTheSource() {
+        // All sources equal (taak 43b): no name, also with several sources
         XCTAssertEqual(f.sourceTitle(claude, style: "full", lang: "nl", theme: nil), "😅 42% / 61% · 2u40m")
         XCTAssertEqual(f.sourceTitle(codex(session: 81, weekly: 40), style: "full", lang: "nl", theme: nil),
-                       "😰 ChatGPT 81% / 40% · 6u16m")
-        XCTAssertEqual(f.sourceTitle(codex(), style: "session", lang: "en", theme: nil), "🚀 ChatGPT 18%")
+                       "😰 81% / 40% · 6u16m")
+        XCTAssertEqual(f.sourceTitle(codex(), style: "session", lang: "en", theme: nil), "🚀 18%")
         XCTAssertEqual(f.sourceTitle(codex(), style: "emoji", lang: "en", theme: nil), "🚀")
-        // Ring mode drops the face; the name stays
-        XCTAssertEqual(titleWithoutFace(f.sourceTitle(codex(), style: "session", lang: "nl", theme: nil)), "ChatGPT 18%")
+        XCTAssertEqual(titleWithoutFace(f.sourceTitle(codex(), style: "session", lang: "nl", theme: nil)), "18%")
     }
 
     func testClaudeTitleMatchesTheOldOne() {
@@ -179,7 +179,7 @@ final class SourceCardsTests: XCTestCase {
         let d = f.dashboardData(limits: claudeLimits(session: 10, weekly: 20), settings: s, state: AppState(),
                                 lang: "nl", others: [codex(session: 81, weekly: 40)])
         XCTAssertEqual((d["sources"] as? [JSONObject])?.map { $0["id"] as? String }, ["claude-desktop", "codex"])
-        XCTAssertEqual((d["menubar_previews"] as? JSONObject)?["full"] as? String, "ChatGPT 81% / 40% · 6u16m")
+        XCTAssertEqual((d["menubar_previews"] as? JSONObject)?["full"] as? String, "81% / 40% · 6u16m")
         XCTAssertEqual(jsonNumber((d["menubar_ring"] as? JSONObject)?["fraction"]), 0.81)
         let rows = d["source_rows"] as! [JSONObject]
         XCTAssertEqual(rows.map { $0["hidden"] as? Bool }, [false, false])
@@ -245,11 +245,11 @@ final class SourceCardsTests: XCTestCase {
     func testMenubarTitle() {
         let both = f.menubarTitle(limits: claudeLimits(session: 10, weekly: 20), others: [codex(session: 81, weekly: 40)],
                                   settings: settings, lang: "nl")
-        XCTAssertEqual(both.title, "😰 ChatGPT 81% / 40% · 6u16m")
+        XCTAssertEqual(both.title, "😰 81% / 40% · 6u16m")
         XCTAssertEqual(both.sessionPct, 81)
         let alone = f.menubarTitle(limits: claudeLimits(), others: [], settings: settings, lang: "nl")
         XCTAssertEqual(alone.title, f.titleFromLimits(claudeLimits(), style: "full", lang: "nl"))
         let onlyCodex = f.menubarTitle(limits: [:], others: [codex()], settings: settings, lang: "nl")
-        XCTAssertEqual(onlyCodex.title, "🚀 ChatGPT 18% / 9% · 6u16m")
+        XCTAssertEqual(onlyCodex.title, "🚀 18% / 9% · 6u16m")
     }
 }

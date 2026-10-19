@@ -144,6 +144,13 @@ public func refreshMinutes(_ settings: JSONObject) -> Int {
     jsonInt(settings["refresh_minutes"]).flatMap { refreshChoices.contains($0) ? $0 : nil } ?? 5
 }
 
+/// How often every source other than the desktop app is asked: the same
+/// refresh setting (taak 43b: all sources equal). A few seconds less, so the
+/// minute timer's drift doesn't skip a round. Codex: each call ~2.5 s, ~77 MB.
+public func sourceCheckInterval(_ settings: JSONObject) -> TimeInterval {
+    TimeInterval(refreshMinutes(settings) * 60 - 5)
+}
+
 /// Data counts as stale ("verouderd") after missing about three fetches,
 /// never sooner than the 15 minutes it always was.
 public func staleAfterMinutes(refresh: Int) -> Int { max(15, 3 * refresh) }

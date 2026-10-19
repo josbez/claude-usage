@@ -19,13 +19,16 @@ public func currentUtilization(_ w: UsageWindow, now: Date) -> Double {
 
 /// Sources with numbers to show: Claude when its limits file has a session or
 /// week window; another source when its snapshot is younger than a week
-/// (older means the tool isn't in use).
-public func availableSources(claude: SourceSnapshot?, others: [SourceSnapshot], now: Date) -> [SourceSnapshot] {
+/// (older means the tool isn't in use). A hidden source isn't fetched (taak 43b),
+/// so its age says nothing: it stays, so it can be switched back on.
+public func availableSources(claude: SourceSnapshot?, others: [SourceSnapshot], now: Date,
+                             hidden: Set<String> = []) -> [SourceSnapshot] {
     func hasWindows(_ s: SourceSnapshot) -> Bool { s.window(.session) != nil || s.window(.weekly) != nil }
     var out: [SourceSnapshot] = []
     if let c = claude, hasWindows(c) { out.append(c) }
     for s in others where hasWindows(s) {
-        guard let f = s.fetchedAt, now.timeIntervalSince(f) < codexSessionMaxAge else { continue }
+        guard hidden.contains(s.source.id)
+              || s.fetchedAt.map({ now.timeIntervalSince($0) < codexSessionMaxAge }) == true else { continue }
         out.append(s)
     }
     return out
@@ -81,22 +84,22 @@ extension UsageFormatter {
     func planLabel(_ s: SourceSnapshot, _ lang: String) -> String? {
         guard let plan = s.plan, !plan.isEmpty else { return nil }
         if s.source.tool == "claude" { return plan }
-        let key = "plan_\(plan)"
-        let text = strings.t(key, lang)
-        return text == key ? nil : text
+        // Per tool first ("plan_claude-code_pro"): one tool's plan id says nothing about another's
+        for key in ["plan_\(s.source.tool)_\(plan)", "plan_\(plan)"] {
+            let text = strings.t(key, lang)
+            if text != key { return text }
+        }
+        return nil
     }
 
-    /// The menu bar title for one source. Another source than Claude gets its
-    /// name after the face, so it's clear whose numbers they are (55e option 2).
+    /// The menu bar title for one source: the same for every source, no name
+    /// (taak 43b: the ring and numbers are enough; the popover says whose they are).
     public func sourceTitle(_ s: SourceSnapshot, style: String, lang: String, theme: FaceTheme?) -> String {
         let session = s.window(.session), weekly = s.window(.weekly)
-        let title = statusTitle(session: pyInt(session.map { currentUtilization($0, now: now) } ?? 0),
-                                weekly: pyInt(weekly.map { currentUtilization($0, now: now) } ?? 0),
-                                compact: resetCompact(session?.resetsAt.map(isoString) ?? "", lang),
-                                style: style, theme: theme)
-        guard s.source.tool != "claude", style != "emoji" else { return title }
-        let parts = title.split(separator: " ", maxSplits: 1)
-        return parts.count > 1 ? "\(parts[0]) \(sourceName(s, lang)) \(parts[1])" : title
+        return statusTitle(session: pyInt(session.map { currentUtilization($0, now: now) } ?? 0),
+                           weekly: pyInt(weekly.map { currentUtilization($0, now: now) } ?? 0),
+                           compact: resetCompact(session?.resetsAt.map(isoString) ?? "", lang),
+                           style: style, theme: theme)
     }
 
     /// Session percentage the menu bar ring shows for a source.
@@ -198,7 +201,8 @@ extension UsageFormatter {
                              lang: String) -> (title: String, sessionPct: Int) {
         let style = settings["menubar_style"] as? String ?? "full"
         let theme = faceTheme(settings)
-        let available = availableSources(claude: claudeSnapshot(limits: limits, now: now), others: others, now: now)
+        let available = availableSources(claude: claudeSnapshot(limits: limits, now: now), others: others, now: now,
+                                         hidden: hiddenSources(settings))
         if available.isEmpty { return (noDataTitle, 0) }
         if usesSourceTitle(available),
            let s = tightestSource(visibleSources(available, hidden: hiddenSources(settings)), now: now) {

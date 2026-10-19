@@ -909,10 +909,13 @@ function render(d, zeroGeometry) {
   // Badge on the gear: own connection problem, Claude outage, or update available
   // Badges (taak 65): Claude's own problem or a Claude outage on the Claude
   // model card's chevron (the detail is on its screen); the gear only for an update
+  // Claude Code shares Claude's service, so a Claude outage badges both
   const claudeBadge = problem || d.service_badge || '';
+  const serviceIds = (d.source_rows || []).filter(r => r.service).map(r => r.id);
   document.querySelectorAll('#sourceCards .source-card').forEach((card, i) => {
     const s = (d.sources || [])[i];
-    const cls = s && s.id === 'claude-desktop' ? claudeBadge : '';
+    const cls = !s ? '' : s.id === 'claude-desktop' ? claudeBadge
+      : serviceIds.includes(s.id) ? (d.service_badge || '') : '';
     card.querySelector('.chevron-wrap .badge').className = 'badge' + (cls ? ' ' + cls : '');
   });
   const gearBadge = d.update && d.update.state !== 'working' ? 'update' : '';
@@ -1023,9 +1026,11 @@ function sourceInfo(d, id) {
   const rows = d.source_rows || [];
   const row = rows.find(r => r.id === id);
   const card = (d.sources || []).find(c => c.id === id);
-  if (row) return { id, name: row.name, claude: !!row.claude, hidden: row.hidden, status: row.status, live: row.live,
+  if (row) return { id, name: row.name, claude: !!row.claude, service: !!row.service, hidden: row.hidden,
+                    status: row.status, live: row.live,
                     plan: card ? card.plan : '', visible: rows.filter(r => !r.hidden).length };
-  if (card) return { id, name: card.name, claude: id === 'claude-desktop', hidden: false, status: '', live: true,
+  if (card) return { id, name: card.name, claude: id === 'claude-desktop', service: id.startsWith('claude-'),
+                     hidden: false, status: '', live: true,
                      plan: card.plan, visible: 1 };
   return null;
 }
@@ -1054,7 +1059,7 @@ function renderSourceView(d, problem, statusText) {
     text.textContent = info.status;
   }
   title.hidden = !title.textContent;   // no account label: the status line starts the row
-  document.getElementById('serviceLine').hidden = !info.claude;
+  document.getElementById('serviceLine').hidden = !info.service;
   document.getElementById('svShowTitle').textContent = T('set_show_source');
   const sw = document.getElementById('svSwitch');
   sw.setAttribute('aria-checked', info.hidden ? 'false' : 'true');

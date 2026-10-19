@@ -7,8 +7,6 @@ import Foundation
 
 public let codexSource = "codex"
 
-/// How often the app asks `codex app-server` (each call: ~2.5 s, ~77 MB while it runs).
-public let codexCheckInterval: TimeInterval = 5 * 60
 
 /// Values seen in real responses (7-10-2026). Anything else is logged, never guessed.
 let codexKnownPlans: Set<String> = ["plus"]
@@ -45,8 +43,8 @@ public func codexInstalled(home: URL = FileManager.default.homeDirectoryForCurre
         && fm.fileExists(atPath: home.appendingPathComponent(".codex/auth.json").path)
 }
 
-/// Whether to ask the app-server again.
-public func codexCheckDue(lastCheck: Date?, now: Date, interval: TimeInterval = codexCheckInterval) -> Bool {
+/// Whether to ask a source again (Codex, Claude Code), at `sourceCheckInterval`.
+public func codexCheckDue(lastCheck: Date?, now: Date, interval: TimeInterval) -> Bool {
     guard let lastCheck else { return true }
     return now.timeIntervalSince(lastCheck) >= interval
 }

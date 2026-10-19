@@ -86,6 +86,22 @@ let claudeOtherWindowKeys = ["seven_day_opus", "seven_day_sonnet", "seven_day_co
 
 /// The Claude limits file (usage-limits.json) as a snapshot.
 public func claudeSnapshot(limits: JSONObject, now: Date) -> SourceSnapshot {
+    let label = accountLabel(limits)
+    let plan = label["plan"] ?? ""
+    return claudeFormatSnapshot(limits: limits, now: now,
+                                source: UsageSource(id: claudeDesktopSource, tool: "claude",
+                                                    accountLabel: label["name"] ?? ""),
+                                plan: plan.isEmpty ? nil : plan)
+}
+
+/// Tools whose numbers come in Claude's usage format (desktop app, Claude Code):
+/// the card gets the same extras (week progress, resets on claude.ai) for both.
+public func usesClaudeFormat(_ s: SourceSnapshot) -> Bool {
+    s.source.tool == "claude" || s.source.tool == "claude-code"
+}
+
+/// Claude's usage body (claude.ai or the OAuth endpoint) as a snapshot.
+func claudeFormatSnapshot(limits: JSONObject, now: Date, source: UsageSource, plan: String?) -> SourceSnapshot {
     func window(_ key: String, _ kind: WindowKind) -> UsageWindow? {
         guard let b = limits[key] as? JSONObject, let u = jsonNumber(b["utilization"]) else { return nil }
         return UsageWindow(id: key, kind: kind, utilization: u, resetsAt: parseDate(string(b, "resets_at")))
@@ -93,16 +109,14 @@ public func claudeSnapshot(limits: JSONObject, now: Date) -> SourceSnapshot {
     var windows = [window("five_hour", .session), window("seven_day", .weekly)].compactMap { $0 }
     windows += claudeOtherWindowKeys.compactMap { window($0, .other) }
 
-    let label = accountLabel(limits)
-    let plan = label["plan"] ?? ""
     let credits = limitResets(limits, now: now).map {
         ResetCredits(available: $0.count, nextExpiry: $0.endsAt, labels: $0.labels)
     }
     return SourceSnapshot(
-        source: UsageSource(id: claudeDesktopSource, tool: "claude", accountLabel: label["name"] ?? ""),
+        source: source,
         windows: windows,
         fetchedAt: parseDate(string(limits, "fetched_at")),
-        plan: plan.isEmpty ? nil : plan,
+        plan: plan,
         resetCredits: credits,
         extras: limits)
 }

@@ -13,6 +13,9 @@ struct ClaudeCodeFetchState {
     var token: ClaudeCodeToken?
     /// No Keychain read before this (after a refusal or an expired token).
     var keychainNotBefore: Date?
+    /// After an expired token: ~/.claude.json's mtime then. Claude Code writes it
+    /// while in use, so a newer mtime means it may have refreshed: read again at once.
+    var expiredConfigMtime: Date?
     var lastProblem: String?
     var lastSummary: String?
     var loggedSame = false
@@ -66,7 +69,9 @@ extension AppDelegate {
         if isSourceOff(claudeCodeSource) { return }   // switched off: not fetched
 
         let cached = claudeCode.token
-        let mayRead = claudeCode.keychainNotBefore.map { now >= $0 } ?? true
+        let configMtime = (try? FileManager.default.attributesOfItem(atPath: claudeCodeConfigFile().path))?[.modificationDate] as? Date
+        let usedSince = claudeCode.expiredConfigMtime.map { old in configMtime.map { $0 > old } ?? false } ?? false
+        let mayRead = usedSince || (claudeCode.keychainNotBefore.map { now >= $0 } ?? true)
         if cached?.isUsable(now: now) != true && !mayRead { return }   // waiting: no prompt storm
         claudeCode.checking = true
         let version = state.version
@@ -101,12 +106,16 @@ extension AppDelegate {
         claudeCode.checking = false
         claudeCode.token = nil
         claudeCode.keychainNotBefore = Date() + (refused ? claudeCodeRefusedRetry : claudeCodeExpiredRetry)
+        // Expired: Claude Code's next activity may bring a fresh token. Refused: wait (no prompt storm).
+        claudeCode.expiredConfigMtime = refused ? nil
+            : (try? FileManager.default.attributesOfItem(atPath: claudeCodeConfigFile().path))?[.modificationDate] as? Date
         claudeCodeProblem(problem)
     }
 
     func onClaudeCodeResult(_ outcome: ClaudeCodeFetchOutcome, token: ClaudeCodeToken) {
         claudeCode.checking = false
         claudeCode.token = token
+        claudeCode.expiredConfigMtime = nil
         if let p = token.unknownPlan, !claudeCode.loggedUnknownPlan {
             claudeCode.loggedUnknownPlan = true
             log("claude-code: onbekend abonnement: \(p)")

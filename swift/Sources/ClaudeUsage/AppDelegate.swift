@@ -104,7 +104,10 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSPopoverDelegate {
         setupStatusItem()
         setupPopover()
         setupFetchWebView()
+        // Every source at once, then each at the refresh setting
         startFetch()
+        maybeFetchCodex()
+        maybeFetchClaudeCode()
         maybeCheckUpdates()
         maybeCheckServiceStatus()
         // Every minute, also while the popover is open (common run loop modes).
@@ -199,7 +202,9 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSPopoverDelegate {
     /// Order: Claude Code, then Codex.
     func otherSnapshots() -> [SourceSnapshot] {
         var out: [SourceSnapshot] = []
-        if claudeCodeIsSource(desktopLimits: loadJSONObject(paths.limits)),
+        if claudeCode.api && !claudeCodeDisabled {
+            out.append(claudeCodeAPISnapshot(now: Date()))
+        } else if claudeCodeIsSource(desktopLimits: loadJSONObject(paths.limits)),
            let s = claudeCodeSnapshot(limits: loadJSONObject(paths.snapshotFile(claudeCodeSource)), now: Date()) {
             out.append(s)
         }

@@ -61,12 +61,13 @@ extension UsageFormatter {
         let claude = claudeSnapshot(limits: limits, now: now)
         let hidden = hiddenSources(settings)
         let available = availableSources(claude: claude, others: others, now: now, hidden: hidden)
-        var visible = visibleSources(available, hidden: hidden)
-        if visible.isEmpty { visible = [claude] }   // nothing fetched yet: Claude's card with "—"
-        let cards = visible.map { s in
+        let visible = visibleSources(available, hidden: hidden)
+        var cards = visible.map { s in
             sourceCard(s, settings: settings, lang: lang,
                        claudeLimits: usesClaudeFormat(s) ? s.extras : nil)
         }
+        // No source at all: one empty card that names no tool (the app is model agnostic)
+        if cards.isEmpty { cards = [emptySourceCard(state: state, lang: lang)] }
         let rows: [JSONObject] = available.map { s in
             ["id": s.source.id, "name": sourceName(s, lang), "hidden": hidden.contains(s.source.id),
              "claude": s.source.id == claudeDesktopSource,
@@ -75,8 +76,9 @@ extension UsageFormatter {
              "service": usesClaudeFormat(s),
              "live": ["app-server", "oauth"].contains(s.extras["origin"] as? String ?? "")]
         }
-        let tight = tightestSource(visible, now: now) ?? claude
-        if available.isEmpty {
+        let limited = visible.filter(hasLimits)
+        let tight = tightestSource(limited, now: now) ?? claude
+        if limited.isEmpty {
             // No numbers from any source: "—", never a made-up 0%
             for style in menubarStyles { previews[style] = noDataTitle }
         } else if usesSourceTitle(available) {
@@ -89,6 +91,8 @@ extension UsageFormatter {
         // Only ChatGPT: Claude never had numbers, so it has no status here. The
         // footer's age is the shown source's, and only while its card doesn't
         // say "Updated" itself.
+        // Nothing found: the empty card says so; "log in to Claude" would name one tool
+        if available.isEmpty && !state.loggedIn { status = "ok"; reason = "" }
         let noClaude = claudeAbsent(available)
         // Claude switched off: not fetched (taak 43b), so its old numbers are no warning
         if !noClaude && !visible.contains(where: { $0.source.id == claudeDesktopSource }) {
@@ -102,7 +106,8 @@ extension UsageFormatter {
         }
         // A Claude outage is no reason for a badge when Claude isn't there
         let serviceBadge = noClaude ? "" : statusBadgeClass(state.service)
-        let mr = menubarRing(sessionPct: usesSourceTitle(available) ? sourceSessionPct(tight) : sessionPct)
+        let mr = menubarRing(sessionPct: limited.isEmpty ? 0
+                             : usesSourceTitle(available) ? sourceSessionPct(tight) : sessionPct)
         var ringData: JSONObject = ["fraction": mr.fraction]
         if let (r, g, b) = mr.rgb { ringData["color"] = "rgb(\(r), \(g), \(b))" }
         return [
@@ -147,4 +152,16 @@ extension UsageFormatter {
             "source_rows": rows,
         ]
     }
+
+    /// The card when no tool on this Mac has numbers: no name of a tool, no face.
+    func emptySourceCard(state: AppState, lang: String) -> JSONObject {
+        ["id": emptySourceId, "name": strings.t("source_none", lang),
+         "note": strings.t(state.fetching ? "source_searching" : "source_none_note", lang),
+         "session_pct": NSNull(), "session_face": "", "session_reset": NSNull(),
+         "weekly_pct": NSNull(), "weekly_reset": NSNull(), "week_elapsed": NSNull(),
+         "plan": NSNull(), "resets": NSNull(), "updated": NSNull()]
+    }
 }
+
+/// Id of the empty card (not a source: never in a file name or the hidden list).
+public let emptySourceId = "none"

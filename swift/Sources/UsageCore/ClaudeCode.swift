@@ -30,6 +30,36 @@ public func claudeCodeAccount(claudeJSON: JSONObject) -> ClaudeCodeAccount? {
     return ClaudeCodeAccount(organizationId: org)
 }
 
+/// Claude Code without a plan account but with an API key (Console login: the
+/// Keychain item "Claude Code"; or a key from the environment it was told to
+/// accept). Pay per use: there are no plan limits to show, only that.
+/// Only the existence of the item and the config entries is checked, never a key.
+public func claudeCodeUsesAPIKey(claudeJSON: JSONObject, keychainItemExists: Bool) -> Bool {
+    guard claudeJSON["oauthAccount"] == nil else { return false }
+    let approved = ((claudeJSON["customApiKeyResponses"] as? JSONObject)?["approved"] as? [Any]) ?? []
+    return keychainItemExists || !approved.isEmpty || claudeJSON["primaryApiKey"] != nil
+}
+
+/// Whether the Keychain has Claude Code's API-key item. Attributes only (no -w):
+/// no prompt, nothing secret read.
+public func claudeCodeAPIKeyItemExists() -> Bool {
+    let p = Process()
+    p.executableURL = URL(fileURLWithPath: "/usr/bin/security")
+    p.arguments = ["find-generic-password", "-s", "Claude Code"]
+    p.standardOutput = FileHandle.nullDevice
+    p.standardError = FileHandle.nullDevice
+    guard (try? p.run()) != nil else { return false }
+    p.waitUntilExit()
+    return p.terminationStatus == 0
+}
+
+/// Claude Code on an API key as a source: a card without numbers that says so.
+public func claudeCodeAPISnapshot(now: Date) -> SourceSnapshot {
+    SourceSnapshot(source: UsageSource(id: claudeCodeSource, tool: "claude-code", accountLabel: ""),
+                   windows: [], fetchedAt: now, plan: "api", resetCredits: nil,
+                   extras: ["origin": "config", "billing": "api"])
+}
+
 public func claudeCodeConfigFile(home: URL = FileManager.default.homeDirectoryForCurrentUser) -> URL {
     home.appendingPathComponent(".claude.json")
 }

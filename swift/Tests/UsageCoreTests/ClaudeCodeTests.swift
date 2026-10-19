@@ -166,4 +166,37 @@ final class ClaudeCodeTests: XCTestCase {
         let shown = f.dashboardData(limits: desktop(), settings: settings, state: state, lang: "en", others: [code])
         XCTAssertEqual(shown["status"] as? String, "stale")
     }
+
+    // MARK: - API key: a card without limits
+
+    func testAPIKeyDetection() {
+        XCTAssertTrue(claudeCodeUsesAPIKey(claudeJSON: [:], keychainItemExists: true))
+        XCTAssertTrue(claudeCodeUsesAPIKey(claudeJSON: ["customApiKeyResponses": ["approved": ["abc"], "rejected": []]],
+                                           keychainItemExists: false))
+        XCTAssertFalse(claudeCodeUsesAPIKey(claudeJSON: ["customApiKeyResponses": ["approved": [], "rejected": []]],
+                                            keychainItemExists: false))
+        // A plan account wins: limits, not "API"
+        XCTAssertFalse(claudeCodeUsesAPIKey(claudeJSON: ["oauthAccount": ["organizationUuid": "org-code"]],
+                                            keychainItemExists: true))
+    }
+
+    func testAPICardSaysSoAndStaysOutOfTheMenuBar() {
+        let api = claudeCodeAPISnapshot(now: now)
+        let d = f.dashboardData(limits: desktop(session: 42), settings: settings, state: AppState(), lang: "en",
+                                others: [api])
+        let cards = d["sources"] as! [JSONObject]
+        XCTAssertEqual(cards.map { $0["name"] as? String }, ["Claude", "Claude Code"])
+        XCTAssertEqual(cards[1]["plan"] as? String, "API")
+        XCTAssertEqual(cards[1]["note"] as? String, "Pay per use, no plan limits")
+        XCTAssertTrue(cards[1]["session_pct"] is NSNull)
+        XCTAssertTrue(cards[1]["updated"] is NSNull)
+        XCTAssertEqual((d["source_rows"] as? [JSONObject])?[1]["status"] as? String, "Signed in with an API key")
+        XCTAssertEqual((d["menubar_previews"] as? JSONObject)?["session"] as? String, "42%")
+
+        // Only the API card: the menu bar has no numbers ("—"), never 0%
+        let only = f.dashboardData(limits: [:], settings: settings, state: AppState(), lang: "en", others: [api])
+        XCTAssertEqual((only["sources"] as? [JSONObject])?.map { $0["id"] as? String }, [claudeCodeSource])
+        XCTAssertEqual((only["menubar_previews"] as? JSONObject)?["full"] as? String, "—")
+        XCTAssertEqual(f.menubarTitle(limits: [:], others: [api], settings: settings, lang: "en").title, "—")
+    }
 }

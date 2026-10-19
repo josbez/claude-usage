@@ -946,7 +946,11 @@ function renderSources(list, zeroGeometry, problemText) {
   }
   list.forEach((s, i) => {
     const card = box.children[i];
-    card.onclick = () => showView('source', s.id);
+    // The empty card ('none') is no source: nothing to open
+    const empty = s.id === 'none';
+    card.onclick = empty ? null : () => showView('source', s.id);
+    card.querySelector('.source-open').disabled = empty;
+    card.querySelector('.chevron-wrap').hidden = empty;
     card.querySelector('.source-open').setAttribute('aria-label', T('source_details', { name: s.name }));
     renderSourceCard(card, s, zeroGeometry, problemText);
   });
@@ -956,8 +960,10 @@ const has = v => v !== null && v !== undefined;
 
 function renderSourceCard(card, s, zero, problemText) {
   const pct = has(s.session_pct) ? Math.max(0, Math.min(100, s.session_pct)) : 0;
-  // No numbers at all and a problem: neutral card that says why, no face
-  const noData = !!problemText && !has(s.session_pct) && !has(s.weekly_pct);
+  // No numbers at all and a problem, or a source without limits (note): neutral
+  // card that says why, no face
+  const noData = !!s.note || (!!problemText && !has(s.session_pct) && !has(s.weekly_pct));
+  const why = s.note || problemText;
   card.classList.toggle('no-data', noData);
   const color = colorForPct(pct);
   const readable = noData ? 'var(--muted)' : readableStressColor(color);   // ≥4.6:1 on the tinted card
@@ -985,12 +991,12 @@ function renderSourceCard(card, s, zero, problemText) {
   card.querySelector('.source-plan').textContent = r ? '' : (s.plan || '');
 
   const pctEl = card.querySelector('.source-pct');
-  pctEl.textContent = has(s.session_pct) ? s.session_pct + '%' : '—%';
+  pctEl.textContent = s.note ? '' : has(s.session_pct) ? s.session_pct + '%' : '—%';
   pctEl.style.color = readable;
   const resetEl = card.querySelector('.source-session-reset');
-  resetEl.textContent = noData ? problemText
+  resetEl.textContent = noData ? why
     : has(s.session_reset) ? T('card_session', { when: s.session_reset }) : T('card_session_plain');
-  resetEl.title = noData ? problemText : '';
+  resetEl.title = noData ? why : '';
   card.querySelector('.source-updated').textContent = s.updated || '';
 
   // Week: usage in front of the elapsed share of the window

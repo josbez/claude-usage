@@ -192,11 +192,18 @@ final class SourceCardsTests: XCTestCase {
         XCTAssertEqual((hidden["menubar_previews"] as? JSONObject)?["full"] as? String, "10% / 20% · 2u40m")
     }
 
-    func testNothingFetchedStillShowsClaudesCard() {
+    func testNothingFetchedShowsAnEmptyCardThatNamesNoTool() {
         let d = f.dashboardData(limits: [:], settings: settings, state: AppState(), lang: "nl")
         let cards = d["sources"] as! [JSONObject]
         XCTAssertEqual(cards.count, 1)
+        XCTAssertEqual(cards[0]["id"] as? String, emptySourceId)
+        XCTAssertEqual(cards[0]["name"] as? String, "Geen AI-tool gevonden")
         XCTAssertTrue(cards[0]["session_pct"] is NSNull)
+        XCTAssertTrue((d["source_rows"] as? [JSONObject])?.isEmpty ?? false)
+        var fetching = AppState()
+        fetching.fetching = true
+        let first = f.dashboardData(limits: [:], settings: settings, state: fetching, lang: "en")
+        XCTAssertEqual((first["sources"] as? [JSONObject])?.first?["note"] as? String, "Looking for AI tools…")
     }
 
     /// No numbers from any source: "—", not "🚀 0% / 0% · —" (a real 0% stays 0%).
@@ -210,7 +217,8 @@ final class SourceCardsTests: XCTestCase {
         let d = f.dashboardData(limits: [:], settings: settings, state: state, lang: "nl")
         XCTAssertEqual((d["menubar_previews"] as? JSONObject)?["full"] as? String, "—")
         XCTAssertEqual((d["menubar_previews"] as? JSONObject)?["emoji"] as? String, "—")
-        XCTAssertEqual(d["status"] as? String, "not_logged_in")
+        // Nothing found: the empty card says so, no "log in to Claude" in the footer
+        XCTAssertEqual(d["status"] as? String, "ok")
         XCTAssertEqual(d["claude_absent"] as? Bool, false)
         let zero = f.menubarTitle(limits: claudeLimits(session: 0, weekly: 0), others: [], settings: settings, lang: "nl")
         XCTAssertTrue(zero.title.contains("0% / 0%"))

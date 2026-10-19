@@ -23,16 +23,22 @@ public func currentUtilization(_ w: UsageWindow, now: Date) -> Double {
 /// so its age says nothing: it stays, so it can be switched back on.
 public func availableSources(claude: SourceSnapshot?, others: [SourceSnapshot], now: Date,
                              hidden: Set<String> = []) -> [SourceSnapshot] {
-    func hasWindows(_ s: SourceSnapshot) -> Bool { s.window(.session) != nil || s.window(.weekly) != nil }
     var out: [SourceSnapshot] = []
-    if let c = claude, hasWindows(c) { out.append(c) }
-    for s in others where hasWindows(s) {
+    if let c = claude, hasLimits(c) { out.append(c) }
+    for s in others where hasLimits(s) || isPayPerUse(s) {
         guard hidden.contains(s.source.id)
               || s.fetchedAt.map({ now.timeIntervalSince($0) < codexSessionMaxAge }) == true else { continue }
         out.append(s)
     }
     return out
 }
+
+/// A session or week window: numbers for the card and the menu bar.
+public func hasLimits(_ s: SourceSnapshot) -> Bool { s.window(.session) != nil || s.window(.weekly) != nil }
+
+/// Paid per use (Claude Code on an API key): a card that says so, no numbers,
+/// never in the menu bar.
+public func isPayPerUse(_ s: SourceSnapshot) -> Bool { s.extras["billing"] as? String == "api" }
 
 /// The hidden set after the user flips one switch (taak 61). Hiding the last
 /// visible available source is refused: the set comes back unchanged.
@@ -156,8 +162,10 @@ extension UsageFormatter {
             card["resets"] = NSNull()
         }
 
+        if isPayPerUse(s) { card["note"] = strings.t("card_no_limits", lang) }
+
         // Old numbers say so on the card (a session file can be hours old).
-        if let f = s.fetchedAt, now.timeIntervalSince(f) / 60 > Double(staleAfterMinutes(refresh: refreshMinutes(settings))) {
+        if !isPayPerUse(s), let f = s.fetchedAt, now.timeIntervalSince(f) / 60 > Double(staleAfterMinutes(refresh: refreshMinutes(settings))) {
             card["updated"] = strings.t("card_updated", lang, ["when": ageText(f, lang)])
         } else {
             card["updated"] = NSNull()
@@ -188,6 +196,7 @@ extension UsageFormatter {
 
     /// A row in settings for a non-Claude source: where the numbers come from and how old they are.
     public func sourceStatus(_ s: SourceSnapshot, lang: String) -> String {
+        if isPayPerUse(s) { return strings.t("source_api_key", lang) }
         let origin = s.extras["origin"] as? String
         var text = strings.t(origin == "session-file" ? "source_from_file" : "source_connected_\(s.source.tool)", lang)
         if let f = s.fetchedAt { text += " · " + ageText(f, lang) }
@@ -203,9 +212,9 @@ extension UsageFormatter {
         let theme = faceTheme(settings)
         let available = availableSources(claude: claudeSnapshot(limits: limits, now: now), others: others, now: now,
                                          hidden: hiddenSources(settings))
-        if available.isEmpty { return (noDataTitle, 0) }
+        if !available.contains(where: hasLimits) { return (noDataTitle, 0) }
         if usesSourceTitle(available),
-           let s = tightestSource(visibleSources(available, hidden: hiddenSources(settings)), now: now) {
+           let s = tightestSource(visibleSources(available, hidden: hiddenSources(settings)).filter(hasLimits), now: now) {
             return (sourceTitle(s, style: style, lang: lang, theme: theme), sourceSessionPct(s))
         }
         return (titleFromLimits(limits, style: style, lang: lang, theme: theme), sessionPct(limits))

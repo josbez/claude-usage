@@ -7,6 +7,8 @@ struct ClaudeCodeFetchState {
     var lastCheck: Date?
     /// From ~/.claude.json at the last check: who Claude Code is logged in as.
     var account: ClaudeCodeAccount?
+    /// No plan account but an API key: a card without limits, nothing to fetch.
+    var api = false
     /// Token in memory only; read again from the Keychain once it expires.
     var token: ClaudeCodeToken?
     /// No Keychain read before this (after a refusal or an expired token).
@@ -38,9 +40,16 @@ extension AppDelegate {
         guard !claudeCode.checking,
               codexCheckDue(lastCheck: claudeCode.lastCheck, now: now, interval: sourceCheckInterval(settings)) else { return }
         claudeCode.lastCheck = now
-        let before = claudeCode.account
-        claudeCode.account = claudeCodeDisabled ? nil
-            : claudeCodeAccount(claudeJSON: loadJSONObject(claudeCodeConfigFile()))
+        let before = claudeCode.account, beforeAPI = claudeCode.api
+        let config = claudeCodeDisabled ? [:] : loadJSONObject(claudeCodeConfigFile())
+        claudeCode.account = claudeCodeAccount(claudeJSON: config)
+        claudeCode.api = !claudeCodeDisabled && claudeCode.account == nil
+            && claudeCodeUsesAPIKey(claudeJSON: config, keychainItemExists: claudeCodeAPIKeyItemExists())
+        if claudeCode.api != beforeAPI {
+            log(claudeCode.api ? "claude-code: API-key, geen planlimieten" : "claude-code: geen API-key meer")
+            showCachedTitle()
+            if popover.isShown { pushData() }
+        }
         if claudeCode.account != before {
             claudeCode.token = nil   // another login: another token
             claudeCode.keychainNotBefore = nil

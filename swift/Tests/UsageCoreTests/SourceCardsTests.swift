@@ -2,7 +2,7 @@ import Foundation
 import XCTest
 @testable import UsageCore
 
-/// Taak 55f: cards per source, the tightest source in the menu bar, hiding sources.
+/// Taak 55f: cards per source, the busiest session in the menu bar, hiding sources.
 final class SourceCardsTests: XCTestCase {
     let now = parseDate("2026-10-07T12:00:00Z")!
     let amsterdam = TimeZone(identifier: "Europe/Amsterdam")!
@@ -69,18 +69,28 @@ final class SourceCardsTests: XCTestCase {
 
     // MARK: - Tightest source and menu bar
 
-    func testTightestIsHighestOfSessionAndWeek() {
-        XCTAssertEqual(tightestSource([claude, codex()], now: now)?.source.id, claudeDesktopSource)   // 61% week
+    func testTightestFollowsTheSession() {
+        XCTAssertEqual(tightestSource([claude, codex()], now: now)?.source.id, claudeDesktopSource)   // 42% session
         XCTAssertEqual(tightestSource([claude, codex(session: 81)], now: now)?.source.id, codexSource)
         // Tie: Claude (first) stays
-        XCTAssertEqual(tightestSource([claude, codex(session: 61)], now: now)?.source.id, claudeDesktopSource)
+        XCTAssertEqual(tightestSource([claude, codex(session: 42)], now: now)?.source.id, claudeDesktopSource)
         XCTAssertNil(tightestSource([], now: now))
+    }
+
+    func testAWeekOnlyCountsOnceCritical() {
+        // 77% week against a busier session: the session wins
+        let hot = claudeSnapshot(limits: claudeLimits(session: 61, weekly: 42), now: now)
+        XCTAssertEqual(tightestSource([hot, codex(session: 12, weekly: 77)], now: now)?.source.id, claudeDesktopSource)
+        XCTAssertEqual(pressure(codex(session: 12, weekly: 77), now: now), 12)
+        // From the weekly notification threshold on, the week takes over
+        XCTAssertEqual(tightestSource([hot, codex(session: 12, weekly: 90)], now: now)?.source.id, codexSource)
+        XCTAssertEqual(pressure(codex(session: 12, weekly: 92), now: now), 92)
     }
 
     func testAPassedResetCountsAsZero() {
         let reset = codex(session: 95, sessionReset: "2026-10-07T11:00:00Z")
         XCTAssertEqual(f.sourceSessionPct(reset), 0)
-        XCTAssertEqual(pressure(reset, now: now), 9)
+        XCTAssertEqual(pressure(reset, now: now), 0)
         XCTAssertEqual(tightestSource([claude, reset], now: now)?.source.id, claudeDesktopSource)
     }
 

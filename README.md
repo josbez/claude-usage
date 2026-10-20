@@ -3,7 +3,7 @@
 macOS menu bar app: how much of your AI plan is left: Claude, Claude Code and ChatGPT.
 
 - 5-hour and weekly limit, per source, with reset times
-- Menu bar shows the source closest to a limit
+- Menu bar shows the source with the busiest session (a week only takes over from 90%)
 - Click a card for its connection status, or to hide it
 - Notifications at 80% / 95% session and 90% weekly
 - Signed self-updates; English and Dutch

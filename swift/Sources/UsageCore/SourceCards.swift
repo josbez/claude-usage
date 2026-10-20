@@ -58,14 +58,19 @@ public func visibleSources(_ available: [SourceSnapshot], hidden: Set<String>) -
     return visible.isEmpty ? Array(available.prefix(1)) : visible
 }
 
-/// How close a source is to a limit: its highest current utilization.
+/// How close a source is to a limit, for the glance in the menu bar: the
+/// session, since that decides whether you can keep working right now and
+/// shows which tool is in use. A week only counts once it is critical (the
+/// weekly notification threshold); below that it moves too slowly to earn
+/// the menu bar.
 public func pressure(_ s: SourceSnapshot, now: Date) -> Double {
-    [s.window(.session), s.window(.weekly)].compactMap { $0 }
-        .map { currentUtilization($0, now: now) }.max() ?? 0
+    let session = s.window(.session).map { currentUtilization($0, now: now) } ?? 0
+    let weekly = s.window(.weekly).map { currentUtilization($0, now: now) } ?? 0
+    return weekly >= Double(weeklyThresholds.min() ?? 90) ? max(session, weekly) : session
 }
 
-/// The source the menu bar shows: the one closest to a limit; on a tie the
-/// first (Claude comes first).
+/// The source the menu bar shows: the one under the most pressure; on a tie
+/// the first (Claude comes first).
 public func tightestSource(_ sources: [SourceSnapshot], now: Date) -> SourceSnapshot? {
     var best: SourceSnapshot? = nil
     for s in sources where best == nil || pressure(s, now: now) > pressure(best!, now: now) { best = s }

@@ -43,7 +43,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSPopoverDelegate {
     var lastSessionHash: String?
     /// Cookie key in memory: one Keychain request per app start (taak 54).
     lazy var cookieKeys = CookieKeyCache(onRead: { [weak self] reason in
-        self?.log("keychain: wachtwoord opgevraagd (reden: \(reason.rawValue))")
+        self?.log("keychain: password requested (reason: \(reason.rawValue))")
     })
     var serviceChecking = false
     var serviceCheckedAt: Date?
@@ -51,6 +51,8 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSPopoverDelegate {
     var loggedWeekWindows = Set<String>()
     /// Codex as a second source (CodexFetching.swift, taak 55c).
     var codex = CodexFetchState()
+    /// Claude Code with another account (ClaudeCodeFetching.swift, taak 43b).
+    var claudeCode = ClaudeCodeFetchState()
 
     // Notifications (Notifying.swift)
     var notifyCenter: UNUserNotificationCenter?
@@ -67,7 +69,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSPopoverDelegate {
         guard let url = Bundle.main.url(forResource: "strings", withExtension: "json"),
               let strings = try? Strings(contentsOf: url)
         else {
-            log("strings.json ontbreekt in de bundle")
+            log("strings.json missing from the bundle")
             NSApp.terminate(nil)
             return
         }
@@ -76,13 +78,13 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSPopoverDelegate {
            let template = try? String(contentsOf: js, encoding: .utf8) {
             fetchJSTemplate = template
         } else {
-            log("fetch.js ontbreekt in de bundle")
+            log("fetch.js missing from the bundle")
         }
         lang = languageFrom(Locale.preferredLanguages, defaultLang: strings.defaultLang)
         let info = Bundle.main.infoDictionary ?? [:]
         state.version = info["CFBundleShortVersionString"] as? String ?? "dev"
         state.build = info["CFBundleVersion"] as? String ?? ""
-        log("app gestart (versie \(state.version), taal \(lang)\(isDev ? ", dev" : ""))")
+        log("app started (version \(state.version), language \(lang)\(isDev ? ", dev" : ""))")
 
         // No App Nap (deliberate, Jos 1-10-2026): the menu bar title must stay current
         // at a glance, without opening the popover. With App Nap allowed, refreshes
@@ -92,17 +94,20 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSPopoverDelegate {
 
         switch migrateLimitsFile(paths) {
         case .none: break
-        case .moved: log("limieten verhuisd naar \(paths.limits.path)")
+        case .moved: log("limits moved to \(paths.limits.path)")
         case .keptNewer(let fromLegacy):
-            log("limieten: oud en nieuw bestand gevonden, \(fromLegacy ? "oude (nieuwer)" : "nieuwe") bewaard")
-        case .failed(let error): log("limieten verhuizen mislukt: \(error)")
+            log("limits: found old and new file, kept the \(fromLegacy ? "old (newer)" : "new") one")
+        case .failed(let error): log("moving limits failed: \(error)")
         }
         setupNotifications()
         migrateMenubarIcon()
         setupStatusItem()
         setupPopover()
         setupFetchWebView()
+        // Every source at once, then each at the refresh setting
         startFetch()
+        maybeFetchCodex()
+        maybeFetchClaudeCode()
         maybeCheckUpdates()
         maybeCheckServiceStatus()
         // Every minute, also while the popover is open (common run loop modes).
@@ -154,9 +159,9 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSPopoverDelegate {
         cachedSettings = nil
         do {
             try saveSettings(s, paths.settings)
-            log("instelling \(key): \(value)")
+            log("setting \(key): \(value)")
         } catch {
-            log("instelling opslaan mislukt: \(error)")
+            log("saving setting failed: \(error)")
         }
     }
 
@@ -192,17 +197,30 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSPopoverDelegate {
         setStatusTitle(t.title)
     }
 
-    /// Sources other than Claude, as last stored (usage-limits/<id>.json),
+    /// Sources other than the desktop app, as last stored (usage-limits/<id>.json),
     /// only while the tool is installed and logged in on this Mac.
+    /// Order: Claude Code, then Codex.
     func otherSnapshots() -> [SourceSnapshot] {
-        guard codexAvailable else { return [] }
-        return [codexSource].compactMap { snapshot(fromJSON: loadJSONObject(paths.snapshotFile($0)), sourceId: $0) }
+        var out: [SourceSnapshot] = []
+        if claudeCode.api && !claudeCodeDisabled {
+            out.append(claudeCodeAPISnapshot(now: Date()))
+        } else if claudeCodeIsSource(desktopLimits: loadJSONObject(paths.limits)),
+           let s = claudeCodeSnapshot(limits: loadJSONObject(paths.snapshotFile(claudeCodeSource)), now: Date()) {
+            out.append(s)
+        }
+        if codexAvailable, let s = snapshot(fromJSON: loadJSONObject(paths.snapshotFile(codexSource)), sourceId: codexSource) {
+            out.append(s)
+        }
+        return out
     }
 
     func tick() {
         checkAccountSwitch()
         maybeCheckUpdates()
         maybeCheckServiceStatus()
+        // Every source at the refresh setting, also without the desktop app
+        maybeFetchCodex()
+        maybeFetchClaudeCode()
         if !limitsAreFresh(loadJSONObject(paths.limits), now: Date(), maxAgeMinutes: refreshMinutes(settings)) {
             startFetch()
         } else if popover.isShown {
@@ -232,7 +250,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSPopoverDelegate {
         if let html = Bundle.main.url(forResource: "dashboard", withExtension: "html") {
             webView.loadFileURL(html, allowingReadAccessTo: html.deletingLastPathComponent())
         } else {
-            log("dashboard.html ontbreekt in de bundle")
+            log("dashboard.html missing from the bundle")
         }
         let vc = NSViewController()
         vc.view = webView
@@ -249,6 +267,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSPopoverDelegate {
             checkAccountSwitch()
             maybeCheckUpdates()
             maybeFetchCodex()
+            maybeFetchClaudeCode()
             pushData(animated: true)
             // Never show stale numbers on open (e.g. right after waking from sleep).
             if !limitsAreFresh(loadJSONObject(paths.limits), now: Date(), maxAgeMinutes: refreshMinutes(settings)) {
@@ -272,7 +291,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSPopoverDelegate {
             let key = pyIsoformatUTC(win.end)
             if !loggedWeekWindows.contains(key) {
                 loggedWeekWindows.insert(key)
-                log("weekvenster wijkt af van 7 dagen: \(pyIsoformatUTC(win.start)) → \(key)")
+                log("week window differs from 7 days: \(pyIsoformatUTC(win.start)) → \(key)")
             }
         }
         state.update = updateView()
@@ -317,7 +336,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSPopoverDelegate {
         case "setNotifications":
             let enabled = (body as? Bool) ?? ((body as? NSNumber)?.boolValue ?? false)
             updateSetting("notifications", enabled)
-            log("meldingen \(enabled ? "aan" : "uit")")
+            log("notifications \(enabled ? "on" : "off")")
             pushData()
         case "setMenubarStyle":
             guard let style = body as? String, menubarStyles.contains(style) else { return }
@@ -344,6 +363,8 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSPopoverDelegate {
             updateSetting("refresh_minutes", n)
             // Shorter than the data's age: fetch now instead of at the next tick.
             if !limitsAreFresh(loadJSONObject(paths.limits), now: Date(), maxAgeMinutes: n) { startFetch() }
+            maybeFetchCodex()
+            maybeFetchClaudeCode()
             pushData()
         case "startUpdate":
             startUpdate()
@@ -357,9 +378,18 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSPopoverDelegate {
             guard let msg = body as? [String: Any], let id = msg["id"] as? String, isValidSourceId(id),
                   let hide = msg["hidden"] as? Bool else { return }
             let available = availableSources(claude: claudeSnapshot(limits: loadJSONObject(paths.limits), now: Date()),
-                                             others: otherSnapshots(), now: Date()).map(\.source.id)
+                                             others: otherSnapshots(), now: Date(),
+                                             hidden: hiddenSources(settings)).map(\.source.id)
             let hidden = settingSourceHidden(hiddenSources(settings), id: id, hide: hide, available: available)
             updateSetting(hiddenSourcesKey, hidden.sorted())
+            // Switched back on: fresh numbers now (it wasn't fetched while hidden)
+            if !hide {
+                if !limitsAreFresh(loadJSONObject(paths.limits), now: Date(), maxAgeMinutes: refreshMinutes(settings)) {
+                    startFetch()
+                }
+                maybeFetchCodex()
+                maybeFetchClaudeCode()
+            }
             showCachedTitle()   // held until the popover closes (anchor)
             pushData()
         case "openResetsPage":
@@ -367,7 +397,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSPopoverDelegate {
             NSWorkspace.shared.open(URL(string: resetsURL)!)
         case "openStatusPage":
             guard let s = body as? String, isStatusURL(s), let url = URL(string: s) else {
-                log("claude-status: link geweigerd: \(String(String(describing: body).prefix(80)))")
+                log("claude-status: link rejected: \(String(String(describing: body).prefix(80)))")
                 return
             }
             NSWorkspace.shared.open(url)

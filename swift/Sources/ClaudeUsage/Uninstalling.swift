@@ -19,25 +19,25 @@ extension AppDelegate {
         alert.suppressionButton?.title = strings.t("alert_uninstall_keep_history", lang)
         alert.suppressionButton?.state = .on
         guard alert.runModal() == .alertFirstButtonReturn else {
-            log("verwijderen geannuleerd")
+            log("uninstall cancelled")
             return
         }
         uninstall(keepHistory: alert.suppressionButton?.state == .on)
     }
 
     private func uninstall(keepHistory: Bool) {
-        log("verwijderen gestart (geschiedenis \(keepHistory ? "bewaard" : "weg"))")
+        log("uninstall started (history \(keepHistory ? "kept" : "removed"))")
         timer?.invalidate()
         let fm = FileManager.default
         for url in paths.uninstallTargets(keepHistory: keepHistory) where fm.fileExists(atPath: url.path) {
-            do { try fm.removeItem(at: url) } catch { log("verwijderen \(url.lastPathComponent) mislukt: \(error)") }
+            do { try fm.removeItem(at: url) } catch { log("removing \(url.lastPathComponent) failed: \(error)") }
         }
         // From here on log() would recreate the log file: stay quiet unless it fails.
         NSWorkspace.shared.recycle([Bundle.main.bundleURL]) { [weak self] _, error in
             DispatchQueue.main.async {
                 guard let self = self else { return }
                 if let error = error {
-                    self.log("app naar de Prullenbak mislukt: \(error)")
+                    self.log("moving app to the Trash failed: \(error)")
                     let alert = NSAlert()
                     alert.messageText = self.strings.t("alert_uninstall_failed_title", self.lang)
                     alert.informativeText = error.localizedDescription

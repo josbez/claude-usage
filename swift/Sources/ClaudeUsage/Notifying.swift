@@ -11,7 +11,7 @@ extension AppDelegate {
         center.delegate = notifyDelegate
         center.requestAuthorization(options: [.alert, .sound]) { [weak self] granted, error in
             DispatchQueue.main.async {
-                self?.log("notificatie-toestemming: \(granted ? "ja" : "nee")"
+                self?.log("notification permission: \(granted ? "yes" : "no")"
                           + (error.map { " (\($0.localizedDescription))" } ?? ""))
             }
         }
@@ -39,10 +39,10 @@ extension AppDelegate {
         center.add(UNNotificationRequest(identifier: id, content: content, trigger: nil)) { [weak self] error in
             guard let error else { return }
             DispatchQueue.main.async {
-                self?.log("notificatie mislukt (\(id)): \(error.localizedDescription)")
+                self?.log("notification failed (\(id)): \(error.localizedDescription)")
             }
         }
-        log("notificatie: \(title)")
+        log("notification: \(title)")
     }
 
     var notificationsEnabled: Bool { truthy(settings["notifications"]) }
@@ -55,7 +55,7 @@ extension AppDelegate {
             // Still record crossed thresholds, so switching back on doesn't
             // replay warnings for this window.
             let why = notificationsEnabled ? "bron verborgen" : "meldingen uit"
-            notes.forEach { log("notificatie onderdrukt (\(why)): \($0.title)") }
+            notes.forEach { log("notification suppressed (\(why)): \($0.title)") }
             notes = []
         }
         for note in notes {
@@ -64,7 +64,7 @@ extension AppDelegate {
         do {
             try saveJSONObject(newState, to: paths.notifyState)
         } catch {
-            log("notificatie-check mislukt: \(error)")
+            log("notification check failed: \(error)")
         }
     }
 
@@ -73,8 +73,15 @@ extension AppDelegate {
     func isSourceVisible(_ id: String) -> Bool {
         let now = Date()
         let claude = claudeSnapshot(limits: loadJSONObject(paths.limits), now: now)
-        let available = availableSources(claude: claude, others: otherSnapshots(), now: now)
-        return visibleSources(available, hidden: hiddenSources(settings)).contains { $0.source.id == id }
+        let hidden = hiddenSources(settings)
+        let available = availableSources(claude: claude, others: otherSnapshots(), now: now, hidden: hidden)
+        return visibleSources(available, hidden: hidden).contains { $0.source.id == id }
+    }
+
+    /// A source the user switched off isn't fetched at all (taak 43b). The last
+    /// visible source never counts as off, also when its id is in the hidden list.
+    func isSourceOff(_ id: String) -> Bool {
+        hiddenSources(settings).contains(id) && !isSourceVisible(id)
     }
 
     /// Notifications for a source other than Claude (taak 55g): same thresholds,
@@ -89,7 +96,7 @@ extension AppDelegate {
         for a in alerts {
             let text = formatter.alertText(a, sourceName: name, lang: lang)
             if let quiet {
-                log("notificatie onderdrukt (\(quiet)): \(text.title)")
+                log("notification suppressed (\(quiet)): \(text.title)")
             } else {
                 post(id: a.id, title: text.title, body: text.body, pct: a.isReset ? -1 : a.pct)
             }
@@ -97,7 +104,7 @@ extension AppDelegate {
         do {
             try saveJSONObject(newState, to: paths.notifyState)
         } catch {
-            log("notificatie-check mislukt: \(error)")
+            log("notification check failed: \(error)")
         }
     }
 
@@ -110,7 +117,7 @@ extension AppDelegate {
             try appendHistory(rec, base: historyDir(for: snapshot.source.id, paths: paths))
             lastRecorded = snapshot.fetchedAt
         } catch {
-            log("geschiedenis opslaan mislukt (\(snapshot.source.id)): \(error)")
+            log("saving history failed (\(snapshot.source.id)): \(error)")
         }
     }
 
@@ -123,7 +130,7 @@ extension AppDelegate {
             try renderStatusImage(pct: pct, theme: formatter.faceTheme(settings)).write(to: url)
             return try UNNotificationAttachment(identifier: "status", url: url)
         } catch {
-            log("notificatie-afbeelding mislukt: \(error)")
+            log("notification image failed: \(error)")
             return nil
         }
     }
@@ -133,7 +140,7 @@ extension AppDelegate {
         do {
             try appendHistory(historyRecord(limits), base: paths.historyDir)
         } catch {
-            log("geschiedenis opslaan mislukt: \(error)")
+            log("saving history failed: \(error)")
         }
     }
 }

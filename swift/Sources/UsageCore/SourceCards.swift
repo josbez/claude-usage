@@ -19,17 +19,27 @@ public func currentUtilization(_ w: UsageWindow, now: Date) -> Double {
 
 /// Sources with numbers to show: Claude when its limits file has a session or
 /// week window; another source when its snapshot is younger than a week
-/// (older means the tool isn't in use).
-public func availableSources(claude: SourceSnapshot?, others: [SourceSnapshot], now: Date) -> [SourceSnapshot] {
-    func hasWindows(_ s: SourceSnapshot) -> Bool { s.window(.session) != nil || s.window(.weekly) != nil }
+/// (older means the tool isn't in use). A hidden source isn't fetched (taak 43b),
+/// so its age says nothing: it stays, so it can be switched back on.
+/// Sources without limits (API key) come last, below every card with numbers (taak 66).
+public func availableSources(claude: SourceSnapshot?, others: [SourceSnapshot], now: Date,
+                             hidden: Set<String> = []) -> [SourceSnapshot] {
     var out: [SourceSnapshot] = []
-    if let c = claude, hasWindows(c) { out.append(c) }
-    for s in others where hasWindows(s) {
-        guard let f = s.fetchedAt, now.timeIntervalSince(f) < codexSessionMaxAge else { continue }
+    if let c = claude, hasLimits(c) { out.append(c) }
+    for s in others.filter(hasLimits) + others.filter({ !hasLimits($0) && isPayPerUse($0) }) {
+        guard hidden.contains(s.source.id)
+              || s.fetchedAt.map({ now.timeIntervalSince($0) < codexSessionMaxAge }) == true else { continue }
         out.append(s)
     }
     return out
 }
+
+/// A session or week window: numbers for the card and the menu bar.
+public func hasLimits(_ s: SourceSnapshot) -> Bool { s.window(.session) != nil || s.window(.weekly) != nil }
+
+/// Paid per use (Claude Code on an API key): a card that says so, no numbers,
+/// never in the menu bar.
+public func isPayPerUse(_ s: SourceSnapshot) -> Bool { s.extras["billing"] as? String == "api" }
 
 /// The hidden set after the user flips one switch (taak 61). Hiding the last
 /// visible available source is refused: the set comes back unchanged.
@@ -81,22 +91,22 @@ extension UsageFormatter {
     func planLabel(_ s: SourceSnapshot, _ lang: String) -> String? {
         guard let plan = s.plan, !plan.isEmpty else { return nil }
         if s.source.tool == "claude" { return plan }
-        let key = "plan_\(plan)"
-        let text = strings.t(key, lang)
-        return text == key ? nil : text
+        // Per tool first ("plan_claude-code_pro"): one tool's plan id says nothing about another's
+        for key in ["plan_\(s.source.tool)_\(plan)", "plan_\(plan)"] {
+            let text = strings.t(key, lang)
+            if text != key { return text }
+        }
+        return nil
     }
 
-    /// The menu bar title for one source. Another source than Claude gets its
-    /// name after the face, so it's clear whose numbers they are (55e option 2).
+    /// The menu bar title for one source: the same for every source, no name
+    /// (taak 43b: the ring and numbers are enough; the popover says whose they are).
     public func sourceTitle(_ s: SourceSnapshot, style: String, lang: String, theme: FaceTheme?) -> String {
         let session = s.window(.session), weekly = s.window(.weekly)
-        let title = statusTitle(session: pyInt(session.map { currentUtilization($0, now: now) } ?? 0),
-                                weekly: pyInt(weekly.map { currentUtilization($0, now: now) } ?? 0),
-                                compact: resetCompact(session?.resetsAt.map(isoString) ?? "", lang),
-                                style: style, theme: theme)
-        guard s.source.tool != "claude", style != "emoji" else { return title }
-        let parts = title.split(separator: " ", maxSplits: 1)
-        return parts.count > 1 ? "\(parts[0]) \(sourceName(s, lang)) \(parts[1])" : title
+        return statusTitle(session: pyInt(session.map { currentUtilization($0, now: now) } ?? 0),
+                           weekly: pyInt(weekly.map { currentUtilization($0, now: now) } ?? 0),
+                           compact: resetCompact(session?.resetsAt.map(isoString) ?? "", lang),
+                           style: style, theme: theme)
     }
 
     /// Session percentage the menu bar ring shows for a source.
@@ -153,8 +163,10 @@ extension UsageFormatter {
             card["resets"] = NSNull()
         }
 
+        if isPayPerUse(s) { card["note"] = strings.t("card_no_limits", lang) }
+
         // Old numbers say so on the card (a session file can be hours old).
-        if let f = s.fetchedAt, now.timeIntervalSince(f) / 60 > Double(staleAfterMinutes(refresh: refreshMinutes(settings))) {
+        if !isPayPerUse(s), let f = s.fetchedAt, now.timeIntervalSince(f) / 60 > Double(staleAfterMinutes(refresh: refreshMinutes(settings))) {
             card["updated"] = strings.t("card_updated", lang, ["when": ageText(f, lang)])
         } else {
             card["updated"] = NSNull()
@@ -185,6 +197,7 @@ extension UsageFormatter {
 
     /// A row in settings for a non-Claude source: where the numbers come from and how old they are.
     public func sourceStatus(_ s: SourceSnapshot, lang: String) -> String {
+        if isPayPerUse(s) { return strings.t("source_api_key", lang) }
         let origin = s.extras["origin"] as? String
         var text = strings.t(origin == "session-file" ? "source_from_file" : "source_connected_\(s.source.tool)", lang)
         if let f = s.fetchedAt { text += " · " + ageText(f, lang) }
@@ -198,10 +211,11 @@ extension UsageFormatter {
                              lang: String) -> (title: String, sessionPct: Int) {
         let style = settings["menubar_style"] as? String ?? "full"
         let theme = faceTheme(settings)
-        let available = availableSources(claude: claudeSnapshot(limits: limits, now: now), others: others, now: now)
-        if available.isEmpty { return (noDataTitle, 0) }
+        let available = availableSources(claude: claudeSnapshot(limits: limits, now: now), others: others, now: now,
+                                         hidden: hiddenSources(settings))
+        if !available.contains(where: hasLimits) { return (noDataTitle, 0) }
         if usesSourceTitle(available),
-           let s = tightestSource(visibleSources(available, hidden: hiddenSources(settings)), now: now) {
+           let s = tightestSource(visibleSources(available, hidden: hiddenSources(settings)).filter(hasLimits), now: now) {
             return (sourceTitle(s, style: style, lang: lang, theme: theme), sourceSessionPct(s))
         }
         return (titleFromLimits(limits, style: style, lang: lang, theme: theme), sessionPct(limits))

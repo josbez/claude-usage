@@ -86,7 +86,7 @@ public func hexData(_ s: String) -> Data? {
 }
 
 /// An update failure: a STRINGS key (without "err_") plus values, so the app
-/// can show it in the user's language; `description` is Dutch, for the log.
+/// can show it in the user's language; `description` is English, for the log.
 public struct UpdateError: Error, CustomStringConvertible {
     public let key: String
     public let values: [String: Any]
@@ -102,7 +102,7 @@ public struct UpdateError: Error, CustomStringConvertible {
         strings?.t("err_" + key, lang, values) ?? key
     }
 
-    public var description: String { message("nl") }
+    public var description: String { message("en") }
 }
 
 // MARK: - Signing releases (replaces scripts/sign-release.py, taak 47)
@@ -125,9 +125,9 @@ public enum SignReleaseError: Error, CustomStringConvertible {
     case badKey, wrongKey, selfCheckFailed
     public var description: String {
         switch self {
-        case .badKey: return "signing key onleesbaar (verwacht een Ed25519 PKCS#8 PEM)"
-        case .wrongKey: return "signing key hoort niet bij updatePublicKeyHex — bestaande installaties zouden deze update weigeren"
-        case .selfCheckFailed: return "zelfcontrole van de handtekening faalde"
+        case .badKey: return "signing key unreadable (expected an Ed25519 PKCS#8 PEM)"
+        case .wrongKey: return "signing key does not match updatePublicKeyHex — existing installs would reject this update"
+        case .selfCheckFailed: return "signature self-check failed"
         }
     }
 }

@@ -15,7 +15,7 @@ extension AppDelegate {
         case .key(let value): return value
         case .loggedOut: return ""
         case .noPassword:
-            log("cookie decrypt: \(CookieError.noPassword) of hij past niet — opnieuw na vernieuwen of over een uur")
+            log("cookie decrypt: \(CookieError.noPassword) or it does not fit — retrying after refresh or in an hour")
             return nil
         case .waiting: return nil
         case .noDatabase:
@@ -44,7 +44,7 @@ extension AppDelegate {
     func setupFetchWebView() {
         guard let key = sessionKey() else { return }
         guard !key.isEmpty else {
-            log("geen sessionKey gevonden — is de Claude desktop-app ingelogd?")
+            log("no sessionKey found — is the Claude desktop app signed in?")
             state.loggedIn = false
             return
         }
@@ -86,7 +86,7 @@ extension AppDelegate {
         state.loggedIn = true
         let hash = Self.sha256Hex(key)
         if let last = lastSessionHash, last != hash {
-            log("account gewisseld (sessionKey gewijzigd) — direct verversen")
+            log("account switched (sessionKey changed) — refreshing now")
             lastSessionHash = hash
             startFetch()
             return
@@ -116,7 +116,7 @@ extension AppDelegate {
     }
 
     func startFetch() {
-        if state.fetching { return }
+        if state.fetching || isSourceOff(claudeDesktopSource) { return }
         attemptMode = devFetchPath == nil ? fetchMode : .webLight
         beginFetch()
     }
@@ -128,7 +128,7 @@ extension AppDelegate {
         if attemptMode == .native {
             guard let key = sessionKey() else { pushData(); return }
             guard !key.isEmpty else {
-                log("geen sessionKey gevonden — is de Claude desktop-app ingelogd?")
+                log("no sessionKey found — is the Claude desktop app signed in?")
                 state.loggedIn = false
                 pushData()
                 return
@@ -180,12 +180,12 @@ extension AppDelegate {
         guard let next = attemptMode.next, devFetchPath == nil else {
             // Every mode failed: the mode wasn't the problem (offline, logged out).
             if fetchMode != .native {
-                log("fetch: ook \(attemptMode.label) mislukt — volgende keer weer \(FetchMode.native.label)")
+                log("fetch: \(attemptMode.label) failed too — next time \(FetchMode.native.label) again")
                 fetchMode = .native
             }
             return false
         }
-        log("fetch via \(attemptMode.label) mislukt (\(reason)) — opnieuw via \(next.label)")
+        log("fetch via \(attemptMode.label) failed (\(reason)) — retrying via \(next.label)")
         attemptMode = next
         cancelWatchdog()
         // Not from inside a WebKit or URLSession callback: start once it has returned.
@@ -201,7 +201,7 @@ extension AppDelegate {
     func fetchWatchdogFired() {
         watchdog = nil
         guard state.fetching else { return }
-        log("fetch watchdog: geen resultaat binnen \(Int(Self.fetchTimeout))s, reset")
+        log("fetch watchdog: no result within \(Int(Self.fetchTimeout))s, reset")
         if retryNextFetchMode("time-out") { return }
         state.lastFetchError = "time-out"
         state.fetching = false
@@ -228,11 +228,11 @@ extension AppDelegate {
     }
 
     func onFetchFailed() {
-        if retryNextFetchMode("navigatiefout") { return }
+        if retryNextFetchMode("navigation error") { return }
         cancelWatchdog()
         state.fetching = false
-        log("fetch: pagina laden mislukt (navigatiefout)")
-        state.lastFetchError = "pagina laden mislukt"
+        log("fetch: page load failed (navigation error)")
+        state.lastFetchError = "page load failed"
         pushStatus("ready")
         showCachedTitle()
         teardownFetchWebViewSoon()
@@ -251,7 +251,7 @@ extension AppDelegate {
         if let parsed {
             if (parsed["ok"] as? Bool) == true {
                 if attemptMode != fetchMode, devFetchPath == nil {
-                    log("fetch werkt via \(attemptMode.label) — rest van de sessie zo")
+                    log("fetch works via \(attemptMode.label) — rest of the session stays that way")
                     fetchMode = attemptMode
                 }
                 let output = limitsOutput(parsed, now: Date())
@@ -259,29 +259,30 @@ extension AppDelegate {
                     try saveJSONObject(output, to: paths.limits)
                     state.lastFetchError = nil
                 } catch {
-                    log("limieten opslaan mislukt: \(error)")
-                    state.lastFetchError = "opslaan mislukt"
+                    log("saving limits failed: \(error)")
+                    state.lastFetchError = "saving failed"
                 }
                 recordHistory(output)
                 logBlockReasons(parsed, output)
                 logCedarEmber(output)
                 notifyLimits(output)
             } else {
-                let error = parsed["error"] as? String ?? "onbekende fout"
-                log("fetch mislukt (\(attemptMode.label)): \(error)")
+                let error = parsed["error"] as? String ?? "unknown error"
+                log("fetch failed (\(attemptMode.label)): \(error)")
                 if mayRetry, retryNextFetchMode(error) { return }
                 state.lastFetchError = error
             }
         } else {
-            log("fetch resultaat onleesbaar")
-            if mayRetry, retryNextFetchMode("resultaat onleesbaar") { return }
-            state.lastFetchError = "resultaat onleesbaar"
+            log("fetch result unreadable")
+            if mayRetry, retryNextFetchMode("result unreadable") { return }
+            state.lastFetchError = "result unreadable"
         }
         state.fetching = false
         showCachedTitle()
         pushData()
         teardownFetchWebViewSoon()
-        maybeFetchCodex()   // rides along with the Claude fetch, at most every 5 min
+        maybeFetchCodex()   // rides along with the Claude fetch, at most every refresh interval
+        maybeFetchClaudeCode()
     }
 
     func pushStatus(_ status: String) {
@@ -307,7 +308,7 @@ extension AppDelegate {
         if cedarEmberUnrecognised(limits) {
             key = "\(account)|cedar_ember_shape"
             digestSource = limits["cedar_ember"]!
-            line = "cedar_ember: onbekende vorm: \(String(pyStr(limits["cedar_ember"]).prefix(300)))"
+            line = "cedar_ember: unknown shape: \(String(pyStr(limits["cedar_ember"]).prefix(300)))"
         } else if let stable = cedarEmberStable(limits) {
             key = "\(account)|cedar_ember"
             digestSource = stable
@@ -343,7 +344,7 @@ extension AppDelegate {
         URLSession.shared.dataTask(with: req) { [weak self] data, response, error in
             let ok = (response as? HTTPURLResponse).map { (200..<300).contains($0.statusCode) } ?? false
             let summary = ok ? data.flatMap { try? JSONSerialization.jsonObject(with: $0) } : nil
-            let problem = error?.localizedDescription ?? (ok ? nil : "HTTP-fout")
+            let problem = error?.localizedDescription ?? (ok ? nil : "HTTP error")
             DispatchQueue.main.async { self?.onServiceStatus(summary, problem) }
         }.resume()
     }
@@ -351,16 +352,16 @@ extension AppDelegate {
     func onServiceStatus(_ summary: Any?, _ error: String?) {
         serviceChecking = false
         if let error {
-            log("claude-status ophalen mislukt: \(error)")
+            log("claude-status fetch failed: \(error)")
             state.service = ["level": "unreachable"]
         } else if let parsed = serviceStatus(summary) {
             for value in parsed["unknown"] as? [String] ?? [] where !loggedUnknownStatus.contains(value) {
                 loggedUnknownStatus.insert(value)
-                log("claude-status: onbekende waarde \(value)")
+                log("claude-status: unknown value \(value)")
             }
             state.service = parsed
         } else {
-            log("claude-status: onbruikbare respons")
+            log("claude-status: unusable response")
             state.service = ["level": "unreachable"]
         }
         pushData()

@@ -1,6 +1,6 @@
 #!/bin/bash
-# Installeert Usage Meter (ClaudeUsage.app) als achtergrond-app (LaunchAgent) voor de huidige gebruiker.
-# Vereist: ClaudeUsage.app staat al in /Applications.
+# Installs Usage Meter (ClaudeUsage.app) as a background app (LaunchAgent) for the current user.
+# Requires: ClaudeUsage.app is already in /Applications.
 set -e
 
 APP=/Applications/ClaudeUsage.app
@@ -8,16 +8,16 @@ LABEL=com.jos.claude-usage
 PLIST="$HOME/Library/LaunchAgents/$LABEL.plist"
 
 if [ ! -d "$APP" ]; then
-    echo "✗ $APP niet gevonden. Sleep Usage Meter eerst naar Applications."
+    echo "✗ $APP not found. Drag Usage Meter to Applications first."
     exit 1
 fi
 
 if [ ! -d "/Applications/Claude.app" ]; then
-    echo "⚠ Claude desktop-app niet gevonden in /Applications."
-    echo "  Usage Meter leest de sessie uit die app — installeer en log eerst in via https://claude.ai/download"
+    echo "⚠ Claude desktop app not found in /Applications."
+    echo "  Usage Meter reads the session from that app — install it and sign in first via https://claude.ai/download"
 fi
 
-# De app is niet Apple-notarized. Zonder deze stap blokkeert Gatekeeper de eerste start.
+# The app is not Apple-notarized. Without this step Gatekeeper blocks the first launch.
 xattr -dr com.apple.quarantine "$APP" 2>/dev/null || true
 
 mkdir -p "$HOME/Library/LaunchAgents"
@@ -47,6 +47,6 @@ EOF
 launchctl unload "$PLIST" 2>/dev/null || true
 launchctl load "$PLIST"
 
-echo "✓ Usage Meter geïnstalleerd en gestart. Klik ◆ in de menubalk."
-echo "  Eerste keer: macOS vraagt toegang tot de sleutel 'Claude Safe Storage' — kies 'Always Allow'."
-echo "  Eerste cijfers verschijnen na ~10–20 s. Logboek: ~/Library/Logs/ClaudeUsage.log"
+echo "✓ Usage Meter installed and started. Click ◆ in the menu bar."
+echo "  First time: macOS asks for access to the 'Claude Safe Storage' key — choose 'Always Allow'."
+echo "  First numbers appear after ~10–20 s. Log: ~/Library/Logs/ClaudeUsage.log"

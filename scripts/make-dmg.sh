@@ -1,13 +1,13 @@
 #!/bin/bash
-# Bouwt ClaudeUsage.app en verpakt 'm in een deelbare DMG (+ .sig).
+# Builds ClaudeUsage.app and packs it into a shareable DMG (+ .sig).
 #   ./scripts/make-dmg.sh
-# (--swift mag nog als argument; sinds taak 47 is er alleen de Swift-versie)
+# (--swift is still accepted as an argument; since task 47 there is only the Swift version)
 set -euo pipefail
 cd "$(dirname "$0")/.."
 
 case "${1:-}" in
     ""|--swift) ;;
-    *) echo "✗ onbekende optie: $1" >&2; exit 1 ;;
+    *) echo "✗ unknown option: $1" >&2; exit 1 ;;
 esac
 
 ./scripts/build-swift.sh --release
@@ -24,13 +24,13 @@ rm -f "$DMG" "$DMG.sig"
 hdiutil create -volname "Usage Meter" -srcfolder "$STAGE" -ov -format UDZO "$DMG"
 rm -rf "$STAGE"
 
-echo "✓ $DMG klaar ($(du -h "$DMG" | cut -f1))"
+echo "✓ $DMG done ($(du -h "$DMG" | cut -f1))"
 
-# Handtekening voor in-app updates. Zonder .sig weigert de updater de DMG.
+# Signature for in-app updates. Without a .sig the updater rejects the DMG.
 if [ -f "$HOME/.config/claude-usage/release-signing-key.pem" ]; then
     "$SRC/Contents/MacOS/ClaudeUsage" --sign-release "$DMG"
     "$SRC/Contents/MacOS/ClaudeUsage" --verify-release "$DMG" "$DMG.sig"
-    echo "  Release: upload zowel $DMG als $DMG.sig"
+    echo "  Release: upload both $DMG and $DMG.sig"
 else
-    echo "⚠ Geen signing key — $DMG is niet ondertekend en kan niet via de in-app update geïnstalleerd worden."
+    echo "⚠ No signing key — $DMG is unsigned and cannot be installed via the in-app update."
 fi

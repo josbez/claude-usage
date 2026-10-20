@@ -49,7 +49,7 @@ extension AppDelegate {
             } else if let data, let body = try? JSONSerialization.jsonObject(with: data) {
                 result = .json(status: (response as? HTTPURLResponse)?.statusCode ?? 0, body: body)
             } else {
-                result = .blocked("HTTP \((response as? HTTPURLResponse)?.statusCode ?? 0), geen JSON")
+                result = .blocked("HTTP \((response as? HTTPURLResponse)?.statusCode ?? 0), no JSON")
             }
             DispatchQueue.main.async { done(result) }
         }.resume()

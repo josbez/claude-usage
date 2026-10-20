@@ -144,6 +144,13 @@ public func claudeCodeUsageRequest(token: ClaudeCodeToken, appVersion: String) -
     return req
 }
 
+/// After a 429: wait what the server asks (Retry-After in seconds), at least
+/// 5 minutes. The endpoint is shared with Claude Code itself; on a 1-minute
+/// refresh it answered every other request with 429 (19-10-2026).
+public func claudeCodeBackoff(retryAfter: String?) -> TimeInterval {
+    max(retryAfter.flatMap { TimeInterval($0.trimmingCharacters(in: .whitespaces)) } ?? 0, 5 * 60)
+}
+
 public enum ClaudeCodeFetchOutcome: Equatable {
     /// The usage body plus fetched_at and plan: the snapshot file as stored.
     case limits(JSONObject)

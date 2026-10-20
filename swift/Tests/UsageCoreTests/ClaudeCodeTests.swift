@@ -86,6 +86,11 @@ final class ClaudeCodeTests: XCTestCase {
         XCTAssertEqual(claudeCodeOutcome(status: 401, body: nil, plan: nil, now: now), .unauthorized)
         XCTAssertEqual(claudeCodeOutcome(status: 403, body: nil, plan: nil, now: now), .unauthorized)
         XCTAssertEqual(claudeCodeOutcome(status: 429, body: nil, plan: nil, now: now), .rateLimited)
+        // 429: what the server asks, at least 5 minutes
+        XCTAssertEqual(claudeCodeBackoff(retryAfter: nil), 300)
+        XCTAssertEqual(claudeCodeBackoff(retryAfter: "60"), 300)
+        XCTAssertEqual(claudeCodeBackoff(retryAfter: "900"), 900)
+        XCTAssertEqual(claudeCodeBackoff(retryAfter: "Wed, 21 Oct 2026 07:28:00 GMT"), 300)
         XCTAssertEqual(claudeCodeOutcome(status: 500, body: nil, plan: nil, now: now), .failed("HTTP 500"))
         XCTAssertEqual(claudeCodeOutcome(status: 200, body: Data("x".utf8), plan: nil, now: now),
                        .failed("response unreadable"))

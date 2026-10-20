@@ -13,6 +13,8 @@ struct ClaudeCodeFetchState {
     var token: ClaudeCodeToken?
     /// No Keychain read before this (after a refusal or an expired token).
     var keychainNotBefore: Date?
+    /// After a 429: no request before this, whatever the refresh setting.
+    var notBefore: Date?
     /// After an expired token: ~/.claude.json's mtime then. Claude Code writes it
     /// while in use, so a newer mtime means it may have refreshed: read again at once.
     var expiredConfigMtime: Date?
@@ -40,7 +42,7 @@ extension AppDelegate {
 
     func maybeFetchClaudeCode() {
         let now = Date()
-        guard !claudeCode.checking,
+        guard !claudeCode.checking, claudeCode.notBefore.map({ now >= $0 }) ?? true,
               codexCheckDue(lastCheck: claudeCode.lastCheck, now: now, interval: sourceCheckInterval(settings)) else { return }
         claudeCode.lastCheck = now
         let before = claudeCode.account, beforeAPI = claudeCode.api
@@ -97,7 +99,8 @@ extension AppDelegate {
                 let outcome: ClaudeCodeFetchOutcome = error.map { .failed($0.localizedDescription) }
                     ?? claudeCodeOutcome(status: (response as? HTTPURLResponse)?.statusCode ?? 0,
                                          body: data, plan: token.plan, now: Date())
-                DispatchQueue.main.async { self?.onClaudeCodeResult(outcome, token: token) }
+                let retryAfter = (response as? HTTPURLResponse)?.value(forHTTPHeaderField: "Retry-After")
+                DispatchQueue.main.async { self?.onClaudeCodeResult(outcome, token: token, retryAfter: retryAfter) }
             }.resume()
         }
     }
@@ -112,7 +115,7 @@ extension AppDelegate {
         claudeCodeProblem(problem)
     }
 
-    func onClaudeCodeResult(_ outcome: ClaudeCodeFetchOutcome, token: ClaudeCodeToken) {
+    func onClaudeCodeResult(_ outcome: ClaudeCodeFetchOutcome, token: ClaudeCodeToken, retryAfter: String? = nil) {
         claudeCode.checking = false
         claudeCode.token = token
         claudeCode.expiredConfigMtime = nil
@@ -145,7 +148,9 @@ extension AppDelegate {
             claudeCode.token = nil
             claudeCodeProblem("token rejected (401/403)")
         case .rateLimited:
-            claudeCodeProblem("too many requests (429) — next attempt next round")
+            let wait = claudeCodeBackoff(retryAfter: retryAfter)
+            claudeCode.notBefore = Date() + wait
+            claudeCodeProblem("too many requests (429), waiting \(Int(wait / 60)) min")
         case .failed(let why):
             claudeCodeProblem(why)
         }

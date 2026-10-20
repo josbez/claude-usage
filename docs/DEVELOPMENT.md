@@ -55,9 +55,10 @@ The popover is `dev/dashboard.html`. Its look is defined by the [Usage Meter des
 
 ## Logs and pitfalls
 
-- Log: `~/Library/Logs/ClaudeUsage.log`; fetched data: one file per source in `~/.claude/usage-limits/` (`claude-desktop.json`; up to 2.1 this was `~/.claude/usage-limits.json`, moved on first launch).
+- Log: `~/Library/Logs/ClaudeUsage.log`; fetched data: one file per source in `~/.claude/usage-limits/` (`claude-desktop.json`, `claude-code.json`, `codex.json`; up to 2.1 this was `~/.claude/usage-limits.json`, moved on first launch).
 - Usage history (own storage; the API keeps none): `~/.claude/usage-history/YYYY-MM.jsonl`, one line per fetch with raw API values only, about 5.5 MB per month. Stays local.
 - **Source ≠ deployed:** changes only take effect after `./scripts/deploy.sh`.
 - **Universal builds, macOS 11+:** releases ship arm64 + x86_64. An update is one-way: an arm64-only release would leave Intel Macs with an app that doesn't start.
 - **Keychain:** the cookie password is read with `/usr/bin/security`, once per launch. Don't switch to `SecItemCopyMatching` without a plan: every user would get a new Keychain prompt.
+- **Claude Code:** its OAuth token (Keychain item `Claude Code-credentials`, also via `/usr/bin/security`) is read only when the one in memory has expired, and never refreshed: refreshing rotates Claude Code's own refresh token and logs it out. Usage comes from `api.anthropic.com/api/oauth/usage`; after a 429 the app waits at least 5 minutes.
 - **Same identity across versions:** bundle id `com.jos.claude-usage`, executable `ClaudeUsage`, LaunchAgent `com.jos.claude-usage` and the files in `~/.claude/` must stay the same, or updates break existing installs.

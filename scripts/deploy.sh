@@ -22,10 +22,21 @@ fail() {
     exit 1
 }
 
+FORCE=0
 case "${1:-}" in
     ""|--swift) ;;
+    --force) FORCE=1 ;;
     *) echo "✗ unknown option: $1" >&2; exit 1 ;;
 esac
+
+# /Applications only gets a published release: work in progress goes to the β
+# (./scripts/beta.sh). Deploying is allowed when HEAD is the release tag.
+VERSION=$(sed -n 's/^VERSION="\${VERSION:-\(.*\)}"$/\1/p' scripts/build-swift.sh)
+if [ "$FORCE" = 0 ] && [ "$(git tag --points-at HEAD)" != "v$VERSION" ]; then
+    echo "✗ HEAD is not release v$VERSION: use ./scripts/beta.sh for work in progress" >&2
+    echo "  (the regular app runs what users have; --force to deploy anyway)" >&2
+    exit 1
+fi
 
 ./scripts/build-swift.sh --release
 SRC=dist-swift/ClaudeUsage.app

@@ -10,12 +10,13 @@ Requirements: macOS 11 or later and **Xcode** (not just the command line tools: 
 ./scripts/build-swift.sh            # Swift tests + universal build + ad-hoc codesign
                                     # → dist-swift/ClaudeUsage Dev.app (bundle id …claude-usage.dev)
 ./scripts/build-swift.sh --release  # same, as the real bundle → dist-swift/ClaudeUsage.app
-./scripts/deploy.sh                 # release build, install to /Applications, restart LaunchAgent, verify a fresh fetch
+./scripts/beta.sh                   # dev build next to the installed app, restart it, verify a fresh fetch
+./scripts/deploy.sh                 # release build to /Applications (only at a release tag; --force otherwise)
 ./scripts/make-dmg.sh               # release build + ClaudeUsage.dmg (+ .sig if the signing key is present)
 (cd swift && swift test)            # tests only
 ```
 
-`deploy.sh` ends with `✓ fetch verified` or fails with the last log lines. `CFBundleVersion` is the build time (`YYYYMMDD.HHMMSS`), so you can see which build is running.
+`beta.sh` and `deploy.sh` end with `✓ fetch verified` or fails with the last log lines. `CFBundleVersion` is the build time (`YYYYMMDD.HHMMSS`), so you can see which build is running.
 
 The **dev build** runs next to the installed app for side-by-side testing: it has its own bundle id, a `β` before the menu bar title and notification titles, and its own files (`~/.claude/*.dev.json`, `~/.claude/usage-history-dev/`, `~/Library/Logs/ClaudeUsage-Dev.log`).
 
@@ -57,7 +58,7 @@ The popover is `dev/dashboard.html`. Its look is defined by the [Usage Meter des
 
 - Log: `~/Library/Logs/ClaudeUsage.log`; fetched data: one file per source in `~/.claude/usage-limits/` (`claude-desktop.json`, `claude-code.json`, `codex.json`; up to 2.1 this was `~/.claude/usage-limits.json`, moved on first launch).
 - Usage history (own storage; the API keeps none): `~/.claude/usage-history/YYYY-MM.jsonl`, one line per fetch with raw API values only, about 5.5 MB per month. Stays local.
-- **Source ≠ deployed:** changes only take effect after `./scripts/deploy.sh`.
+- **Source ≠ running:** changes only take effect after `./scripts/beta.sh` (dev build) or a release. The installed app runs what users have; work in progress goes to the dev build.
 - **Universal builds, macOS 11+:** releases ship arm64 + x86_64. An update is one-way: an arm64-only release would leave Intel Macs with an app that doesn't start.
 - **Keychain:** the cookie password is read with `/usr/bin/security`, once per launch. Don't switch to `SecItemCopyMatching` without a plan: every user would get a new Keychain prompt.
 - **Claude Code:** its OAuth token (Keychain item `Claude Code-credentials`, also via `/usr/bin/security`) is read only when the one in memory has expired, and never refreshed: refreshing rotates Claude Code's own refresh token and logs it out. Usage comes from `api.anthropic.com/api/oauth/usage`; after a 429 the app waits at least 5 minutes.

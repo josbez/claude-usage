@@ -6,7 +6,8 @@ import Foundation
 // still read the Claude limits file directly until 55d/55f/55g switch over.
 
 public enum WindowKind: String, Equatable {
-    case session, weekly, other
+    /// A billing cycle of about a month (Cursor, taak 41).
+    case session, weekly, monthly, other
 }
 
 /// A limit window as the source reports it. `utilization` is 0–100.

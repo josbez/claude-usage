@@ -53,6 +53,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSPopoverDelegate {
     var codex = CodexFetchState()
     /// Claude Code with another account (ClaudeCodeFetching.swift, taak 43b).
     var claudeCode = ClaudeCodeFetchState()
+    var cursor = CursorFetchState()
 
     // Notifications (Notifying.swift)
     var notifyCenter: UNUserNotificationCenter?
@@ -108,6 +109,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSPopoverDelegate {
         startFetch()
         maybeFetchCodex()
         maybeFetchClaudeCode()
+        maybeFetchCursor()
         maybeCheckUpdates()
         maybeCheckServiceStatus()
         // Every minute, also while the popover is open (common run loop modes).
@@ -199,7 +201,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSPopoverDelegate {
 
     /// Sources other than the desktop app, as last stored (usage-limits/<id>.json),
     /// only while the tool is installed and logged in on this Mac.
-    /// Order: Claude Code, then Codex.
+    /// Order: Claude Code, then Codex, then Cursor.
     func otherSnapshots() -> [SourceSnapshot] {
         var out: [SourceSnapshot] = []
         if claudeCode.api && !claudeCodeDisabled {
@@ -209,6 +211,9 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSPopoverDelegate {
             out.append(s)
         }
         if codexAvailable, let s = snapshot(fromJSON: loadJSONObject(paths.snapshotFile(codexSource)), sourceId: codexSource) {
+            out.append(s)
+        }
+        if cursorInstalled, let s = snapshot(fromJSON: loadJSONObject(paths.snapshotFile(cursorSource)), sourceId: cursorSource) {
             out.append(s)
         }
         return out
@@ -221,6 +226,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSPopoverDelegate {
         // Every source at the refresh setting, also without the desktop app
         maybeFetchCodex()
         maybeFetchClaudeCode()
+        maybeFetchCursor()
         if !limitsAreFresh(loadJSONObject(paths.limits), now: Date(), maxAgeMinutes: refreshMinutes(settings)) {
             startFetch()
         } else if popover.isShown {
@@ -268,6 +274,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSPopoverDelegate {
             maybeCheckUpdates()
             maybeFetchCodex()
             maybeFetchClaudeCode()
+            maybeFetchCursor()
             pushData(animated: true)
             // Never show stale numbers on open (e.g. right after waking from sleep).
             if !limitsAreFresh(loadJSONObject(paths.limits), now: Date(), maxAgeMinutes: refreshMinutes(settings)) {
@@ -365,6 +372,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSPopoverDelegate {
             if !limitsAreFresh(loadJSONObject(paths.limits), now: Date(), maxAgeMinutes: n) { startFetch() }
             maybeFetchCodex()
             maybeFetchClaudeCode()
+            maybeFetchCursor()
             pushData()
         case "startUpdate":
             startUpdate()
@@ -389,6 +397,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSPopoverDelegate {
                 }
                 maybeFetchCodex()
                 maybeFetchClaudeCode()
+                maybeFetchCursor()
             }
             showCachedTitle()   // held until the popover closes (anchor)
             pushData()

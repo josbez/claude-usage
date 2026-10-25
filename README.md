@@ -1,8 +1,8 @@
 # Usage Meter
 
-macOS menu bar app: how much of your AI plan is left: Claude, Claude Code and ChatGPT.
+macOS menu bar app: how much of your AI plan is left: Claude, Claude Code, ChatGPT and Cursor.
 
-- 5-hour and weekly limit, per source, with reset times
+- 5-hour and weekly limit, per source, with reset times (Cursor: its monthly plan usage)
 - Menu bar shows the source closest to a limit
 - Click a card for its connection status, or to hide it
 - Notifications at 80% / 95% session and 90% weekly
@@ -15,6 +15,7 @@ macOS menu bar app: how much of your AI plan is left: Claude, Claude Code and Ch
   - [Claude desktop app](https://claude.ai/download)
   - Claude Code (own card when signed in with another account than the Claude app; on an API key: a card without limits)
   - ChatGPT app (with Codex) or Codex
+  - Cursor (uses an unofficial endpoint, the one Cursor's own usage view uses; it may stop working without notice)
 
 ## Install
 
@@ -30,9 +31,10 @@ macOS menu bar app: how much of your AI plan is left: Claude, Claude Code and Ch
 
 ## Privacy
 
-- Talks only to claude.ai, api.anthropic.com, status.claude.com and GitHub
+- Talks only to claude.ai, api.anthropic.com, status.claude.com, api2.cursor.sh (with Cursor) and GitHub
 - Claude Code: its sign-in token is read from the Keychain, kept in memory only, never stored or refreshed
 - ChatGPT limits come from the Codex program on your Mac; its sign-in is never read
+- Cursor: its sign-in token is read from Cursor's own settings file, kept in memory only, never stored or refreshed
 - A hidden source isn't checked at all
 - Usage history stays on your Mac
 

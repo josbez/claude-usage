@@ -34,7 +34,7 @@ func alertLimitName(_ kind: WindowKind) -> String? {
     switch kind {
     case .session: return "five_hour"
     case .weekly: return "seven_day"
-    case .other: return nil
+    case .monthly, .other: return nil   // no thresholds for a month (taak 41)
     }
 }
 

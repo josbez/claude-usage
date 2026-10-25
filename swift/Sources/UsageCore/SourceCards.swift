@@ -34,8 +34,16 @@ public func availableSources(claude: SourceSnapshot?, others: [SourceSnapshot], 
     return out
 }
 
-/// A session or week window: numbers for the card and the menu bar.
-public func hasLimits(_ s: SourceSnapshot) -> Bool { s.window(.session) != nil || s.window(.weekly) != nil }
+/// A session, week or month window: numbers for the card and the menu bar.
+public func hasLimits(_ s: SourceSnapshot) -> Bool {
+    s.window(.session) != nil || s.window(.weekly) != nil || s.window(.monthly) != nil
+}
+
+/// The window in the card's ring and the menu bar's: the session, or for a
+/// source that only has a billing cycle (Cursor), the month.
+public func mainWindow(_ s: SourceSnapshot) -> UsageWindow? {
+    s.window(.session) ?? (s.window(.weekly) == nil ? s.window(.monthly) : nil)
+}
 
 /// Paid per use (Claude Code on an API key): a card that says so, no numbers,
 /// never in the menu bar.
@@ -60,7 +68,7 @@ public func visibleSources(_ available: [SourceSnapshot], hidden: Set<String>) -
 
 /// How close a source is to a limit: its highest current utilization.
 public func pressure(_ s: SourceSnapshot, now: Date) -> Double {
-    [s.window(.session), s.window(.weekly)].compactMap { $0 }
+    [s.window(.session), s.window(.weekly), s.window(.monthly)].compactMap { $0 }
         .map { currentUtilization($0, now: now) }.max() ?? 0
 }
 
@@ -102,16 +110,17 @@ extension UsageFormatter {
     /// The menu bar title for one source: the same for every source, no name
     /// (taak 43b: the ring and numbers are enough; the popover says whose they are).
     public func sourceTitle(_ s: SourceSnapshot, style: String, lang: String, theme: FaceTheme?) -> String {
-        let session = s.window(.session), weekly = s.window(.weekly)
+        let session = mainWindow(s), weekly = s.window(.weekly)
         return statusTitle(session: pyInt(session.map { currentUtilization($0, now: now) } ?? 0),
                            weekly: pyInt(weekly.map { currentUtilization($0, now: now) } ?? 0),
-                           compact: resetCompact(session?.resetsAt.map(isoString) ?? "", lang),
+                           // Hours until a month's end say nothing in the menu bar: "—"
+                           compact: session?.kind == .monthly ? "—" : resetCompact(session?.resetsAt.map(isoString) ?? "", lang),
                            style: style, theme: theme)
     }
 
     /// Session percentage the menu bar ring shows for a source.
     public func sourceSessionPct(_ s: SourceSnapshot) -> Int {
-        pyInt(s.window(.session).map { currentUtilization($0, now: now) } ?? 0)
+        pyInt(mainWindow(s).map { currentUtilization($0, now: now) } ?? 0)
     }
 
     /// One card in the popover. Missing windows stay null (the card shows "—"),
@@ -119,12 +128,13 @@ extension UsageFormatter {
     /// resets on claude.ai).
     public func sourceCard(_ s: SourceSnapshot, settings: JSONObject, lang: String,
                            claudeLimits: JSONObject? = nil) -> JSONObject {
-        let session = s.window(.session), weekly = s.window(.weekly)
+        let session = mainWindow(s), weekly = s.window(.weekly)
         let sessionPct = session.map { pyInt(currentUtilization($0, now: now)) }
         let weeklyPct = weekly.map { pyInt(currentUtilization($0, now: now)) }
         func reset(_ w: UsageWindow?) -> Any {
-            guard let r = w?.resetsAt, r > now else { return NSNull() }
-            return resetTime(isoString(r), lang)
+            guard let w, let r = w.resetsAt, r > now else { return NSNull() }
+            // A month away: the date ("Sun Nov 8"), not a weekday and time
+            return w.kind == .monthly ? shortDate(isoString(r), lang) : resetTime(isoString(r), lang)
         }
 
         var card: JSONObject = [
@@ -136,6 +146,8 @@ extension UsageFormatter {
             "weekly_pct": weeklyPct ?? NSNull(),
             "weekly_reset": reset(weekly),
             "plan": planLabel(s, lang) ?? NSNull(),
+            // What the ring counts: "session", or "month" for a billing cycle (Cursor)
+            "main_kind": session?.kind == .monthly ? "month" : "session",
         ]
 
         var elapsed: Double? = nil

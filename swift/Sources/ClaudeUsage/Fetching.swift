@@ -283,6 +283,7 @@ extension AppDelegate {
         teardownFetchWebViewSoon()
         maybeFetchCodex()   // rides along with the Claude fetch, at most every refresh interval
         maybeFetchClaudeCode()
+        maybeFetchCursor()
     }
 
     func pushStatus(_ status: String) {

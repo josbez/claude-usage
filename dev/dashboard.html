@@ -1024,6 +1024,8 @@ function renderSourceCard(card, s, zero, problemText) {
   pctEl.style.color = readable;
   const resetEl = card.querySelector('.source-session-reset');
   resetEl.textContent = noData ? why
+    : s.main_kind === 'month'
+      ? (has(s.session_reset) ? T('card_month', { when: s.session_reset }) : T('card_month_plain'))
     : has(s.session_reset) ? T('card_session', { when: s.session_reset }) : T('card_session_plain');
   resetEl.title = noData ? why : '';
   card.querySelector('.source-updated').textContent = s.updated || '';

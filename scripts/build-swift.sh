@@ -11,7 +11,7 @@
 set -euo pipefail
 cd "$(dirname "$0")/.."
 
-VERSION="${VERSION:-3.3}"
+VERSION="${VERSION:-3.4}"
 OUT_DIR="${OUT_DIR:-dist-swift}"
 MODE=dev
 [ "${1:-}" = "--release" ] && MODE=release

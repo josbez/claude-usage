@@ -255,6 +255,9 @@
     vertical-align: 1px;   /* optical baseline nudge */
   }
   .version-status { display: flex; align-items: center; gap: var(--space-9); }
+  /* Feedback row (taak 56): "open in new" icon button opens the form in the browser; the row is a mouse convenience */
+  .setting-sub.wrap { white-space: normal; }
+  .setting-row.feedback { cursor: pointer; }
   .version-status .setting-sub { margin-top: 0; }
 
   .switch {
@@ -723,6 +726,21 @@
             <button class="update-btn" id="updateBtn" hidden onclick="onStartUpdate()"></button>
           </div>
         </div>
+        <!-- Feedback (taak 56): opens the Tally form in the browser; only version, macOS, Mac type and language -->
+        <div class="setting-row feedback" onclick="onFeedback()">
+          <div class="setting-text">
+            <div class="setting-title" data-i18n="set_feedback">Feedback</div>
+            <div class="setting-sub wrap" data-i18n="set_feedback_sub">Stuur je feedback of idee in</div>
+          </div>
+          <button class="icon-btn" data-i18n-title="btn_feedback_open" title="Formulier openen in je browser"
+                  onclick="event.stopPropagation(); onFeedback()">
+            <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+              <path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6"/>
+              <path d="M15 3h6v6"/>
+              <path d="M10 14L21 3"/>
+            </svg>
+          </button>
+        </div>
       </div>
     </div>
     <div class="settings-actions">
@@ -1148,6 +1166,12 @@ function renderService(svc) {
 function onOpenResets() {
   if (window.webkit && window.webkit.messageHandlers && window.webkit.messageHandlers.openResetsPage) {
     window.webkit.messageHandlers.openResetsPage.postMessage(null);
+  }
+}
+
+function onFeedback() {
+  if (window.webkit && window.webkit.messageHandlers && window.webkit.messageHandlers.openFeedback) {
+    window.webkit.messageHandlers.openFeedback.postMessage(null);
   }
 }
 

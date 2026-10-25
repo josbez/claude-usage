@@ -42,5 +42,6 @@ macOS menu bar app: how much of your AI plan is left: Claude, Claude Code and Ch
 
 ## More
 
+- Feedback or an idea: Settings → **Feedback** opens a short form (sends app version, macOS, Mac type and language; nothing else)
 - [Development](docs/DEVELOPMENT.md) · [MIT license](LICENSE)
 - Not affiliated with Anthropic or OpenAI

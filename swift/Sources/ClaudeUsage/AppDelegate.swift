@@ -241,7 +241,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSPopoverDelegate {
         let config = WKWebViewConfiguration()
         let handler = ScriptHandler(owner: self)
         for name in ["refresh", "close", "quit", "uninstall", "setNotifications", "startUpdate",
-                     "setMenubarStyle", "setMenubarIcon", "setSeasonalFaces", "setAppearance", "setRefresh", "openStatusPage", "openResetsPage", "resize",
+                     "setMenubarStyle", "setMenubarIcon", "setSeasonalFaces", "setAppearance", "setRefresh", "openStatusPage", "openResetsPage", "openFeedback", "resize",
                      "setSourceHidden"] {
             config.userContentController.add(handler, name: name)
         }
@@ -395,6 +395,16 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSPopoverDelegate {
         case "openResetsPage":
             // Fixed URL, no argument from the page.
             NSWorkspace.shared.open(URL(string: resetsURL)!)
+        case "openFeedback":
+            // Fixed form URL; only version, macOS, architecture and language, no argument from the page.
+            #if arch(arm64)
+            let arch = "arm64"
+            #else
+            let arch = "x86_64"
+            #endif
+            NSWorkspace.shared.open(feedbackURL(version: state.version,
+                                                os: macOSVersionString(ProcessInfo.processInfo.operatingSystemVersion),
+                                                arch: arch, lang: lang))
         case "openStatusPage":
             guard let s = body as? String, isStatusURL(s), let url = URL(string: s) else {
                 log("claude-status: link rejected: \(String(String(describing: body).prefix(80)))")

@@ -11,6 +11,9 @@ struct ClaudeCodeFetchState {
     var api = false
     /// Token in memory only; read again from the Keychain once it expires.
     var token: ClaudeCodeToken?
+    /// The organization of the token last read from the Keychain (its profile).
+    /// nil: not known yet, ~/.claude.json's account counts until then.
+    var tokenOrg: String?
     /// No Keychain read before this (after a refusal or an expired token).
     var keychainNotBefore: Date?
     /// After a 429: no request before this, whatever the refresh setting.
@@ -37,7 +40,8 @@ extension AppDelegate {
 
     /// Whether Claude Code is a source now; cheap (no file read of ~/.claude.json).
     func claudeCodeIsSource(desktopLimits: JSONObject) -> Bool {
-        !claudeCodeDisabled && claudeCodeIsSeparate(claudeCode.account, desktopLimits: desktopLimits)
+        let account = claudeCode.account.map { a in claudeCode.tokenOrg.map(ClaudeCodeAccount.init) ?? a }
+        return !claudeCodeDisabled && claudeCodeIsSeparate(account, desktopLimits: desktopLimits)
     }
 
     func maybeFetchClaudeCode() {
@@ -57,9 +61,13 @@ extension AppDelegate {
         }
         if claudeCode.account != before {
             claudeCode.token = nil   // another login: another token
+            claudeCode.tokenOrg = nil
             claudeCode.keychainNotBefore = nil
         }
-        guard claudeCodeIsSource(desktopLimits: loadJSONObject(paths.limits)) else {
+        // ~/.claude.json can name another account than the token in use: the same
+        // account there only counts once a token's profile says so too.
+        let verify = claudeCode.account != nil && !claudeCodeDisabled && claudeCode.tokenOrg == nil
+        guard verify || claudeCodeIsSource(desktopLimits: loadJSONObject(paths.limits)) else {
             if claudeCode.account != nil && !claudeCode.loggedSame {
                 claudeCode.loggedSame = true
                 log("claude-code: same account as the desktop app — no separate source")
@@ -67,7 +75,7 @@ extension AppDelegate {
             if before != claudeCode.account { showCachedTitle(); if popover.isShown { pushData() } }
             return
         }
-        claudeCode.loggedSame = false
+        if !verify { claudeCode.loggedSame = false }
         if isSourceOff(claudeCodeSource) { return }   // switched off: not fetched
 
         let cached = claudeCode.token
@@ -77,13 +85,16 @@ extension AppDelegate {
         if cached?.isUsable(now: now) != true && !mayRead { return }   // waiting: no prompt storm
         claudeCode.checking = true
         let version = state.version
+        let knownOrg = claudeCode.tokenOrg
         DispatchQueue.global(qos: .utility).async { [weak self] in
             var token = cached
             var keychain: String? = nil
+            var read = false
             if token?.isUsable(now: now) != true {
                 switch readClaudeCodeKeychain() {
                 case .value(let v):
                     token = claudeCodeToken(keychainValue: v)
+                    read = true
                     keychain = token == nil ? "keychain item unreadable" : nil
                     DispatchQueue.main.async { self?.log("keychain: Claude Code token requested") }
                 case .missing: token = nil; keychain = "no keychain item"
@@ -95,14 +106,47 @@ extension AppDelegate {
                 DispatchQueue.main.async { self?.onClaudeCodeNoToken(problem, refused: keychain != nil) }
                 return
             }
-            URLSession.shared.dataTask(with: claudeCodeUsageRequest(token: token, appVersion: version)) { data, response, error in
-                let outcome: ClaudeCodeFetchOutcome = error.map { .failed($0.localizedDescription) }
-                    ?? claudeCodeOutcome(status: (response as? HTTPURLResponse)?.statusCode ?? 0,
-                                         body: data, plan: token.plan, now: Date())
-                let retryAfter = (response as? HTTPURLResponse)?.value(forHTTPHeaderField: "Retry-After")
-                DispatchQueue.main.async { self?.onClaudeCodeResult(outcome, token: token, retryAfter: retryAfter) }
+            guard read || knownOrg == nil else { self?.fetchClaudeCodeUsage(token: token, version: version); return }
+            // A token from the Keychain: whose is it? Never logged, only compared.
+            URLSession.shared.dataTask(with: claudeCodeProfileRequest(token: token, appVersion: version)) { data, response, error in
+                let status = (response as? HTTPURLResponse)?.statusCode ?? 0
+                let org = claudeCodeProfileOrg(status: status, body: data)
+                DispatchQueue.main.async {
+                    if org == nil { self?.log("claude-code: profile unknown (\(error?.localizedDescription ?? "HTTP \(status)")), using ~/.claude.json") }
+                    self?.onClaudeCodeProfile(org, token: token, version: version)
+                }
             }.resume()
         }
+    }
+
+    /// The token's organization known (nil: profile unreachable, ~/.claude.json
+    /// counts): fetch its usage only when that is another account than the desktop app.
+    func onClaudeCodeProfile(_ org: String?, token: ClaudeCodeToken, version: String) {
+        let wasSource = claudeCodeIsSource(desktopLimits: loadJSONObject(paths.limits))
+        claudeCode.token = token
+        if let org { claudeCode.tokenOrg = org }
+        let isSource = claudeCodeIsSource(desktopLimits: loadJSONObject(paths.limits))
+        if isSource != wasSource { showCachedTitle(); if popover.isShown { pushData() } }
+        guard isSource, !isSourceOff(claudeCodeSource) else {
+            claudeCode.checking = false
+            if !isSource && !claudeCode.loggedSame {
+                claudeCode.loggedSame = true
+                log("claude-code: same account as the desktop app — no separate source")
+            }
+            return
+        }
+        claudeCode.loggedSame = false
+        DispatchQueue.global(qos: .utility).async { [weak self] in self?.fetchClaudeCodeUsage(token: token, version: version) }
+    }
+
+    func fetchClaudeCodeUsage(token: ClaudeCodeToken, version: String) {
+        URLSession.shared.dataTask(with: claudeCodeUsageRequest(token: token, appVersion: version)) { [weak self] data, response, error in
+            let outcome: ClaudeCodeFetchOutcome = error.map { .failed($0.localizedDescription) }
+                ?? claudeCodeOutcome(status: (response as? HTTPURLResponse)?.statusCode ?? 0,
+                                     body: data, plan: token.plan, now: Date())
+            let retryAfter = (response as? HTTPURLResponse)?.value(forHTTPHeaderField: "Retry-After")
+            DispatchQueue.main.async { self?.onClaudeCodeResult(outcome, token: token, retryAfter: retryAfter) }
+        }.resume()
     }
 
     func onClaudeCodeNoToken(_ problem: String, refused: Bool) {

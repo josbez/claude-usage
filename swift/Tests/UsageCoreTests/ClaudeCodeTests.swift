@@ -51,6 +51,19 @@ final class ClaudeCodeTests: XCTestCase {
         XCTAssertFalse(claudeCodeIsSeparate(nil, desktopLimits: desktop()))
     }
 
+    func testProfileOrgDecidesTheAccount() {
+        let body = #"{"account":{"uuid":"acc-placeholder"},"organization":{"uuid":"org-code","organization_type":"claude_pro"}}"#.data(using: .utf8)
+        XCTAssertEqual(claudeCodeProfileOrg(status: 200, body: body), "org-code")
+        XCTAssertNil(claudeCodeProfileOrg(status: 401, body: body))
+        XCTAssertNil(claudeCodeProfileOrg(status: 200, body: #"{"organization":{}}"#.data(using: .utf8)))
+        XCTAssertNil(claudeCodeProfileOrg(status: 200, body: nil))
+        let t = claudeCodeToken(keychainValue: #"{"claudeAiOauth":{"accessToken":"tok-placeholder"}}"#)!
+        let req = claudeCodeProfileRequest(token: t, appVersion: "0")
+        XCTAssertEqual(req.url, claudeCodeProfileURL)
+        XCTAssertEqual(req.value(forHTTPHeaderField: "Authorization"), "Bearer tok-placeholder")
+        XCTAssertEqual(req.value(forHTTPHeaderField: "anthropic-beta"), "oauth-2025-04-20")
+    }
+
     func testTokenFromKeychainValue() {
         let value = #"{"claudeAiOauth":{"accessToken":"tok-placeholder","refreshToken":"r","expiresAt":1791374400000,"subscriptionType":"pro"},"mcpOAuth":{}}"#
         let t = claudeCodeToken(keychainValue: value)!

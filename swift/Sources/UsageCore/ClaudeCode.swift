@@ -19,9 +19,11 @@ public let claudeCodeKeychainService = "Claude Code-credentials"
 let claudeCodeKnownPlans: Set<String> = ["pro", "max", "team", "enterprise"]
 
 /// The account Claude Code is logged in with, from ~/.claude.json (no Keychain,
-/// no prompt). nil: Claude Code isn't installed or isn't logged in.
+/// no prompt). nil: Claude Code isn't installed or isn't logged in. Its
+/// organization can be stale: once the token is read, its profile decides.
 public struct ClaudeCodeAccount: Equatable {
     public let organizationId: String
+    public init(organizationId: String) { self.organizationId = organizationId }
 }
 
 public func claudeCodeAccount(claudeJSON: JSONObject) -> ClaudeCodeAccount? {
@@ -136,7 +138,28 @@ public let claudeCodeRefusedRetry: TimeInterval = 60 * 60
 public let claudeCodeExpiredRetry: TimeInterval = 30 * 60
 
 public func claudeCodeUsageRequest(token: ClaudeCodeToken, appVersion: String) -> URLRequest {
-    var req = URLRequest(url: claudeCodeUsageURL, timeoutInterval: 20)
+    claudeCodeRequest(claudeCodeUsageURL, token: token, appVersion: appVersion)
+}
+
+/// Who the token belongs to. ~/.claude.json's oauthAccount can name another
+/// account than the token in the Keychain (seen 28-10-2026: Team org there,
+/// personal Pro token in use), so the token decides.
+public let claudeCodeProfileURL = URL(string: "https://api.anthropic.com/api/oauth/profile")!
+
+public func claudeCodeProfileRequest(token: ClaudeCodeToken, appVersion: String) -> URLRequest {
+    claudeCodeRequest(claudeCodeProfileURL, token: token, appVersion: appVersion)
+}
+
+/// The organization of the profile answer; nil for anything else (no guess).
+public func claudeCodeProfileOrg(status: Int, body: Data?) -> String? {
+    guard status == 200, let body,
+          let obj = (try? JSONSerialization.jsonObject(with: body)) as? JSONObject,
+          let org = (obj["organization"] as? JSONObject)?["uuid"] as? String, !org.isEmpty else { return nil }
+    return org
+}
+
+func claudeCodeRequest(_ url: URL, token: ClaudeCodeToken, appVersion: String) -> URLRequest {
+    var req = URLRequest(url: url, timeoutInterval: 20)
     req.setValue("Bearer " + token.accessToken, forHTTPHeaderField: "Authorization")
     req.setValue("oauth-2025-04-20", forHTTPHeaderField: "anthropic-beta")
     req.setValue("application/json", forHTTPHeaderField: "Accept")

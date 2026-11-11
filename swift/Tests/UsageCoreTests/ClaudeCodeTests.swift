@@ -64,6 +64,83 @@ final class ClaudeCodeTests: XCTestCase {
         XCTAssertEqual(req.value(forHTTPHeaderField: "anthropic-beta"), "oauth-2025-04-20")
     }
 
+    // MARK: - The token's organization, kept in memory (taak 67)
+
+    func token(_ access: String) -> ClaudeCodeToken {
+        claudeCodeToken(keychainValue: #"{"claudeAiOauth":{"accessToken":"\#(access)"}}"#)!
+    }
+
+    func testTokenKeyTellsTokensApart() {
+        XCTAssertEqual(claudeCodeTokenKey(token("tok-a")), claudeCodeTokenKey(token("tok-a")))
+        XCTAssertNotEqual(claudeCodeTokenKey(token("tok-a")), claudeCodeTokenKey(token("tok-b")))
+        let known = ClaudeCodeTokenOrg(tokenKey: claudeCodeTokenKey(token("tok-a")), org: "org-code")
+        XCTAssertFalse(claudeCodeNeedsProfile(known, token: token("tok-a")))
+        XCTAssertTrue(claudeCodeNeedsProfile(known, token: token("tok-b")))
+        XCTAssertTrue(claudeCodeNeedsProfile(nil, token: token("tok-a")))
+    }
+
+    func testProfileAnswerIsRemembered() {
+        let a = token("tok-a"), b = token("tok-b")
+        XCTAssertEqual(claudeCodeRememberOrg(nil, token: a, profileOrg: "org-code"),
+                       ClaudeCodeTokenOrg(tokenKey: claudeCodeTokenKey(a), org: "org-code"))
+        // A new token with its own profile: the new answer wins
+        let known = claudeCodeRememberOrg(nil, token: a, profileOrg: "org-code")
+        XCTAssertEqual(claudeCodeRememberOrg(known, token: b, profileOrg: "org-other")?.org, "org-other")
+        // Nothing known, no profile: still nothing known (~/.claude.json counts)
+        XCTAssertNil(claudeCodeRememberOrg(nil, token: a, profileOrg: nil))
+    }
+
+    /// Open point 1: the token expires, the profile can't be asked; the same
+    /// token keeps its organization, so the card stays.
+    func testSameTokenKeepsItsOrgWithoutProfile() {
+        let a = token("tok-a")
+        let known = claudeCodeRememberOrg(nil, token: a, profileOrg: "org-code")
+        XCTAssertEqual(claudeCodeRememberOrg(known, token: a, profileOrg: nil), known)
+    }
+
+    /// ... but not when the token itself changed: that can be another login.
+    func testAnotherTokenWithoutProfileForgetsTheOrg() {
+        let known = claudeCodeRememberOrg(nil, token: token("tok-a"), profileOrg: "org-code")
+        XCTAssertNil(claudeCodeRememberOrg(known, token: token("tok-b"), profileOrg: nil))
+    }
+
+    func testEffectiveAccountPrefersTheToken() {
+        let config = ClaudeCodeAccount(organizationId: "org-desktop")   // ~/.claude.json: as the desktop app
+        let known = ClaudeCodeTokenOrg(tokenKey: 1, org: "org-code")    // the token: another account
+        XCTAssertEqual(claudeCodeEffectiveAccount(config: config, known: known), ClaudeCodeAccount(organizationId: "org-code"))
+        XCTAssertEqual(claudeCodeEffectiveAccount(config: config, known: nil), config)
+        XCTAssertNil(claudeCodeEffectiveAccount(config: nil, known: known))   // logged out
+    }
+
+    /// The whole path of open point 1: ~/.claude.json names the desktop app's
+    /// organization, the token another one. Before 3.4.2 a change in ~/.claude.json
+    /// forgot the token's organization and an expired token couldn't bring it back:
+    /// "same account", no card until Claude Code refreshed.
+    func testExpiredTokenKeepsTheCard() {
+        let config = ClaudeCodeAccount(organizationId: "org-desktop")
+        let a = token("tok-a")
+        var known = claudeCodeRememberOrg(nil, token: a, profileOrg: "org-code")
+        XCTAssertTrue(claudeCodeIsSeparate(claudeCodeEffectiveAccount(config: config, known: known), desktopLimits: desktop()))
+        // Re-read after ~/.claude.json changed: the same token, expired, no profile
+        known = claudeCodeRememberOrg(known, token: a, profileOrg: nil)
+        XCTAssertTrue(claudeCodeIsSeparate(claudeCodeEffectiveAccount(config: config, known: known), desktopLimits: desktop()))
+        // Claude Code refreshed to another token and its profile fails: not known, ~/.claude.json counts
+        known = claudeCodeRememberOrg(known, token: token("tok-b"), profileOrg: nil)
+        XCTAssertFalse(claudeCodeIsSeparate(claudeCodeEffectiveAccount(config: config, known: known), desktopLimits: desktop()))
+    }
+
+    /// Open point 2: at app start the desktop file is the previous run's; while
+    /// this run's first fetch is underway "same account" is no verdict.
+    func testDesktopPendingAtAppStart() {
+        let launched = parseDate("2026-10-07T12:00:00Z")!
+        let previousRun = desktop()   // fetched 11:59, before the start
+        XCTAssertTrue(claudeCodeDesktopPending(desktopLimits: previousRun, launchedAt: launched, fetching: true))
+        XCTAssertFalse(claudeCodeDesktopPending(desktopLimits: previousRun, launchedAt: launched, fetching: false))
+        var thisRun = desktop(); thisRun["fetched_at"] = "2026-10-07T12:00:01.123456+00:00"
+        XCTAssertFalse(claudeCodeDesktopPending(desktopLimits: thisRun, launchedAt: launched, fetching: true))
+        XCTAssertTrue(claudeCodeDesktopPending(desktopLimits: [:], launchedAt: launched, fetching: true))
+    }
+
     func testTokenFromKeychainValue() {
         let value = #"{"claudeAiOauth":{"accessToken":"tok-placeholder","refreshToken":"r","expiresAt":1791374400000,"subscriptionType":"pro"},"mcpOAuth":{}}"#
         let t = claudeCodeToken(keychainValue: value)!

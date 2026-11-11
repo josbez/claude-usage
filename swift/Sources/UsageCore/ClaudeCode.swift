@@ -112,8 +112,11 @@ public enum ClaudeCodeKeychainResult {
     case refused
 }
 
-/// Via /usr/bin/security, like the cookie password (valkuil 9): the user's
-/// "Always Allow" for `security` then also covers later reads.
+/// Via /usr/bin/security, like the cookie password (valkuil 9). No prompt (checked
+/// 11-11-2026): Claude Code writes this item with /usr/bin/security itself, so
+/// its ACL trusts exactly that tool (partition "apple-tool:"); the same tool
+/// reading it matches, for every user and account, also after a token refresh
+/// (an update keeps the ACL). SecItemCopyMatching from this app would prompt.
 public func readClaudeCodeKeychain() -> ClaudeCodeKeychainResult {
     let p = Process()
     p.executableURL = URL(fileURLWithPath: "/usr/bin/security")
@@ -156,6 +159,54 @@ public func claudeCodeProfileOrg(status: Int, body: Data?) -> String? {
           let obj = (try? JSONSerialization.jsonObject(with: body)) as? JSONObject,
           let org = (obj["organization"] as? JSONObject)?["uuid"] as? String, !org.isEmpty else { return nil }
     return org
+}
+
+/// The organization of one token, as its profile said. Memory only: never
+/// logged, never written to disk. `tokenKey` tells tokens apart without keeping
+/// a second copy (a hash with a per-process seed, meaningless outside this run).
+public struct ClaudeCodeTokenOrg: Equatable {
+    public let tokenKey: Int
+    public let org: String
+    public init(tokenKey: Int, org: String) { self.tokenKey = tokenKey; self.org = org }
+}
+
+public func claudeCodeTokenKey(_ token: ClaudeCodeToken) -> Int {
+    var h = Hasher()
+    h.combine(token.accessToken)
+    return h.finalize()
+}
+
+/// Whether the token's profile still has to be asked: its organization isn't known yet.
+public func claudeCodeNeedsProfile(_ known: ClaudeCodeTokenOrg?, token: ClaudeCodeToken) -> Bool {
+    known?.tokenKey != claudeCodeTokenKey(token)
+}
+
+/// What to remember after reading a token (and asking its profile, or not).
+/// The profile's answer wins. Without one (unreachable, expired, not asked) the
+/// organization last known stays only for that same token: another token can be
+/// another login, so then nothing is known and ~/.claude.json counts again.
+public func claudeCodeRememberOrg(_ known: ClaudeCodeTokenOrg?, token: ClaudeCodeToken,
+                                  profileOrg: String?) -> ClaudeCodeTokenOrg? {
+    let key = claudeCodeTokenKey(token)
+    if let profileOrg { return ClaudeCodeTokenOrg(tokenKey: key, org: profileOrg) }
+    return known?.tokenKey == key ? known : nil
+}
+
+/// The account that decides whether Claude Code is a source of its own: the
+/// token's organization when known, else ~/.claude.json's. Not logged in
+/// according to ~/.claude.json: no account, whatever is remembered.
+public func claudeCodeEffectiveAccount(config: ClaudeCodeAccount?, known: ClaudeCodeTokenOrg?) -> ClaudeCodeAccount? {
+    guard config != nil else { return nil }
+    return known.map { ClaudeCodeAccount(organizationId: $0.org) } ?? config
+}
+
+/// At app start the desktop app's file is the previous run's: its account may
+/// have switched since. While this run's first fetch of it is underway, "same
+/// account" is no verdict yet (it hid the Claude Code card for a minute).
+public func claudeCodeDesktopPending(desktopLimits: JSONObject, launchedAt: Date, fetching: Bool) -> Bool {
+    guard fetching else { return false }
+    guard let at = (desktopLimits["fetched_at"] as? String).flatMap(parseDate) else { return true }
+    return at < launchedAt
 }
 
 func claudeCodeRequest(_ url: URL, token: ClaudeCodeToken, appVersion: String) -> URLRequest {

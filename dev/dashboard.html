@@ -25,7 +25,6 @@
     /* Text colours checked against WCAG 2.2 AA (4.5:1) on the white card;
        fills keep the lighter accent — their values are also given as text. */
     --accent-text: #3366D6;    /* 5.23:1 */
-    --time-text: #4D6FB3;      /* 4.95:1, muted blue-grey of the time fill */
     --accent-fill-strong: #3366D6;  /* update button: on-accent text 5.23:1, both themes */
     /* -- Colour: icons -- */
     --icon-color: #8A8A8A;
@@ -129,7 +128,6 @@
       --accent-blue: #6B93F5;
       --time-fill: color-mix(in srgb, var(--accent-blue) 30%, var(--track));
       --accent-text: var(--accent-blue);  /* 4.72:1 on #2C2C2E */
-      --time-text: #9DB5F2;               /* 6.85:1 */
       --status-error-text: #FF6961;       /* 4.95:1 on #2C2C2E */
       --icon-color: #9A9A9E;
       --icon-hover-bg: rgba(255,255,255,0.08);
@@ -407,7 +405,6 @@
     font-size: var(--text-secondary); color: var(--muted); white-space: nowrap;
   }
   .week-pct { font-weight: var(--weight-bold); color: var(--accent-text); }
-  .week-elapsed[hidden] { display: none; }
 
   .label-sm {
     font-size: var(--text-label);
@@ -471,7 +468,6 @@
   .no-transition, .no-transition * {
     transition: none !important;
   }
-  .time-num { color: var(--time-text); font-weight: var(--weight-semibold); }
 
   /* ---- Footer ---- */
   .footer {
@@ -570,7 +566,6 @@
     <div class="week-strip">
       <div class="week-line">
         <span class="week-text"><span class="week-pct"></span> <span class="week-reset"></span></span>
-        <span class="week-elapsed"><span class="time-num"></span><span data-i18n="elapsed_suffix">% verstreken</span></span>
       </div>
       <div class="progress-bar-track">
         <div class="progress-bar-time" style="width:0%"></div>
@@ -1030,7 +1025,8 @@ function renderSourceCard(card, s, zero, problemText) {
   resetEl.title = noData ? why : '';
   card.querySelector('.source-updated').textContent = s.updated || '';
 
-  // Week: usage in front of the elapsed share of the window
+  // Week: usage; the elapsed share of the window only as a fill in the bar (no number,
+  // it read as a second weekly percentage)
   const strip = card.querySelector('.week-strip');
   strip.hidden = !has(s.weekly_pct);
   if (strip.hidden) return;
@@ -1041,18 +1037,14 @@ function renderSourceCard(card, s, zero, problemText) {
   card.querySelector('.progress-bar-fill').style.width = (zero ? 0 : w) + '%';
   const time = card.querySelector('.progress-bar-time');
   const tick = card.querySelector('.progress-bar-tick');
-  const elapsed = card.querySelector('.week-elapsed');
   if (has(s.week_elapsed)) {
     const t = Math.max(0, Math.min(100, s.week_elapsed));
     time.style.width = (zero ? 0 : t) + '%';
     tick.style.left = (zero ? 0 : t) + '%';
     tick.hidden = !(w >= t && t > 0 && t < 100);   // only when usage covers the time fill
-    elapsed.hidden = false;
-    elapsed.querySelector('.time-num').textContent = Math.round(t);
   } else {
     time.style.width = '0%';
     tick.hidden = true;
-    elapsed.hidden = true;
   }
 }
 
